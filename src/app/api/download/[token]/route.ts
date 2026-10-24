@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { readLocal, signedDownloadUrl, usingS3 } from "@/lib/storage";
+import { readObject, signedDownloadUrl, usingS3 } from "@/lib/storage";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -14,10 +14,11 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
 
   const name = product.fileName ?? "download";
   if (usingS3()) return NextResponse.redirect(await signedDownloadUrl(product.fileKey, name));
-  const { body, contentType } = await readLocal(product.fileKey);
-  return new NextResponse(new Uint8Array(body), {
+  const file = await readObject(product.fileKey);
+  if (!file) return new NextResponse("File not found.", { status: 404 });
+  return new NextResponse(file.body, {
     headers: {
-      "content-type": contentType,
+      "content-type": file.contentType,
       "content-disposition": `attachment; filename="${name.replace(/"/g, "")}"`,
       "cache-control": "private, no-store",
     },

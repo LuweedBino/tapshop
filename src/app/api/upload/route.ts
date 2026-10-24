@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCreator } from "@/lib/auth";
-import { newKey, uploadUrl } from "@/lib/storage";
-
-const MAX_BYTES = { public: 5 * 1024 * 1024, private: 500 * 1024 * 1024 };
+import { MAX_BYTES, newKey, uploadUrl } from "@/lib/storage";
 
 const Body = z.object({
   visibility: z.enum(["public", "private"]),

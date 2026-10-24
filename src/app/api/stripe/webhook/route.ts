@@ -7,17 +7,22 @@ import { stripe } from "@/lib/stripe";
 
 // Register this endpoint in Stripe for events on connected accounts
 // (checkout.session.completed, checkout.session.async_payment_succeeded, account.updated,
-// charge.refunded). Add a second endpoint for your own account if ALLOW_PLATFORM_CHARGES is on.
+// charge.refunded). Add a second endpoint for your own account if ALLOW_PLATFORM_CHARGES is on;
+// each endpoint has its own signing secret, so STRIPE_WEBHOOK_SECRET takes a comma-separated list.
 export async function POST(req: Request) {
   const signature = req.headers.get("stripe-signature");
-  if (!signature || !env.stripeWebhookSecret) return new NextResponse("Missing signature", { status: 400 });
+  const secrets = env.stripeWebhookSecret.split(",").map((s) => s.trim()).filter(Boolean);
+  if (!signature || secrets.length === 0) return new NextResponse("Missing signature", { status: 400 });
 
-  let event: Stripe.Event;
-  try {
-    event = stripe().webhooks.constructEvent(await req.text(), signature, env.stripeWebhookSecret);
-  } catch {
-    return new NextResponse("Bad signature", { status: 400 });
+  const payload = await req.text();
+  let event: Stripe.Event | null = null;
+  for (const secret of secrets) {
+    try {
+      event = stripe().webhooks.constructEvent(payload, signature, secret);
+      break;
+    } catch {}
   }
+  if (!event) return new NextResponse("Bad signature", { status: 400 });
 
   switch (event.type) {
     case "checkout.session.completed":
