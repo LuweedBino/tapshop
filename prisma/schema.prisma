@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ProductType {
+  DIGITAL
+  LEAD_MAGNET
+  LINK
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  REFUNDED
+}
+
+model Creator {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  handle          String    @unique
+  displayName     String
+  bio             String    @default("")
+  avatarKey       String?
+  accentColor     String    @default("#7c3aed")
+  socialLinks     Json      @default("{}")
+  stripeAccountId String?   @unique
+  stripeReady     Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  products        Product[]
+  orders          Order[]
+  leads           Lead[]
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  creatorId   String
+  creator     Creator     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  type        ProductType @default(DIGITAL)
+  title       String
+  subtitle    String      @default("")
+  description String      @default("")
+  priceCents  Int         @default(0)
+  currency    String      @default("usd")
+  coverKey    String?
+  fileKey     String?
+  fileName    String?
+  url         String?
+  ctaLabel    String      @default("")
+  published   Boolean     @default(true)
+  // Archived products disappear from the store and dashboard but keep past buyers' downloads working.
+  archived    Boolean     @default(false)
+  position    Int         @default(0)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  orders      Order[]
+  leads       Lead[]
+
+  @@index([creatorId, position])
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  creatorId       String
+  creator         Creator     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyerEmail      String
+  buyerName       String      @default("")
+  amountCents     Int
+  currency        String
+  status          OrderStatus @default(PENDING)
+  stripeSessionId String?     @unique
+  downloadToken   String      @unique
+  downloadCount   Int         @default(0)
+  emailSentAt     DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime    @default(now())
+
+  @@index([creatorId, createdAt])
+}
+
+model Lead {
+  id            String   @id @default(cuid())
+  creatorId     String
+  creator       Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  productId     String
+  product       Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  email         String
+  name          String   @default("")
+  downloadToken String   @unique
+  downloadCount Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  @@unique([productId, email])
+  @@index([creatorId, createdAt])
+}
