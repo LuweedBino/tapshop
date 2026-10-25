@@ -144,7 +144,13 @@ export async function saveProduct(productId: string | null, _: FormState, form: 
   if (coverKey === undefined || fileKey === undefined) return { error: "Invalid upload" };
   if (d.type === "DIGITAL" && !fileKey) return { error: "Upload the file buyers will receive" };
 
+  // "" is the main store; anything else must be one of this creator's pages.
+  const pageValue = String(form.get("pageId") ?? "");
+  const page = pageValue ? await db.page.findFirst({ where: { id: pageValue, creatorId: creator.id } }) : null;
+  if (pageValue && !page) return { error: "That page no longer exists" };
+
   const data = {
+    pageId: page?.id ?? null,
     type: d.type,
     title: d.title,
     subtitle: d.subtitle,
@@ -164,18 +170,18 @@ export async function saveProduct(productId: string | null, _: FormState, form: 
     const res = await db.product.updateMany({ where: { id: productId, creatorId: creator.id, archived: false }, data });
     if (res.count === 0) return { error: "Product not found" };
   } else {
-    const last = await db.product.findFirst({ where: { creatorId: creator.id }, orderBy: { position: "desc" } });
+    const last = await db.product.findFirst({ where: { creatorId: creator.id, pageId: data.pageId }, orderBy: { position: "desc" } });
     await db.product.create({ data: { ...data, creatorId: creator.id, position: (last?.position ?? -1) + 1 } });
   }
-  revalidatePath(`/${creator.handle}`);
-  redirect("/dashboard/products");
+  revalidatePath(`/${creator.handle}`, "layout");
+  redirect(data.pageId ? `/dashboard/products?page=${data.pageId}` : "/dashboard/products");
 }
 
 export async function deleteProduct(productId: string) {
   const creator = await requireCreator();
   await db.product.updateMany({ where: { id: productId, creatorId: creator.id }, data: { archived: true, published: false } });
   revalidatePath("/dashboard/products");
-  revalidatePath(`/${creator.handle}`);
+  revalidatePath(`/${creator.handle}`, "layout");
 }
 
 export async function togglePublished(productId: string) {
@@ -184,19 +190,22 @@ export async function togglePublished(productId: string) {
   if (!p) return;
   await db.product.update({ where: { id: p.id }, data: { published: !p.published } });
   revalidatePath("/dashboard/products");
-  revalidatePath(`/${creator.handle}`);
+  revalidatePath(`/${creator.handle}`, "layout");
 }
 
 export async function moveProduct(productId: string, direction: -1 | 1) {
   const creator = await requireCreator();
-  const list = await db.product.findMany({ where: { creatorId: creator.id, archived: false }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
+  const product = await db.product.findFirst({ where: { id: productId, creatorId: creator.id } });
+  if (!product) return;
+  // Order is per page, so only swap with neighbors on the same page.
+  const list = await db.product.findMany({ where: { creatorId: creator.id, pageId: product.pageId, archived: false }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] });
   const i = list.findIndex((p) => p.id === productId);
   const j = i + direction;
   if (i < 0 || j < 0 || j >= list.length) return;
   [list[i], list[j]] = [list[j], list[i]];
   await db.$transaction(list.map((p, position) => db.product.update({ where: { id: p.id }, data: { position } })));
   revalidatePath("/dashboard/products");
-  revalidatePath(`/${creator.handle}`);
+  revalidatePath(`/${creator.handle}`, "layout");
 }
 
 // Accounts v2 isn't in our Stripe SDK yet, so these two calls go through rawRequest.

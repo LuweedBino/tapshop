@@ -5,26 +5,50 @@ import { deleteProduct, moveProduct, togglePublished } from "@/app/actions/dashb
 import { PageHeader } from "@/components/PageHeader";
 import { priceLabel } from "@/components/Storefront";
 import { DeleteButton } from "@/components/DeleteButton";
+import { CopyLink } from "@/components/CopyLink";
+import { env } from "@/lib/env";
 
 const TYPE_LABEL = { DIGITAL: "Digital product", LEAD_MAGNET: "Lead magnet", LINK: "Link", AFFILIATE: "Affiliate link" } as const;
 
-export default async function Products() {
+export default async function Products({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const creator = await requireCreator();
+  const { page: pageParam } = await searchParams;
+  const pages = await db.page.findMany({ where: { creatorId: creator.id }, orderBy: { createdAt: "asc" } });
+  // null is the main store.
+  const page = pages.find((p) => p.id === pageParam) ?? null;
+  const addHref = page ? `/dashboard/products/new?page=${page.id}` : "/dashboard/products/new";
   const products = await db.product.findMany({
-    where: { creatorId: creator.id, archived: false },
+    where: { creatorId: creator.id, archived: false, pageId: page?.id ?? null },
     orderBy: [{ position: "asc" }, { createdAt: "asc" }],
     include: { _count: { select: { orders: { where: { status: "PAID" } }, leads: true } } },
   });
   return (
     <>
-      <PageHeader title="Products" subtitle="Everything on your store, in the order followers see it." action={<Link href="/dashboard/products/new" className="btn">+ Add</Link>} />
+      <PageHeader title="Products" subtitle="Your main store, plus any extra pages. Each page has its own link and shows only its own products." action={<Link href={addHref} className="btn">+ Add</Link>} />
+      <nav className="mb-4 flex flex-wrap gap-2" aria-label="Pages">
+        {[{ id: null, title: "Main store" }, ...pages].map((p) => (
+          <Link
+            key={p.id ?? "main"}
+            href={p.id ? `/dashboard/products?page=${p.id}` : "/dashboard/products"}
+            aria-current={p.id === (page?.id ?? null) ? "page" : undefined}
+            className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition ${p.id === (page?.id ?? null) ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 bg-white hover:border-neutral-500"}`}
+          >
+            {p.title}
+          </Link>
+        ))}
+        <Link href="/dashboard/products/pages/new" className="rounded-full border border-dashed border-neutral-400 px-3.5 py-1.5 text-sm font-semibold text-neutral-600 hover:border-neutral-700 hover:text-neutral-900">+ New page</Link>
+      </nav>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="min-w-0 flex-1"><CopyLink url={`${env.appUrl}/${creator.handle}${page ? `/${page.slug}` : ""}`} /></div>
+        {page && <Link href={`/dashboard/products/pages/${page.id}`} className="btn-secondary shrink-0">Edit page</Link>}
+      </div>
       {products.length === 0 ? (
         <div className="card py-12 text-center">
-          <p className="font-semibold">Your store is empty</p>
+          <p className="font-semibold">{page ? "This page is empty" : "Your store is empty"}</p>
           <p className="mt-1 text-sm text-neutral-500">Add a digital product or a free lead magnet to get started.</p>
           <div className="mt-5 flex justify-center gap-2">
-            <Link href="/dashboard/products/new" className="btn">Sell a product</Link>
-            <Link href="/dashboard/products/new?type=LEAD_MAGNET" className="btn-secondary">Add a lead magnet</Link>
+            <Link href={addHref} className="btn">Sell a product</Link>
+            <Link href={`${addHref}${page ? "&" : "?"}type=LEAD_MAGNET`} className="btn-secondary">Add a lead magnet</Link>
           </div>
         </div>
       ) : (

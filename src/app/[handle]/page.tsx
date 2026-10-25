@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { designOf } from "@/lib/design";
-import { ProductCard, StoreFooter, StoreHeader, StoreShell } from "@/components/Storefront";
+import { StoreFooter, StoreHeader, StoreProducts, StoreShell } from "@/components/Storefront";
 
 async function load(handle: string) {
   return db.creator.findUnique({
     where: { handle: handle.toLowerCase() },
-    include: { products: { where: { published: true }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
+    // Products on an extra page show only there, not on the main store.
+    include: { products: { where: { published: true, pageId: null }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
   });
 }
 
@@ -24,12 +25,7 @@ export default async function StorePage({ params }: { params: Promise<{ handle: 
     <StoreShell design={design}>
       <main className="mx-auto max-w-md">
         <StoreHeader creator={creator} />
-        <section className="mt-8 space-y-3 px-4">
-          {creator.products.map((p) => (
-            <ProductCard key={p.id} product={p} handle={creator.handle} layout={design.layout} />
-          ))}
-          {creator.products.length === 0 && <p className="py-10 text-center text-sm text-[var(--page-muted)]">Nothing here yet. Check back soon.</p>}
-        </section>
+        <StoreProducts products={creator.products} handle={creator.handle} layout={design.layout} />
         <StoreFooter />
       </main>
     </StoreShell>

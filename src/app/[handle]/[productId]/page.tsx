@@ -5,25 +5,51 @@ import { db } from "@/lib/db";
 import { fileUrl } from "@/lib/format";
 import { canSell } from "@/lib/orders";
 import { designOf } from "@/lib/design";
-import { Avatar, defaultCta, priceLabel, StoreFooter, StoreShell } from "@/components/Storefront";
+import { Avatar, defaultCta, priceLabel, StoreFooter, StoreHeader, StoreProducts, StoreShell } from "@/components/Storefront";
 import { BuyForm } from "@/components/BuyForm";
 import { CopyCode } from "@/components/CopyCode";
 import { parseExtras, videoEmbed } from "@/lib/affiliate";
 
+// This segment is either one of the creator's extra pages (/maya/summer-sale) or a product (/maya/<id>).
+async function loadPage(handle: string, slug: string) {
+  const creator = await db.creator.findUnique({ where: { handle: handle.toLowerCase() } });
+  if (!creator || creator.pausedAt) return null;
+  const page = await db.page.findUnique({
+    where: { creatorId_slug: { creatorId: creator.id, slug: slug.toLowerCase() } },
+    include: { products: { where: { published: true, archived: false }, orderBy: [{ position: "asc" }, { createdAt: "asc" }] } },
+  });
+  return page ? { ...page, creator } : null;
+}
+
 async function load(handle: string, productId: string) {
-  const product = await db.product.findUnique({ where: { id: productId }, include: { creator: true } });
+  const product = await db.product.findUnique({ where: { id: productId }, include: { creator: true, page: true } });
   if (!product || !product.published || (product.type === "LINK" && !product.collectEmails) || product.creator.handle !== handle.toLowerCase() || product.creator.pausedAt) return null;
   return product;
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; productId: string }> }): Promise<Metadata> {
   const { handle, productId } = await params;
+  const page = await loadPage(handle, productId);
+  if (page) return { title: `${page.title} | ${page.creator.displayName}`, description: page.description || undefined };
   const p = await load(handle, productId);
   return p ? { title: `${p.title} | ${p.creator.displayName}`, description: p.subtitle || undefined } : {};
 }
 
 export default async function ProductPage({ params }: { params: Promise<{ handle: string; productId: string }> }) {
   const { handle, productId } = await params;
+  const page = await loadPage(handle, productId);
+  if (page) {
+    const design = designOf(page.creator);
+    return (
+      <StoreShell design={design}>
+        <main className="mx-auto max-w-md">
+          <StoreHeader creator={page.creator} page={page} />
+          <StoreProducts products={page.products} handle={page.creator.handle} layout={design.layout} />
+          <StoreFooter />
+        </main>
+      </StoreShell>
+    );
+  }
   const product = await load(handle, productId);
   if (!product) notFound();
   const { creator } = product;
@@ -37,7 +63,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   return (
     <StoreShell design={designOf(creator)} fadeAt={260}>
       <main className="mx-auto max-w-md px-4 pt-5">
-        <Link href={`/${creator.handle}`} className="flex items-center gap-2.5 text-sm font-semibold">
+        <Link href={product.page ? `/${creator.handle}/${product.page.slug}` : `/${creator.handle}`} className="flex items-center gap-2.5 text-sm font-semibold">
           <span aria-hidden>←</span>
           <Avatar creator={creator} size={32} />
           {creator.displayName}
