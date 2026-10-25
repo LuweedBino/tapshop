@@ -44,6 +44,8 @@ body {
 @keyframes si-slide { from { opacity: 0; transform: translateY(14px); } }
 @keyframes si-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @keyframes si-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+/* Visitors who turned animations off in their device settings don't get them,
+   except inside the dashboard preview so creators can still see what they picked. */
 @media (prefers-reduced-motion: reduce) {
-  .si-link, [class*="si-in-"], [class*="si-motion-"] { animation: none !important; transition: none !important; }
+  :is(.si-link, [class*="si-in-"], [class*="si-motion-"]):not(.si-force-motion *) { animation: none !important; transition: none !important; }
 }
