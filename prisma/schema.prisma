@@ -40,6 +40,7 @@ model Creator {
   socialStyle     String    @default("text")
   // Social icon shape, colors and animations; see src/lib/iconStyle.ts.
   socialIconStyle Json      @default("{}")
+  bannerStyle     Json      @default("{}")
   stripeAccountId String?   @unique
   stripeReady     Boolean   @default(false)
   createdAt       DateTime  @default(now())

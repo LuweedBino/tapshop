@@ -9,6 +9,8 @@ import { BUTTON_STYLES, designOf, designVars, FONTS, LAYOUTS, SOCIAL_STYLES, soc
 import { FONT_CLASS } from "@/lib/fonts";
 import { parseAvatarStyle, type AvatarStyle } from "@/lib/avatar";
 import { AvatarEditor } from "./AvatarEditor";
+import { BannerEditor } from "./BannerEditor";
+import { parseBannerStyle, type BannerStyle } from "@/lib/banner";
 import { FileUpload } from "./FileUpload";
 import { SocialIcon } from "./SocialIcon";
 import { SocialLinksEditor } from "./SocialLinksEditor";
@@ -25,6 +27,7 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
   const [avatarKey, setAvatarKey] = useState(creator.avatarKey ?? "");
   const [avatarStyle, setAvatarStyle] = useState<AvatarStyle>(parseAvatarStyle(creator.avatarStyle));
   const [bannerKey, setBannerKey] = useState(creator.bannerKey ?? "");
+  const [bannerStyle, setBannerStyle] = useState<BannerStyle>(parseBannerStyle(creator.bannerStyle));
   const [displayName, setDisplayName] = useState(creator.displayName);
   const [bio, setBio] = useState(creator.bio);
   const [showPreview, setShowPreview] = useState(false);
@@ -38,7 +41,7 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
       design={design}
       handle={creator.handle}
       products={products}
-      creator={{ avatarKey: avatarKey || null, avatarStyle, bannerKey: bannerKey || null, displayName: displayName || " ", bio, accentColor: design.accentColor, socialLinks: socialLinks.filter((l) => l.value.trim()), socialStyle, socialIconStyle: iconStyle, theme: design.theme }}
+      creator={{ avatarKey: avatarKey || null, avatarStyle, bannerKey: bannerKey || null, bannerStyle, displayName: displayName || " ", bio, accentColor: design.accentColor, socialLinks: socialLinks.filter((l) => l.value.trim()), socialStyle, socialIconStyle: iconStyle, theme: design.theme }}
     />
   );
 
@@ -57,8 +60,15 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
         </div>
 
         <div className="card space-y-5">
+          <div>
+            <h2 className="font-semibold">Banner</h2>
+            <p className="mt-0.5 text-sm text-neutral-500">The wide image across the top of your store. Upload your own or pick one from the gallery.</p>
+          </div>
+          <BannerEditor initialKey={creator.bannerKey} bannerKey={bannerKey} onKeyChange={setBannerKey} accent={design.accentColor} value={bannerStyle} onChange={setBannerStyle} />
+        </div>
+
+        <div className="card space-y-5">
           <h2 className="font-semibold">Profile</h2>
-          <FileUpload name="bannerKey" visibility="public" initialKey={creator.bannerKey} accept="image/*" label="Banner image" hint="Optional. Shows across the top of your store. A wide image works best." onChange={setBannerKey} />
           <div>
             <label className="label" htmlFor="displayName">Display name</label>
             <input className="input" id="displayName" name="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />

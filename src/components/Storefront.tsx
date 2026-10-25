@@ -7,6 +7,7 @@ import { iconButtonStyle, iconGlyphSize, iconSpeedVars, parseIconStyle, type Ico
 import { SocialIcon } from "./SocialIcon";
 import { FONT_CLASS } from "@/lib/fonts";
 import { AVATAR_SIZES, avatarFrameStyle, avatarImageStyle, parseAvatarStyle } from "@/lib/avatar";
+import { bannerFrameStyle, bannerImageStyle, bannerOverlayStyle, bannerPatternStyle, bannerSrc, parseBannerStyle, type BannerStyle } from "@/lib/banner";
 
 export function Avatar({ creator, size }: { creator: Pick<Creator, "avatarKey" | "avatarStyle" | "displayName" | "accentColor">; size?: number }) {
   const src = fileUrl(creator.avatarKey);
@@ -35,20 +36,28 @@ export function StoreShell({ design, fadeAt, className = "min-h-dvh", children }
   );
 }
 
-type HeaderCreator = Pick<Creator, "avatarKey" | "avatarStyle" | "bannerKey" | "displayName" | "accentColor" | "bio" | "socialLinks" | "socialStyle" | "socialIconStyle" | "theme">;
+type HeaderCreator = Pick<Creator, "avatarKey" | "avatarStyle" | "bannerKey" | "bannerStyle" | "displayName" | "accentColor" | "bio" | "socialLinks" | "socialStyle" | "socialIconStyle" | "theme">;
 
 export function StoreHeader({ creator }: { creator: HeaderCreator }) {
   const links = parseSocialLinks(creator.socialLinks);
-  const banner = fileUrl(creator.bannerKey);
+  const bannerStyle = parseBannerStyle(creator.bannerStyle);
+  const banner = bannerSrc(bannerStyle, creator.bannerKey, creator.accentColor);
+  const avatarPx = AVATAR_SIZES[parseAvatarStyle(creator.avatarStyle).size].px;
+  const placement = banner ? bannerStyle.avatar : "none";
   return (
     <header className="flex flex-col items-center text-center">
       {banner && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={banner} alt="" className="aspect-[3/1] w-full object-cover" />
+        // An avatar inside the banner needs room, so a short banner grows to fit it.
+        <Banner src={banner} style={bannerStyle} accent={creator.accentColor} minHeight={placement === "inside" ? avatarPx + 40 : undefined}>
+          {placement === "inside" && <Avatar creator={creator} />}
+        </Banner>
       )}
-      <div className={`flex flex-col items-center px-5 ${banner ? "" : "pt-10"}`} style={banner ? { marginTop: -AVATAR_SIZES[parseAvatarStyle(creator.avatarStyle).size].px / 2 } : undefined}>
-        <Avatar creator={creator} />
-        <h1 className="mt-4 text-2xl font-bold tracking-tight">{creator.displayName}</h1>
+      <div
+        className={`flex flex-col items-center px-5 ${placement === "none" ? "pt-10" : placement === "overlap" ? "" : "pt-4"}`}
+        style={placement === "overlap" ? { marginTop: -avatarPx / 2 } : undefined}
+      >
+        {placement !== "inside" && <Avatar creator={creator} />}
+        <h1 className={`${placement === "inside" ? "mt-1" : "mt-4"} text-2xl font-bold tracking-tight`}>{creator.displayName}</h1>
         {creator.bio && <p className="mt-2 max-w-sm whitespace-pre-line text-[15px] leading-relaxed text-[var(--page-muted)]">{creator.bio}</p>}
         {links.length > 0 && (
           <SocialLinks
@@ -61,6 +70,25 @@ export function StoreHeader({ creator }: { creator: HeaderCreator }) {
         )}
       </div>
     </header>
+  );
+}
+
+// Layers, bottom to top: the image (inside a wrapper that carries the motion), color overlay, pattern.
+export function Banner({ src, style, accent, minHeight, children }: { src: string; style: BannerStyle; accent: string; minHeight?: number; children?: React.ReactNode }) {
+  const overlay = bannerOverlayStyle(style, accent);
+  const pattern = bannerPatternStyle(style);
+  return (
+    <div className={`relative w-full ${style.layout === "inset" ? "px-3 pt-3" : ""}`}>
+      <div className="relative w-full overflow-hidden" style={{ ...bannerFrameStyle(style), minHeight }}>
+        <div className={`absolute inset-0 bn-motion-${style.motion}`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={src} alt="" draggable={false} className="h-full w-full object-cover" style={bannerImageStyle(style)} />
+        </div>
+        {overlay && <div className="absolute inset-0" style={overlay} />}
+        {pattern && <div className="absolute inset-0" style={pattern} />}
+      </div>
+      {children && <div className="absolute inset-0 flex items-center justify-center">{children}</div>}
+    </div>
   );
 }
 
