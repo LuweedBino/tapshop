@@ -133,21 +133,45 @@ export async function moveProduct(productId: string, direction: -1 | 1) {
   revalidatePath(`/${creator.handle}`);
 }
 
+// Accounts v2 isn't in our Stripe SDK yet, so these two calls go through rawRequest.
+// The resulting acct_ ids work everywhere else (v1 retrieve, direct charges, account.updated webhooks).
+const STRIPE_V2_VERSION = "2026-09-30.endive";
+
+async function stripeV2<T>(path: string, params: Record<string, unknown>) {
+  return (await stripe().rawRequest("POST", path, params, { apiVersion: STRIPE_V2_VERSION })) as unknown as T;
+}
+
+// Same setup as a v1 Standard account: full Stripe Dashboard, Stripe collects fees and covers losses.
+async function createConnectedAccount(creator: { id: string; email: string; displayName: string }) {
+  const account = await stripeV2<{ id: string }>("/v2/core/accounts", {
+    contact_email: creator.email,
+    display_name: creator.displayName,
+    dashboard: "full",
+    configuration: { merchant: { capabilities: { card_payments: { requested: true } } } },
+    defaults: { responsibilities: { fees_collector: "stripe", losses_collector: "stripe" } },
+    metadata: { creatorId: creator.id },
+  });
+  return account.id;
+}
+
 export async function connectStripe(): Promise<FormState> {
   const creator = await requireCreator();
   let url: string;
   try {
     let accountId = creator.stripeAccountId;
     if (!accountId) {
-      const account = await stripe().accounts.create({ type: "standard", email: creator.email, metadata: { creatorId: creator.id } });
-      accountId = account.id;
+      accountId = await createConnectedAccount(creator);
       await db.creator.update({ where: { id: creator.id }, data: { stripeAccountId: accountId } });
     }
-    const link = await stripe().accountLinks.create({
+    const link = await stripeV2<{ url: string }>("/v2/core/account_links", {
       account: accountId,
-      type: "account_onboarding",
-      refresh_url: `${env.appUrl}/dashboard/payments?refresh=1`,
-      return_url: `${env.appUrl}/dashboard/payments?return=1`,
+      use_case: {
+        type: "account_onboarding",
+        account_onboarding: {
+          refresh_url: `${env.appUrl}/dashboard/payments?refresh=1`,
+          return_url: `${env.appUrl}/dashboard/payments?return=1`,
+        },
+      },
     });
     url = link.url;
   } catch (e) {

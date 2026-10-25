@@ -14,7 +14,7 @@ Later phases: courses, calendar bookings, memberships, Instagram AutoDM, and Pro
 
 ## Stack
 
-Next.js 15 (App Router, server actions) · TypeScript · Tailwind CSS 4 · Postgres + Prisma · Stripe Checkout + Connect (Standard accounts, direct charges) · S3-compatible storage · Resend.
+Next.js 15 (App Router, server actions) · TypeScript · Tailwind CSS 4 · Postgres + Prisma · Stripe Checkout + Connect (Accounts v2 with the full Stripe Dashboard, direct charges) · S3-compatible storage · Resend.
 
 ## Running locally
 
