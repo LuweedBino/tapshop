@@ -1,7 +1,8 @@
 import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
-import { stripe, stripeEnabled } from "@/lib/stripe";
+import { headers } from "next/headers";
+import { stripe, stripeEnabled, STRIPE_COUNTRIES } from "@/lib/stripe";
 import { PageHeader } from "@/components/PageHeader";
 import { ConnectStripeButton } from "@/components/ConnectStripeButton";
 
@@ -14,6 +15,10 @@ export default async function Payments() {
     const account = await stripe().accounts.retrieve(creator.stripeAccountId).catch(() => null);
     if (account?.charges_enabled) creator = await db.creator.update({ where: { id: creator.id }, data: { stripeReady: true } });
   }
+  const countries = Object.entries(STRIPE_COUNTRIES).sort((a, b) => a[1].localeCompare(b[1]));
+  // Vercel sends the visitor's country; preselect it when Stripe supports it.
+  const ipCountry = (await headers()).get("x-vercel-ip-country") ?? "";
+  const defaultCountry = ipCountry in STRIPE_COUNTRIES ? ipCountry : undefined;
 
   return (
     <div className="max-w-xl">
@@ -33,7 +38,11 @@ export default async function Payments() {
             <p className="mt-1 text-sm text-neutral-500">
               You&apos;ll be sent to Stripe to verify your details. It takes a few minutes. Lead magnets and free products work without it.
             </p>
-            <ConnectStripeButton label={creator.stripeAccountId ? "Continue setup" : "Connect with Stripe"} />
+            {creator.stripeAccountId ? (
+              <ConnectStripeButton label="Continue setup" />
+            ) : (
+              <ConnectStripeButton label="Connect with Stripe" countries={countries} defaultCountry={defaultCountry} />
+            )}
           </>
         )}
         {env.allowPlatformCharges && !creator.stripeReady && (
