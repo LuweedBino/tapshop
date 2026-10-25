@@ -9,6 +9,7 @@ import { env } from "@/lib/env";
 import { keyOwner } from "@/lib/storage";
 import { stripe } from "@/lib/stripe";
 import { RESERVED_HANDLES, SOCIALS } from "@/lib/format";
+import { BUTTON_STYLES, FONTS, LAYOUTS, THEMES } from "@/lib/design";
 import type { FormState } from "./auth";
 
 /** Accepts a storage key only if it belongs to this creator and has the expected visibility. */
@@ -24,7 +25,15 @@ const Profile = z.object({
   handle: z.string().trim().toLowerCase().regex(/^[a-z0-9_]{3,30}$/, "Handle must be 3 to 30 letters, numbers, or underscores"),
   bio: z.string().trim().max(300, "Keep your bio under 300 characters"),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
+  theme: z.enum(keys(THEMES)),
+  font: z.enum(keys(FONTS)),
+  buttonStyle: z.enum(keys(BUTTON_STYLES)),
+  layout: z.enum(keys(LAYOUTS)),
 });
+
+function keys<T extends object>(options: T) {
+  return Object.keys(options) as [Extract<keyof T, string>, ...Extract<keyof T, string>[]];
+}
 
 export async function saveProfile(_: FormState, form: FormData): Promise<FormState> {
   const creator = await requireCreator();
@@ -35,11 +44,12 @@ export async function saveProfile(_: FormState, form: FormData): Promise<FormSta
     if (RESERVED_HANDLES.has(handle) || (await db.creator.findUnique({ where: { handle } }))) return { error: "That handle is taken" };
   }
   const avatarKey = ownKey(form.get("avatarKey"), creator.id, "public");
-  if (avatarKey === undefined) return { error: "Invalid image" };
+  const bannerKey = ownKey(form.get("bannerKey"), creator.id, "public");
+  if (avatarKey === undefined || bannerKey === undefined) return { error: "Invalid image" };
   const socialLinks = Object.fromEntries(
     SOCIALS.map((k) => [k, String(form.get(`social_${k}`) ?? "").trim().slice(0, 200)]).filter(([, v]) => v),
   );
-  await db.creator.update({ where: { id: creator.id }, data: { ...parsed.data, avatarKey, socialLinks } });
+  await db.creator.update({ where: { id: creator.id }, data: { ...parsed.data, avatarKey, bannerKey, socialLinks } });
   revalidatePath(`/${creator.handle}`);
   revalidatePath(`/${handle}`);
   return { ok: "Saved" };
