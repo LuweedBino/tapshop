@@ -6,7 +6,7 @@ import { ProfileForm } from "@/components/ProfileForm";
 export default async function StoreSettings() {
   const creator = await requireCreator();
   const products = await db.product.findMany({
-    where: { creatorId: creator.id, published: true, archived: false },
+    where: { creatorId: creator.id, published: true, archived: false, pageId: null },
     orderBy: [{ position: "asc" }, { createdAt: "asc" }],
   });
   return (

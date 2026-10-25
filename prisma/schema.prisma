@@ -49,39 +49,57 @@ model Creator {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   products        Product[]
+  pages           Page[]
   orders          Order[]
   leads           Lead[]
 }
 
-model Product {
-  id          String      @id @default(cuid())
+// An extra storefront at /<handle>/<slug> with its own products. Products with no page are on the main store.
+model Page {
+  id          String    @id @default(cuid())
   creatorId   String
-  creator     Creator     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
-  type        ProductType @default(DIGITAL)
+  creator     Creator   @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  slug        String
   title       String
-  subtitle    String      @default("")
-  description String      @default("")
-  priceCents  Int         @default(0)
-  currency    String      @default("usd")
-  coverKey    String?
-  fileKey     String?
-  fileName    String?
-  url         String?
-  ctaLabel    String      @default("")
+  description String    @default("")
+  createdAt   DateTime  @default(now())
+  products    Product[]
+
+  @@unique([creatorId, slug])
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  creatorId     String
+  creator       Creator     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  type          ProductType @default(DIGITAL)
+  // Deleting a page moves its products back to the main store.
+  pageId        String?
+  page          Page?       @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  title         String
+  subtitle      String      @default("")
+  description   String      @default("")
+  priceCents    Int         @default(0)
+  currency      String      @default("usd")
+  coverKey      String?
+  fileKey       String?
+  fileName      String?
+  url           String?
+  ctaLabel      String      @default("")
   // Digital products and links can also add visitors' emails to Leads. Lead magnets always do.
-  collectEmails Boolean   @default(false)
+  collectEmails Boolean     @default(false)
   // Affiliate pages: video, extra images, extra buttons and a discount code (see lib/affiliate.ts).
-  extras      Json        @default("{}")
+  extras        Json        @default("{}")
   // Times visitors followed an affiliate page's links.
-  clicks      Int         @default(0)
-  published   Boolean     @default(true)
+  clicks        Int         @default(0)
+  published     Boolean     @default(true)
   // Archived products disappear from the store and dashboard but keep past buyers' downloads working.
-  archived    Boolean     @default(false)
-  position    Int         @default(0)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  orders      Order[]
-  leads       Lead[]
+  archived      Boolean     @default(false)
+  position      Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  orders        Order[]
+  leads         Lead[]
 
   @@index([creatorId, position])
 }

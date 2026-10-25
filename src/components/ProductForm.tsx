@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { Product, ProductType } from "@prisma/client";
+import type { Page, Product, ProductType } from "@prisma/client";
 import { saveProduct } from "@/app/actions/dashboard";
 import type { FormState } from "@/app/actions/auth";
 import { parseExtras } from "@/lib/affiliate";
@@ -16,7 +16,7 @@ const TYPES: { value: ProductType; label: string; hint: string }[] = [
   { value: "AFFILIATE", label: "Affiliate link", hint: "Recommend a product and earn a commission" },
 ];
 
-export function ProductForm({ product, initialType }: { product?: Product; initialType?: ProductType }) {
+export function ProductForm({ product, initialType, pages = [], initialPageId }: { product?: Product; initialType?: ProductType; pages?: Page[]; initialPageId?: string }) {
   const [type, setType] = useState<ProductType>(product?.type ?? initialType ?? "DIGITAL");
   const [state, action] = useActionState<FormState, FormData>(saveProduct.bind(null, product?.id ?? null), undefined);
   return (
@@ -98,6 +98,19 @@ export function ProductForm({ product, initialType }: { product?: Product; initi
               </span>
             </span>
           </label>
+        )}
+        {pages.length > 0 ? (
+          <div>
+            <label className="label" htmlFor="pageId">Show on</label>
+            <select className="input" id="pageId" name="pageId" defaultValue={product ? (product.pageId ?? "") : (initialPageId ?? "")}>
+              <option value="">Main store</option>
+              {pages.map((p) => (
+                <option key={p.id} value={p.id}>{p.title} (/{p.slug})</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <input type="hidden" name="pageId" value="" />
         )}
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" name="published" defaultChecked={product?.published ?? true} className="h-4 w-4" />

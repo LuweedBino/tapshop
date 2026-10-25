@@ -38,7 +38,9 @@ export function StoreShell({ design, fadeAt, className = "min-h-dvh", children }
 
 type HeaderCreator = Pick<Creator, "avatarKey" | "avatarStyle" | "bannerKey" | "bannerStyle" | "displayName" | "accentColor" | "bio" | "socialLinks" | "socialStyle" | "socialIconStyle" | "theme">;
 
-export function StoreHeader({ creator }: { creator: HeaderCreator }) {
+/** With `page`, the header shows that page's name and description in place of the bio. */
+export function StoreHeader({ creator, page }: { creator: HeaderCreator; page?: { title: string; description: string } }) {
+  const bio = page ? page.description : creator.bio;
   const links = parseSocialLinks(creator.socialLinks);
   const bannerStyle = parseBannerStyle(creator.bannerStyle);
   const banner = bannerSrc(bannerStyle, creator.bannerKey, creator.accentColor);
@@ -58,7 +60,8 @@ export function StoreHeader({ creator }: { creator: HeaderCreator }) {
       >
         {placement !== "inside" && <Avatar creator={creator} />}
         <h1 className={`${placement === "inside" ? "mt-1" : "mt-4"} text-2xl font-bold tracking-tight`}>{creator.displayName}</h1>
-        {creator.bio && <p className="mt-2 max-w-sm whitespace-pre-line text-[15px] leading-relaxed text-[var(--page-muted)]">{creator.bio}</p>}
+        {page && <p className="mt-1 text-lg font-semibold">{page.title}</p>}
+        {bio && <p className="mt-2 max-w-sm whitespace-pre-line text-[15px] leading-relaxed text-[var(--page-muted)]">{bio}</p>}
         {links.length > 0 && (
           <SocialLinks
             links={links}
@@ -207,6 +210,18 @@ export function ProductCard({ product, handle, layout = "card" }: { product: Pro
         <div className={BUTTON}>{defaultCta(product)}</div>
       </div>
     </Link>
+  );
+}
+
+/** The product list of the main store or of one page. */
+export function StoreProducts({ products, handle, layout }: { products: Product[]; handle: string; layout: Layout }) {
+  return (
+    <section className="mt-8 space-y-3 px-4">
+      {products.map((p) => (
+        <ProductCard key={p.id} product={p} handle={handle} layout={layout} />
+      ))}
+      {products.length === 0 && <p className="py-10 text-center text-sm text-[var(--page-muted)]">Nothing here yet. Check back soon.</p>}
+    </section>
   );
 }
 
