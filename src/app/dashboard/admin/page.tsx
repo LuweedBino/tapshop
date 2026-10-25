@@ -41,7 +41,7 @@ export default async function Admin() {
 
   return (
     <>
-      <PageHeader title="Admin" subtitle="Everyone who has signed up for TapShop, newest first. Only you can see this page." />
+      <PageHeader title="Admin" subtitle="Everyone who has signed up for TapShop, newest first. Click a name to edit or delete the account. Only you can see this page." />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         {tiles.map(([label, value]) => (
           <div key={label} className="card p-4">
@@ -72,7 +72,7 @@ export default async function Admin() {
                 return (
                   <tr key={c.id}>
                     <td className="px-4 py-3">
-                      <p className="font-medium">{c.displayName}</p>
+                      <Link href={`/dashboard/admin/creators/${c.id}`} className="font-medium underline-offset-2 hover:underline">{c.displayName}</Link>
                       <p className="text-xs text-neutral-500">{c.email}</p>
                     </td>
                     <td className="px-4 py-3">
