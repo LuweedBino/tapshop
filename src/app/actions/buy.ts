@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { captureLead, CheckoutError, startCheckout } from "@/lib/orders";
+import { captureLead, CheckoutError, countClick, startCheckout } from "@/lib/orders";
 
 export type BuyState = { error?: string } | undefined;
 
@@ -30,7 +30,9 @@ export async function optIn(productId: string, _: BuyState, form: FormData): Pro
   let next: string;
   try {
     const { lead, product } = await captureLead(productId, parsed.data);
-    next = product.type === "LINK" && product.url ? product.url : `/thanks/lead/${lead.downloadToken}`;
+    // Straight to the link: a redirect to /api/go from here would be fetched twice and count two clicks.
+    if (product.type === "AFFILIATE") await countClick(product.id);
+    next = (product.type === "LINK" || product.type === "AFFILIATE") && product.url ? product.url : `/thanks/lead/${lead.downloadToken}`;
   } catch {
     return { error: "Something went wrong, please try again" };
   }

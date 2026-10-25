@@ -6,7 +6,7 @@ export default async function NewProduct({ searchParams }: { searchParams: Promi
   return (
     <div className="max-w-2xl">
       <PageHeader title="Add to your store" />
-      <ProductForm initialType={type === "LEAD_MAGNET" || type === "LINK" ? type : "DIGITAL"} />
+      <ProductForm initialType={type === "LEAD_MAGNET" || type === "LINK" || type === "AFFILIATE" ? type : "DIGITAL"} />
     </div>
   );
 }

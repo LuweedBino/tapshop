@@ -1,0 +1,6 @@
+-- AlterEnum
+ALTER TYPE "ProductType" ADD VALUE 'AFFILIATE';
+
+-- AlterTable
+ALTER TABLE "Product" ADD COLUMN "extras" JSONB NOT NULL DEFAULT '{}',
+ADD COLUMN "clicks" INTEGER NOT NULL DEFAULT 0;
