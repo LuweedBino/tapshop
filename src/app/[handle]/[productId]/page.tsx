@@ -10,7 +10,7 @@ import { BuyForm } from "@/components/BuyForm";
 
 async function load(handle: string, productId: string) {
   const product = await db.product.findUnique({ where: { id: productId }, include: { creator: true } });
-  if (!product || !product.published || product.type === "LINK" || product.creator.handle !== handle.toLowerCase()) return null;
+  if (!product || !product.published || product.type === "LINK" || product.creator.handle !== handle.toLowerCase() || product.creator.pausedAt) return null;
   return product;
 }
 

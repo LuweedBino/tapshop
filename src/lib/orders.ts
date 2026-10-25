@@ -23,6 +23,7 @@ function stripeAccountFor(creator: { stripeAccountId: string | null; stripeReady
 export async function startCheckout(productId: string, buyer: { email: string; name: string }) {
   const product = await db.product.findUnique({ where: { id: productId }, include: { creator: true } });
   if (!product || !product.published || product.type !== "DIGITAL") throw new CheckoutError("This product is no longer available");
+  if (product.creator.pausedAt) throw new CheckoutError("This store isn't available right now");
   if (product.priceCents > 0 && !canSell(product.creator)) throw new CheckoutError("This creator is not accepting payments yet");
 
   const order = await db.order.create({
@@ -103,7 +104,7 @@ export async function confirmSession(orderId: string, sessionId: string) {
 
 export async function captureLead(productId: string, lead: { email: string; name: string }) {
   const product = await db.product.findUnique({ where: { id: productId }, include: { creator: true } });
-  if (!product || !product.published || product.type !== "LEAD_MAGNET") throw new Error("Not available");
+  if (!product || !product.published || product.type !== "LEAD_MAGNET" || product.creator.pausedAt) throw new Error("Not available");
   const row = await db.lead.upsert({
     where: { productId_email: { productId, email: lead.email } },
     update: { name: lead.name || undefined },

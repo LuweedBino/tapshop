@@ -13,12 +13,12 @@ async function load(handle: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const creator = await load((await params).handle);
-  return creator ? { title: `${creator.displayName} | TapShop`, description: creator.bio || undefined } : {};
+  return creator && !creator.pausedAt ? { title: `${creator.displayName} | TapShop`, description: creator.bio || undefined } : {};
 }
 
 export default async function StorePage({ params }: { params: Promise<{ handle: string }> }) {
   const creator = await load((await params).handle);
-  if (!creator) notFound();
+  if (!creator || creator.pausedAt) notFound();
   const design = designOf(creator);
   return (
     <StoreShell design={design}>

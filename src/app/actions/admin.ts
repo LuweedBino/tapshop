@@ -61,6 +61,15 @@ export async function adminDisconnectStripe(id: string): Promise<FormState> {
   return { ok: "Stripe disconnected. The store can't take payments until the creator connects again." };
 }
 
+export async function adminSetPaused(id: string, paused: boolean): Promise<FormState> {
+  const admin = await requireAdmin();
+  const creator = await target(id);
+  if (paused && creator.id === admin.id) return { error: "You can't pause your own account." };
+  await db.creator.update({ where: { id }, data: { pausedAt: paused ? new Date() : null } });
+  refresh(id, creator.handle);
+  return { ok: paused ? "Paused. The store is offline and can't take new sales." : "Resumed. The store is live again." };
+}
+
 export async function adminDeleteCreator(id: string, _: FormState, form: FormData): Promise<FormState> {
   const admin = await requireAdmin();
   const creator = await target(id);
