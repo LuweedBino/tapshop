@@ -79,7 +79,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
   return (
     <>
-      <PageHeader title="Admin" subtitle="Everyone who has signed up for TapShop. Click a column title to sort by it. Use the buttons under each name for quick edits, or click the name for everything else. Only you can see this page." />
+      <PageHeader title="Admin" subtitle="Everyone who has signed up for TapShop. Click a column title to sort by it. Use the buttons under each creator for quick edits, or click the name for everything else. Only you can see this page." />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         {tiles.map(([label, value]) => (
           <div key={label} className="card p-4">
@@ -99,7 +99,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                   const active = col.key === sort;
                   const next = active ? (dir === "asc" ? "desc" : "asc") : TEXT.includes(col.key) ? "asc" : "desc";
                   return (
-                    <th key={col.key} className={`px-2 py-3 font-medium ${"right" in col ? "text-right" : ""}`} aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}>
+                    <th key={col.key} className={`px-3 py-3 font-medium ${"right" in col ? "text-right" : ""}`} aria-sort={active ? (dir === "asc" ? "ascending" : "descending") : undefined}>
                       <Link
                         href={`/dashboard/admin?sort=${col.key}&dir=${next}`}
                         scroll={false}
@@ -113,39 +113,44 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                 })}
               </tr>
             </thead>
-            <tbody className="divide-y divide-neutral-100">
               {sorted.map((c) => {
                 const s = byCreator.get(c.id);
+                // One <tbody> per creator: the details row, then the buttons row under it.
                 return (
-                  <tr key={c.id}>
-                    <td className="px-2 py-3">
-                      <Link href={`/dashboard/admin/creators/${c.id}`} className="font-medium underline-offset-2 hover:underline">{c.displayName}</Link>
-                      {c.pausedAt && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Paused</span>}
-                      <p className="text-xs text-neutral-500">{c.email}</p>
-                      <QuickActions creator={c} isSelf={c.id === admin.id} />
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-3">
-                      <Link href={`/${c.handle}`} target="_blank" className="font-medium text-neutral-700 underline-offset-2 hover:underline">/{c.handle} ↗</Link>
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-3">
-                      {c.stripeReady ? (
-                        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" />Connected</span>
-                      ) : c.stripeAccountId ? (
-                        <span className="inline-flex items-center gap-1.5 text-amber-700"><span className="h-2 w-2 rounded-full bg-amber-400" />Started</span>
-                      ) : (
-                        <span className="text-neutral-400">Not started</span>
-                      )}
-                    </td>
-                    <td className="px-2 py-3 text-right tabular-nums">{c._count.products}</td>
-                    <td className="px-2 py-3 text-right tabular-nums">{c._count.leads}</td>
-                    <td className="whitespace-nowrap px-2 py-3 text-right tabular-nums">
-                      {s ? <>{s.totals.join(" · ")} <span className="text-xs text-neutral-500">({s.count})</span></> : <span className="text-neutral-400">–</span>}
-                    </td>
-                    <td className="whitespace-nowrap px-2 py-3 text-neutral-500">{date(c.createdAt)}</td>
-                  </tr>
+                  <tbody key={c.id} className="border-t border-neutral-100 first-of-type:border-t-0">
+                    <tr>
+                      <td className="px-3 pb-2 pt-3">
+                        <Link href={`/dashboard/admin/creators/${c.id}`} className="font-medium underline-offset-2 hover:underline">{c.displayName}</Link>
+                        {c.pausedAt && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Paused</span>}
+                        <p className="text-xs text-neutral-500">{c.email}</p>
+                      </td>
+                      <td className="whitespace-nowrap px-3 pb-2 pt-3">
+                        <Link href={`/${c.handle}`} target="_blank" className="font-medium text-neutral-700 underline-offset-2 hover:underline">/{c.handle} ↗</Link>
+                      </td>
+                      <td className="whitespace-nowrap px-3 pb-2 pt-3">
+                        {c.stripeReady ? (
+                          <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" />Connected</span>
+                        ) : c.stripeAccountId ? (
+                          <span className="inline-flex items-center gap-1.5 text-amber-700"><span className="h-2 w-2 rounded-full bg-amber-400" />Started</span>
+                        ) : (
+                          <span className="text-neutral-400">Not started</span>
+                        )}
+                      </td>
+                      <td className="px-3 pb-2 pt-3 text-right tabular-nums">{c._count.products}</td>
+                      <td className="px-3 pb-2 pt-3 text-right tabular-nums">{c._count.leads}</td>
+                      <td className="whitespace-nowrap px-3 pb-2 pt-3 text-right tabular-nums">
+                        {s ? <>{s.totals.join(" · ")} <span className="text-xs text-neutral-500">({s.count})</span></> : <span className="text-neutral-400">–</span>}
+                      </td>
+                      <td className="whitespace-nowrap px-3 pb-2 pt-3 text-neutral-500">{date(c.createdAt)}</td>
+                    </tr>
+                    <tr>
+                      <td colSpan={COLUMNS.length} className="px-3 pb-3">
+                        <QuickActions creator={c} isSelf={c.id === admin.id} />
+                      </td>
+                    </tr>
+                  </tbody>
                 );
               })}
-            </tbody>
           </table>
         </div>
       )}
