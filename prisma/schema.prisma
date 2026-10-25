@@ -27,6 +27,8 @@ model Creator {
   displayName     String
   bio             String    @default("")
   avatarKey       String?
+  // Profile photo edits (zoom, focus point, filter, shape...); see src/lib/avatar.ts.
+  avatarStyle     Json      @default("{}")
   accentColor     String    @default("#7c3aed")
   bannerKey       String?
   // Storefront design choices; valid values live in src/lib/design.ts.
