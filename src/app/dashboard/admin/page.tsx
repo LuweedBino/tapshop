@@ -7,7 +7,9 @@ import { QuickActions } from "@/components/AdminCreatorForms";
 
 export const dynamic = "force-dynamic";
 
-const date = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+// "Oct 25" this year, "Oct 25, 2025" otherwise, to keep the table narrow.
+const date = (d: Date) =>
+  d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: d.getFullYear() === new Date().getFullYear() ? undefined : "numeric" });
 
 export default async function Admin() {
   const admin = await requireAdmin();
@@ -58,13 +60,13 @@ export default async function Admin() {
           <table className="w-full text-left text-sm">
             <thead className="border-b border-neutral-200 text-xs text-neutral-500">
               <tr>
-                <th className="px-4 py-3 font-medium">Creator</th>
-                <th className="px-4 py-3 font-medium">Store</th>
-                <th className="px-4 py-3 font-medium">Stripe</th>
-                <th className="px-4 py-3 text-right font-medium">Products</th>
-                <th className="px-4 py-3 text-right font-medium">Leads</th>
-                <th className="px-4 py-3 text-right font-medium">Sales</th>
-                <th className="px-4 py-3 font-medium">Joined</th>
+                <th className="px-3 py-3 font-medium">Creator</th>
+                <th className="px-3 py-3 font-medium">Store</th>
+                <th className="px-3 py-3 font-medium">Stripe</th>
+                <th className="px-3 py-3 text-right font-medium">Products</th>
+                <th className="px-3 py-3 text-right font-medium">Leads</th>
+                <th className="px-3 py-3 text-right font-medium">Sales</th>
+                <th className="px-3 py-3 font-medium">Joined</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100">
@@ -72,16 +74,16 @@ export default async function Admin() {
                 const s = byCreator.get(c.id);
                 return (
                   <tr key={c.id}>
-                    <td className="px-4 py-3">
+                    <td className="px-3 py-3">
                       <Link href={`/dashboard/admin/creators/${c.id}`} className="font-medium underline-offset-2 hover:underline">{c.displayName}</Link>
                       {c.pausedAt && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Paused</span>}
                       <p className="text-xs text-neutral-500">{c.email}</p>
                       <QuickActions creator={c} isSelf={c.id === admin.id} />
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3">
+                    <td className="whitespace-nowrap px-3 py-3">
                       <Link href={`/${c.handle}`} target="_blank" className="font-medium text-neutral-700 underline-offset-2 hover:underline">/{c.handle} ↗</Link>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3">
+                    <td className="whitespace-nowrap px-3 py-3">
                       {c.stripeReady ? (
                         <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-green-500" />Connected</span>
                       ) : c.stripeAccountId ? (
@@ -90,12 +92,12 @@ export default async function Admin() {
                         <span className="text-neutral-400">Not started</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">{c._count.products}</td>
-                    <td className="px-4 py-3 text-right tabular-nums">{c._count.leads}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
+                    <td className="px-3 py-3 text-right tabular-nums">{c._count.products}</td>
+                    <td className="px-3 py-3 text-right tabular-nums">{c._count.leads}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
                       {s ? <>{s.totals.join(" · ")} <span className="text-xs text-neutral-500">({s.count})</span></> : <span className="text-neutral-400">–</span>}
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-neutral-500">{date(c.createdAt)}</td>
+                    <td className="whitespace-nowrap px-3 py-3 text-neutral-500">{date(c.createdAt)}</td>
                   </tr>
                 );
               })}
