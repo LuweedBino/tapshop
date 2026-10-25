@@ -11,12 +11,17 @@ type Props = {
   accept?: string;
   label: string;
   hint?: string;
+  onChange?: (key: string) => void;
 };
 
 // Uploads straight to storage (S3 presigned URL, Vercel Blob, or the local dev endpoint) so
 // large files never pass through a server action, then submits only the storage key.
-export function FileUpload({ name, visibility, initialKey, initialName, accept, label, hint }: Props) {
-  const [key, setKey] = useState(initialKey ?? "");
+export function FileUpload({ name, visibility, initialKey, initialName, accept, label, hint, onChange }: Props) {
+  const [key, setKeyState] = useState(initialKey ?? "");
+  const setKey = (k: string) => {
+    setKeyState(k);
+    onChange?.(k);
+  };
   const [fileName, setFileName] = useState(initialName ?? "");
   const [status, setStatus] = useState<"idle" | "uploading" | "error">("idle");
   const [error, setError] = useState("");

@@ -28,6 +28,12 @@ model Creator {
   bio             String    @default("")
   avatarKey       String?
   accentColor     String    @default("#7c3aed")
+  bannerKey       String?
+  // Storefront design choices; valid values live in src/lib/design.ts.
+  theme           String    @default("soft")
+  font            String    @default("modern")
+  buttonStyle     String    @default("rounded")
+  layout          String    @default("card")
   socialLinks     Json      @default("{}")
   stripeAccountId String?   @unique
   stripeReady     Boolean   @default(false)
