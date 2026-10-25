@@ -63,7 +63,14 @@ export type IconStyle = {
   hover: keyof typeof ICON_HOVERS;
   entrance: keyof typeof ICON_ENTRANCES;
   motion: keyof typeof ICON_MOTIONS;
+  // Animation speed multipliers: 1 is normal, 2 twice as fast, 0.5 half as fast.
+  hoverSpeed: number;
+  entranceSpeed: number;
+  motionSpeed: number;
 };
+
+export const SPEED_MIN = 0.25;
+export const SPEED_MAX = 3;
 
 export const DEFAULT_ICON_STYLE: IconStyle = {
   shape: "circle",
@@ -74,7 +81,20 @@ export const DEFAULT_ICON_STYLE: IconStyle = {
   hover: "lift",
   entrance: "none",
   motion: "none",
+  hoverSpeed: 1,
+  entranceSpeed: 1,
+  motionSpeed: 1,
 };
+
+const speed = (v: unknown) => {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isFinite(n) ? Math.min(SPEED_MAX, Math.max(SPEED_MIN, n)) : 1;
+};
+
+/** CSS variables the social link animations read their speed from. */
+export function iconSpeedVars(s: IconStyle): CSSProperties {
+  return { "--si-hs": s.hoverSpeed, "--si-es": s.entranceSpeed, "--si-ms": s.motionSpeed } as CSSProperties;
+}
 
 const oneOf = <T extends object>(options: T, v: unknown, fallback: keyof T) => (typeof v === "string" && Object.hasOwn(options, v) ? (v as keyof T) : fallback);
 
@@ -90,6 +110,9 @@ export function parseIconStyle(raw: unknown): IconStyle {
     hover: oneOf(ICON_HOVERS, o.hover, d.hover),
     entrance: oneOf(ICON_ENTRANCES, o.entrance, d.entrance),
     motion: oneOf(ICON_MOTIONS, o.motion, d.motion),
+    hoverSpeed: o.hoverSpeed === undefined ? 1 : speed(o.hoverSpeed),
+    entranceSpeed: o.entranceSpeed === undefined ? 1 : speed(o.entranceSpeed),
+    motionSpeed: o.motionSpeed === undefined ? 1 : speed(o.motionSpeed),
   };
 }
 

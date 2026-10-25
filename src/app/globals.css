@@ -27,17 +27,18 @@ body {
   }
 }
 
-/* Social link animations: entrance on the outer wrapper, motion in the middle, hover on the link. */
-.si-link { transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease; }
+/* Social link animations: entrance on the outer wrapper, motion in the middle, hover on the link.
+   Speeds come from --si-hs (hover), --si-es (entrance) and --si-ms (motion); 2 means twice as fast. */
+.si-link { --d: calc(0.2s / var(--si-hs, 1)); transition: transform var(--d) ease, box-shadow var(--d) ease, opacity var(--d) ease; }
 .si-hover-lift:hover { transform: translateY(-3px); }
 .si-hover-grow:hover { transform: scale(1.15); }
 .si-hover-glow:hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--si) 25%, transparent), 0 0 18px color-mix(in srgb, var(--si) 60%, transparent); }
-.si-hover-wiggle:hover { animation: si-wiggle 0.5s ease; }
-.si-in-fade { animation: si-fade 0.5s ease both; animation-delay: calc(var(--i) * 70ms); }
-.si-in-pop { animation: si-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: calc(var(--i) * 70ms); }
-.si-in-slide { animation: si-slide 0.5s ease both; animation-delay: calc(var(--i) * 70ms); }
-.si-motion-float { animation: si-float 3s ease-in-out infinite; animation-delay: calc(var(--i) * -0.4s); }
-.si-motion-pulse { animation: si-pulse 2.4s ease-in-out infinite; animation-delay: calc(var(--i) * 0.15s); }
+.si-hover-wiggle:hover { animation: si-wiggle calc(0.5s / var(--si-hs, 1)) ease; }
+.si-in-fade { animation: si-fade calc(0.5s / var(--si-es, 1)) ease both; animation-delay: calc(var(--i) * 70ms / var(--si-es, 1)); }
+.si-in-pop { animation: si-pop calc(0.45s / var(--si-es, 1)) cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: calc(var(--i) * 70ms / var(--si-es, 1)); }
+.si-in-slide { animation: si-slide calc(0.5s / var(--si-es, 1)) ease both; animation-delay: calc(var(--i) * 70ms / var(--si-es, 1)); }
+.si-motion-float { animation: si-float calc(3s / var(--si-ms, 1)) ease-in-out infinite; animation-delay: calc(var(--i) * -0.4s / var(--si-ms, 1)); }
+.si-motion-pulse { animation: si-pulse calc(2.4s / var(--si-ms, 1)) ease-in-out infinite; animation-delay: calc(var(--i) * 0.15s / var(--si-ms, 1)); }
 @keyframes si-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
 @keyframes si-fade { from { opacity: 0; } }
 @keyframes si-pop { from { opacity: 0; transform: scale(0.3); } }

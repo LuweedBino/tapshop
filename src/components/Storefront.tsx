@@ -3,7 +3,7 @@ import type { Creator, Product } from "@prisma/client";
 import { fileUrl, money } from "@/lib/format";
 import { parseSocialLinks, PLATFORMS, socialHref, type SocialLink } from "@/lib/socials";
 import { designVars, onColor, socialStyleOf, type Design, type Layout, type SocialStyle } from "@/lib/design";
-import { iconButtonStyle, iconGlyphSize, parseIconStyle, type IconStyle } from "@/lib/iconStyle";
+import { iconButtonStyle, iconGlyphSize, iconSpeedVars, parseIconStyle, type IconStyle } from "@/lib/iconStyle";
 import { SocialIcon } from "./SocialIcon";
 import { FONT_CLASS } from "@/lib/fonts";
 import { AVATAR_SIZES, avatarFrameStyle, avatarImageStyle, parseAvatarStyle } from "@/lib/avatar";
@@ -68,7 +68,7 @@ export function SocialLinks({ links, style, iconStyle, accent, dark }: { links: 
   const iconOnly = style === "icons";
   const base = "si-link flex items-center justify-center border border-[var(--card-border)] bg-[var(--card)] font-semibold text-[var(--card-text)]";
   return (
-    <nav className={`mt-4 flex flex-wrap justify-center ${iconOnly ? "gap-2.5" : "gap-2"}`}>
+    <nav className={`mt-4 flex flex-wrap justify-center ${iconOnly ? "gap-2.5" : "gap-2"}`} style={iconSpeedVars(iconStyle)}>
       {links.map((l, i) => {
         const label = PLATFORMS[l.kind].label;
         const href = socialHref(l);
