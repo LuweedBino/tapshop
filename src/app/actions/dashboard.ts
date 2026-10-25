@@ -8,8 +8,9 @@ import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { keyOwner } from "@/lib/storage";
 import { stripe } from "@/lib/stripe";
-import { RESERVED_HANDLES, SOCIALS } from "@/lib/format";
-import { BUTTON_STYLES, FONTS, LAYOUTS, THEMES } from "@/lib/design";
+import { RESERVED_HANDLES } from "@/lib/format";
+import { parseSocialLinks, socialLinkError, type SocialLink } from "@/lib/socials";
+import { BUTTON_STYLES, FONTS, LAYOUTS, SOCIAL_STYLES, THEMES } from "@/lib/design";
 import { parseAvatarStyle, type AvatarStyle } from "@/lib/avatar";
 import type { FormState } from "./auth";
 
@@ -30,6 +31,7 @@ const Profile = z.object({
   font: z.enum(keys(FONTS)),
   buttonStyle: z.enum(keys(BUTTON_STYLES)),
   layout: z.enum(keys(LAYOUTS)),
+  socialStyle: z.enum(keys(SOCIAL_STYLES)),
 });
 
 function keys<T extends object>(options: T) {
@@ -53,9 +55,16 @@ export async function saveProfile(_: FormState, form: FormData): Promise<FormSta
   } catch {
     return { error: "Invalid photo settings" };
   }
-  const socialLinks = Object.fromEntries(
-    SOCIALS.map((k) => [k, String(form.get(`social_${k}`) ?? "").trim().slice(0, 200)]).filter(([, v]) => v),
-  );
+  let socialLinks: SocialLink[];
+  try {
+    socialLinks = parseSocialLinks(JSON.parse(String(form.get("socialLinks") ?? "[]")));
+  } catch {
+    return { error: "Invalid social links" };
+  }
+  for (const l of socialLinks) {
+    const error = socialLinkError(l);
+    if (error) return { error };
+  }
   await db.creator.update({ where: { id: creator.id }, data: { ...parsed.data, avatarKey, avatarStyle, bannerKey, socialLinks } });
   revalidatePath(`/${creator.handle}`);
   revalidatePath(`/${handle}`);

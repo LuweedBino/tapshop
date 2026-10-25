@@ -37,6 +37,7 @@ model Creator {
   buttonStyle     String    @default("rounded")
   layout          String    @default("card")
   socialLinks     Json      @default("{}")
+  socialStyle     String    @default("text")
   stripeAccountId String?   @unique
   stripeReady     Boolean   @default(false)
   createdAt       DateTime  @default(now())

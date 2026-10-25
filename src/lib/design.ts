@@ -30,7 +30,18 @@ export const LAYOUTS = {
   compact: { label: "Buttons", hint: "One slim row per product" },
 } as const;
 
+export const SOCIAL_STYLES = {
+  text: { label: "Text", hint: "Buttons with the name" },
+  icons: { label: "Icons", hint: "Round icon buttons" },
+  both: { label: "Icons + text", hint: "Icon beside the name" },
+} as const;
+
 export type Theme = keyof typeof THEMES;
+export type SocialStyle = keyof typeof SOCIAL_STYLES;
+
+export function socialStyleOf(value: string): SocialStyle {
+  return pick(SOCIAL_STYLES, value);
+}
 export type Font = keyof typeof FONTS;
 export type ButtonStyle = keyof typeof BUTTON_STYLES;
 export type Layout = keyof typeof LAYOUTS;

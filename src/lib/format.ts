@@ -10,5 +10,3 @@ export const RESERVED_HANDLES = new Set([
   "api", "dashboard", "login", "signup", "logout", "thanks", "d", "admin", "settings", "about", "pricing", "_next",
 ]);
 
-export const SOCIALS = ["instagram", "tiktok", "youtube", "x", "website"] as const;
-export type Socials = Partial<Record<(typeof SOCIALS)[number], string>>;
