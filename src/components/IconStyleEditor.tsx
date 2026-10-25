@@ -9,6 +9,8 @@ import {
   ICON_MOTIONS,
   ICON_SHAPES,
   ICON_SIZES,
+  SPEED_MAX,
+  SPEED_MIN,
   type IconStyle,
 } from "@/lib/iconStyle";
 import { Segmented } from "./Segmented";
@@ -49,8 +51,11 @@ export function IconStyleEditor({ value, onChange }: { value: IconStyle; onChang
       </div>
       <Segmented label="Icon size" options={ICON_SIZES} value={value.size} onChange={(v) => set("size", v)} />
       <Segmented label="On hover" options={ICON_HOVERS} value={value.hover} onChange={(v) => set("hover", v)} />
+      {value.hover !== "none" && <Speed value={value.hoverSpeed} onChange={(v) => set("hoverSpeed", v)} />}
       <Segmented label="When the page opens" options={ICON_ENTRANCES} value={value.entrance} onChange={(v) => set("entrance", v)} />
+      {value.entrance !== "none" && <Speed value={value.entranceSpeed} onChange={(v) => set("entranceSpeed", v)} />}
       <Segmented label="Always-on motion" options={ICON_MOTIONS} value={value.motion} onChange={(v) => set("motion", v)} />
+      {value.motion !== "none" && <Speed value={value.motionSpeed} onChange={(v) => set("motionSpeed", v)} />}
       {reduced && (
         <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-900">
           Animations are turned off on this device, so your store won&apos;t move when <em>you</em> open it. The preview still shows them, and
@@ -59,5 +64,16 @@ export function IconStyleEditor({ value, onChange }: { value: IconStyle; onChang
         </p>
       )}
     </div>
+  );
+}
+
+function Speed({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <label className="-mt-2 flex items-center gap-3 text-xs text-neutral-500">
+      <span className="w-10 shrink-0">Slower</span>
+      <input type="range" min={SPEED_MIN} max={SPEED_MAX} step={0.25} value={value} onChange={(e) => onChange(Number(e.target.value))} className="min-w-0 flex-1 accent-neutral-900" aria-label="Speed" />
+      <span className="w-10 shrink-0 text-right">Faster</span>
+      <span className="w-10 shrink-0 text-right font-semibold text-neutral-800">{value}×</span>
+    </label>
   );
 }
