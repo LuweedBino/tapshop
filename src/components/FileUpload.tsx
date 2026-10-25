@@ -56,7 +56,7 @@ export function FileUpload({ name, visibility, initialKey, initialName, accept, 
 
   return (
     <div>
-      <span className="label">{label}</span>
+      {label && <span className="label">{label}</span>}
       <input type="hidden" name={name} value={key} />
       {!isImage && <input type="hidden" name={`${name}Name`} value={fileName} />}
       <div className="flex items-center gap-3">

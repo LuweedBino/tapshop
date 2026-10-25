@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { priceLabel } from "@/components/Storefront";
 import { DeleteButton } from "@/components/DeleteButton";
 
-const TYPE_LABEL = { DIGITAL: "Digital product", LEAD_MAGNET: "Lead magnet", LINK: "Link" } as const;
+const TYPE_LABEL = { DIGITAL: "Digital product", LEAD_MAGNET: "Lead magnet", LINK: "Link", AFFILIATE: "Affiliate link" } as const;
 
 export default async function Products() {
   const creator = await requireCreator();
@@ -43,7 +43,8 @@ export default async function Products() {
                 <p className="truncate font-semibold">{p.title}</p>
                 <p className="mt-0.5 text-xs text-neutral-500">
                   {TYPE_LABEL[p.type]}
-                  {p.type !== "LINK" && <> · {priceLabel(p)}</>}
+                  {priceLabel(p) && p.type !== "LINK" && <> · {priceLabel(p)}</>}
+                  {p.type === "AFFILIATE" && <> · {p.clicks} {p.clicks === 1 ? "click" : "clicks"}</>}
                   {p.type === "DIGITAL" && <> · {p._count.orders} sold</>}
                   {(p.type === "LEAD_MAGNET" || p.collectEmails) && <> · {p._count.leads} leads</>}
                 </p>

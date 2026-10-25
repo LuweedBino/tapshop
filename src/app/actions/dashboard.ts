@@ -14,6 +14,7 @@ import { BUTTON_STYLES, FONTS, LAYOUTS, SOCIAL_STYLES, THEMES } from "@/lib/desi
 import { parseBannerStyle, type BannerStyle } from "@/lib/banner";
 import { parseAvatarStyle, type AvatarStyle } from "@/lib/avatar";
 import { parseIconStyle, type IconStyle } from "@/lib/iconStyle";
+import { MAX_BUTTONS, MAX_GALLERY, normalizeUrl, videoEmbed, type AffiliateExtras } from "@/lib/affiliate";
 import type { FormState } from "./auth";
 
 /** Accepts a storage key only if it belongs to this creator and has the expected visibility. */
@@ -86,7 +87,7 @@ export async function saveProfile(_: FormState, form: FormData): Promise<FormSta
 }
 
 const ProductInput = z.object({
-  type: z.enum(["DIGITAL", "LEAD_MAGNET", "LINK"]),
+  type: z.enum(["DIGITAL", "LEAD_MAGNET", "LINK", "AFFILIATE"]),
   title: z.string().trim().min(1, "Give it a title").max(120),
   subtitle: z.string().trim().max(200).default(""),
   description: z.string().trim().max(5000).default(""),
@@ -95,7 +96,30 @@ const ProductInput = z.object({
   url: z.string().trim().max(2000).default(""),
   published: z.string().optional(),
   collectEmails: z.string().optional(),
+  video: z.string().trim().max(500).default(""),
+  code: z.string().trim().max(40).default(""),
 });
+
+/** The video, extra images, extra buttons and discount code of an affiliate page. */
+function affiliateExtras(form: FormData, d: z.infer<typeof ProductInput>, creatorId: string): AffiliateExtras | { error: string } {
+  if (d.video && !videoEmbed(d.video)) return { error: "Use a YouTube, Vimeo or Loom link for the video" };
+  const gallery: string[] = [];
+  for (const value of form.getAll("galleryKey").slice(0, MAX_GALLERY)) {
+    const key = ownKey(value, creatorId, "public");
+    if (key === undefined) return { error: "Invalid upload" };
+    if (key) gallery.push(key);
+  }
+  const labels = form.getAll("buttonLabel").map((v) => String(v).trim().slice(0, 60));
+  const urls = form.getAll("buttonUrl").map((v) => String(v));
+  const buttons = [];
+  for (let i = 0; i < Math.min(labels.length, MAX_BUTTONS); i++) {
+    if (!labels[i] && !urls[i]?.trim()) continue;
+    const url = normalizeUrl(urls[i] ?? "");
+    if (!labels[i] || !url) return { error: `Give button ${i + 1} both a label and a valid link` };
+    buttons.push({ label: labels[i], url });
+  }
+  return { gallery, video: d.video, buttons, code: d.code };
+}
 
 export async function saveProduct(productId: string | null, _: FormState, form: FormData): Promise<FormState> {
   const creator = await requireCreator();
@@ -109,13 +133,12 @@ export async function saveProduct(productId: string | null, _: FormState, form: 
   if (priceCents > 0 && priceCents < 50) return { error: "Paid products must cost at least $0.50" };
 
   let url: string | null = null;
-  if (d.type === "LINK") {
-    try {
-      url = new URL(/^https?:\/\//.test(d.url) ? d.url : `https://${d.url}`).toString();
-    } catch {
-      return { error: "Enter a valid link" };
-    }
+  if (d.type === "LINK" || d.type === "AFFILIATE") {
+    url = normalizeUrl(d.url);
+    if (!url) return { error: d.type === "AFFILIATE" ? "Enter your affiliate link" : "Enter a valid link" };
   }
+  const extras = d.type === "AFFILIATE" ? affiliateExtras(form, d, creator.id) : null;
+  if (extras && "error" in extras) return { error: extras.error };
   const coverKey = ownKey(form.get("coverKey"), creator.id, "public");
   const fileKey = ownKey(form.get("fileKey"), creator.id, "private");
   if (coverKey === undefined || fileKey === undefined) return { error: "Invalid upload" };
@@ -130,10 +153,11 @@ export async function saveProduct(productId: string | null, _: FormState, form: 
     ctaLabel: d.ctaLabel,
     url,
     coverKey: d.type === "LINK" ? null : coverKey,
-    fileKey: d.type === "LINK" ? null : fileKey,
+    fileKey: d.type === "LINK" || d.type === "AFFILIATE" ? null : fileKey,
     fileName: fileKey ? String(form.get("fileKeyName") ?? "").slice(0, 200) || "download" : null,
     published: d.published === "on",
     collectEmails: d.type !== "LEAD_MAGNET" && d.collectEmails === "on",
+    extras: extras ?? {},
   };
 
   if (productId) {

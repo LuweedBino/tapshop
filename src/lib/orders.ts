@@ -112,10 +112,14 @@ function saveLead(product: { id: string; creatorId: string }, lead: { email: str
   });
 }
 
-/** A lead magnet sign-up, or the email step in front of a link that collects emails. */
+export async function countClick(productId: string) {
+  await db.product.update({ where: { id: productId }, data: { clicks: { increment: 1 } } });
+}
+
+/** A lead magnet sign-up, or the email step in front of a link or affiliate page that collects emails. */
 export async function captureLead(productId: string, lead: { email: string; name: string }) {
   const product = await db.product.findUnique({ where: { id: productId }, include: { creator: true } });
-  const collects = product?.type === "LEAD_MAGNET" || (product?.type === "LINK" && product.collectEmails);
+  const collects = product?.type === "LEAD_MAGNET" || ((product?.type === "LINK" || product?.type === "AFFILIATE") && product.collectEmails);
   if (!product || !product.published || !collects || product.creator.pausedAt) throw new Error("Not available");
   const row = await saveLead(product, lead);
   if (product.type === "LEAD_MAGNET" && product.fileKey) {

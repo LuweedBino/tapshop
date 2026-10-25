@@ -11,6 +11,7 @@ enum ProductType {
   DIGITAL
   LEAD_MAGNET
   LINK
+  AFFILIATE
 }
 
 enum OrderStatus {
@@ -69,6 +70,10 @@ model Product {
   ctaLabel    String      @default("")
   // Digital products and links can also add visitors' emails to Leads. Lead magnets always do.
   collectEmails Boolean   @default(false)
+  // Affiliate pages: video, extra images, extra buttons and a discount code (see lib/affiliate.ts).
+  extras      Json        @default("{}")
+  // Times visitors followed an affiliate page's links.
+  clicks      Int         @default(0)
   published   Boolean     @default(true)
   // Archived products disappear from the store and dashboard but keep past buyers' downloads working.
   archived    Boolean     @default(false)

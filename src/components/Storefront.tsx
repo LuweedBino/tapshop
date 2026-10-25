@@ -128,6 +128,7 @@ export function SocialLinks({ links, style, iconStyle, accent, dark }: { links: 
 }
 
 export function priceLabel(p: Pick<Product, "type" | "priceCents" | "currency">) {
+  if (p.type === "AFFILIATE") return "";
   return p.type === "LEAD_MAGNET" || p.priceCents === 0 ? "Free" : money(p.priceCents, p.currency);
 }
 
@@ -135,6 +136,7 @@ export function defaultCta(p: Pick<Product, "type" | "priceCents" | "ctaLabel">)
   if (p.ctaLabel) return p.ctaLabel;
   if (p.type === "LEAD_MAGNET") return "Get it free";
   if (p.type === "LINK") return "Open";
+  if (p.type === "AFFILIATE") return "Shop now";
   return p.priceCents === 0 ? "Get it free" : "Buy now";
 }
 
@@ -148,7 +150,7 @@ function Thumb({ product, className }: { product: Product; className: string }) 
     <img src={cover} alt="" className={`object-cover ${className}`} />
   ) : (
     <div className={`flex items-center justify-center bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] text-2xl text-[var(--accent)] ${className}`}>
-      {product.type === "LEAD_MAGNET" ? "✉" : "⬇"}
+      {product.type === "LEAD_MAGNET" ? "✉" : product.type === "AFFILIATE" ? "★" : "⬇"}
     </div>
   );
 }
@@ -175,7 +177,7 @@ export function ProductCard({ product, handle, layout = "card" }: { product: Pro
       <Link href={href} className={`${CARD} flex items-center gap-3 p-2 pr-4`}>
         <Thumb product={product} className="h-12 w-12 shrink-0 rounded-[calc(var(--card-radius)*0.7)]" />
         <span className="min-w-0 flex-1 truncate font-semibold">{product.title}</span>
-        <span className="shrink-0 text-sm font-bold text-[var(--accent)]">{priceLabel(product)}</span>
+        {priceLabel(product) && <span className="shrink-0 text-sm font-bold text-[var(--accent)]">{priceLabel(product)}</span>}
       </Link>
     );
   }
@@ -198,7 +200,7 @@ export function ProductCard({ product, handle, layout = "card" }: { product: Pro
         <div className="min-w-0 flex-1">
           <h2 className="font-semibold leading-snug">{product.title}</h2>
           {product.subtitle && <p className="mt-0.5 line-clamp-2 text-sm text-[var(--card-muted)]">{product.subtitle}</p>}
-          <p className="mt-1.5 text-sm font-bold text-[var(--accent)]">{priceLabel(product)}</p>
+          {priceLabel(product) && <p className="mt-1.5 text-sm font-bold text-[var(--accent)]">{priceLabel(product)}</p>}
         </div>
       </div>
       <div className="px-4 pb-4">
