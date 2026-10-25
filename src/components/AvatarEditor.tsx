@@ -12,6 +12,7 @@ import {
   type AvatarStyle,
 } from "@/lib/avatar";
 import { fileUrl } from "@/lib/format";
+import { Segmented } from "./Segmented";
 
 const EDITOR_PX = 176;
 
@@ -93,26 +94,5 @@ function Slider({ label, min, max, step, value, display, onChange }: { label: st
       </span>
       <input type="range" min={min} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-neutral-900" />
     </label>
-  );
-}
-
-function Segmented<K extends string>({ label, options, value, onChange }: { label: string; options: Record<K, { label: string }>; value: K; onChange: (v: K) => void }) {
-  return (
-    <fieldset>
-      <legend className="label">{label}</legend>
-      <div className="flex flex-wrap gap-2">
-        {(Object.keys(options) as K[]).map((k) => (
-          <button
-            key={k}
-            type="button"
-            aria-pressed={value === k}
-            onClick={() => onChange(k)}
-            className={`rounded-full border px-3.5 py-1.5 text-sm font-medium transition ${value === k ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300 hover:border-neutral-500"}`}
-          >
-            {options[k].label}
-          </button>
-        ))}
-      </div>
-    </fieldset>
   );
 }

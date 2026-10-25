@@ -26,3 +26,24 @@ body {
     @apply rounded-2xl border border-neutral-200 bg-white p-5;
   }
 }
+
+/* Social link animations: entrance on the outer wrapper, motion in the middle, hover on the link. */
+.si-link { transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease; }
+.si-hover-lift:hover { transform: translateY(-3px); }
+.si-hover-grow:hover { transform: scale(1.15); }
+.si-hover-glow:hover { box-shadow: 0 0 0 3px color-mix(in srgb, var(--si) 25%, transparent), 0 0 18px color-mix(in srgb, var(--si) 60%, transparent); }
+.si-hover-wiggle:hover { animation: si-wiggle 0.5s ease; }
+.si-in-fade { animation: si-fade 0.5s ease both; animation-delay: calc(var(--i) * 70ms); }
+.si-in-pop { animation: si-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both; animation-delay: calc(var(--i) * 70ms); }
+.si-in-slide { animation: si-slide 0.5s ease both; animation-delay: calc(var(--i) * 70ms); }
+.si-motion-float { animation: si-float 3s ease-in-out infinite; animation-delay: calc(var(--i) * -0.4s); }
+.si-motion-pulse { animation: si-pulse 2.4s ease-in-out infinite; animation-delay: calc(var(--i) * 0.15s); }
+@keyframes si-wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-12deg); } 75% { transform: rotate(12deg); } }
+@keyframes si-fade { from { opacity: 0; } }
+@keyframes si-pop { from { opacity: 0; transform: scale(0.3); } }
+@keyframes si-slide { from { opacity: 0; transform: translateY(14px); } }
+@keyframes si-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes si-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) {
+  .si-link, [class*="si-in-"], [class*="si-motion-"] { animation: none !important; transition: none !important; }
+}

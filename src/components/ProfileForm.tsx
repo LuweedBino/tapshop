@@ -12,6 +12,8 @@ import { AvatarEditor } from "./AvatarEditor";
 import { FileUpload } from "./FileUpload";
 import { SocialIcon } from "./SocialIcon";
 import { SocialLinksEditor } from "./SocialLinksEditor";
+import { IconStyleEditor } from "./IconStyleEditor";
+import { parseIconStyle, type IconStyle } from "@/lib/iconStyle";
 import { ProductCard, StoreFooter, StoreHeader, StoreShell } from "./Storefront";
 import { Submit } from "./Submit";
 
@@ -28,6 +30,7 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
   const [showPreview, setShowPreview] = useState(false);
   const [socialLinks, setSocialLinks] = useState<SocialLink[]>(parseSocialLinks(creator.socialLinks));
   const [socialStyle, setSocialStyle] = useState<SocialStyle>(socialStyleOf(creator.socialStyle));
+  const [iconStyle, setIconStyle] = useState<IconStyle>(parseIconStyle(creator.socialIconStyle));
   const set = <K extends keyof Design>(k: K, v: Design[K]) => setDesign((d) => ({ ...d, [k]: v }));
 
   const preview = (
@@ -35,7 +38,7 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
       design={design}
       handle={creator.handle}
       products={products}
-      creator={{ avatarKey: avatarKey || null, avatarStyle, bannerKey: bannerKey || null, displayName: displayName || " ", bio, accentColor: design.accentColor, socialLinks: socialLinks.filter((l) => l.value.trim()), socialStyle }}
+      creator={{ avatarKey: avatarKey || null, avatarStyle, bannerKey: bannerKey || null, displayName: displayName || " ", bio, accentColor: design.accentColor, socialLinks: socialLinks.filter((l) => l.value.trim()), socialStyle, socialIconStyle: iconStyle, theme: design.theme }}
     />
   );
 
@@ -116,6 +119,7 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
               </span>
             )}
           </Choice>
+          <IconStyleEditor value={iconStyle} onChange={setIconStyle} />
         </div>
         <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
           <Submit>Save changes</Submit>
@@ -173,7 +177,8 @@ function Preview({ design, handle, products, creator }: {
     <div className="h-[600px] w-[300px] overflow-hidden rounded-[2.5rem] border-[10px] border-neutral-900 bg-neutral-900 shadow-xl" onClickCapture={(e) => e.preventDefault()}>
       <div className="h-full overflow-y-auto rounded-[1.8rem]">
         <StoreShell design={design} className="min-h-full">
-          <StoreHeader creator={creator} />
+          {/* Keyed so entrance animations replay whenever the icon style changes. */}
+          <StoreHeader key={JSON.stringify(creator.socialIconStyle)} creator={creator} />
           <section className="mt-6 space-y-3 px-3">
             {products.map((p) => (
               <ProductCard key={p.id} product={p} handle={handle} layout={design.layout} />

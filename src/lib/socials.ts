@@ -101,3 +101,15 @@ export function socialHref({ kind, value }: SocialLink): string {
     .replace("{n}", value.replace(/\D/g, ""))
     .replace("{u}", value.replace(/^\/+/, ""));
 }
+
+// Official brand colors (Simple Icons data; LinkedIn from its brand guide). Website, Email and Phone have none.
+export const BRAND_COLORS: Partial<Record<SocialKind, string>> = {
+  instagram: "#FF0069", tiktok: "#000000", youtube: "#FF0000", x: "#000000", facebook: "#0866FF", threads: "#000000",
+  snapchat: "#FFFC00", pinterest: "#BD081C", linkedin: "#0A66C2", reddit: "#FF4500", tumblr: "#36465D", bluesky: "#1185FE",
+  mastodon: "#6364FF", twitch: "#9146FF", kick: "#53FC19", vimeo: "#1AB7EA", whatsapp: "#25D366", telegram: "#26A5E4",
+  discord: "#5865F2", signal: "#3B45FD", spotify: "#1ED760", applemusic: "#FA243C", youtubemusic: "#FF0000",
+  soundcloud: "#FF5500", applepodcasts: "#9933CC", patreon: "#000000", substack: "#FF6719", medium: "#000000",
+  kofi: "#FF6433", buymeacoffee: "#FFDD00", onlyfans: "#00AFF0", cashapp: "#00C244", venmo: "#008CFF", paypal: "#002991",
+  gumroad: "#FF90E8", etsy: "#F16521", shopify: "#7AB55C", calendly: "#006BFF", github: "#181717", behance: "#1769FF",
+  dribbble: "#EA4C89", linktree: "#43E55E",
+};

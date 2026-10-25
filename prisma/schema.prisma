@@ -38,6 +38,8 @@ model Creator {
   layout          String    @default("card")
   socialLinks     Json      @default("{}")
   socialStyle     String    @default("text")
+  // Social icon shape, colors and animations; see src/lib/iconStyle.ts.
+  socialIconStyle Json      @default("{}")
   stripeAccountId String?   @unique
   stripeReady     Boolean   @default(false)
   createdAt       DateTime  @default(now())
