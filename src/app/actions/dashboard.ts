@@ -7,7 +7,7 @@ import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { keyOwner } from "@/lib/storage";
-import { stripe } from "@/lib/stripe";
+import { stripe, STRIPE_COUNTRIES } from "@/lib/stripe";
 import { RESERVED_HANDLES } from "@/lib/format";
 import { parseSocialLinks, socialLinkError, type SocialLink } from "@/lib/socials";
 import { BUTTON_STYLES, FONTS, LAYOUTS, SOCIAL_STYLES, THEMES } from "@/lib/design";
@@ -182,11 +182,12 @@ async function stripeV2<T>(path: string, params: Record<string, unknown>) {
 }
 
 // Same setup as a v1 Standard account: full Stripe Dashboard, Stripe collects fees and covers losses.
-async function createConnectedAccount(creator: { id: string; email: string; displayName: string }) {
+async function createConnectedAccount(creator: { id: string; email: string; displayName: string }, country: string) {
   const account = await stripeV2<{ id: string }>("/v2/core/accounts", {
     contact_email: creator.email,
     display_name: creator.displayName,
     dashboard: "full",
+    identity: { country: country.toLowerCase() },
     configuration: { merchant: { capabilities: { card_payments: { requested: true } } } },
     defaults: { responsibilities: { fees_collector: "stripe", losses_collector: "stripe" } },
     metadata: { creatorId: creator.id },
@@ -194,13 +195,15 @@ async function createConnectedAccount(creator: { id: string; email: string; disp
   return account.id;
 }
 
-export async function connectStripe(): Promise<FormState> {
+export async function connectStripe(_: FormState, formData: FormData): Promise<FormState> {
   const creator = await requireCreator();
   let url: string;
   try {
     let accountId = creator.stripeAccountId;
     if (!accountId) {
-      accountId = await createConnectedAccount(creator);
+      const country = String(formData.get("country") ?? "");
+      if (!(country in STRIPE_COUNTRIES)) return { error: "Choose the country where you live or run your business." };
+      accountId = await createConnectedAccount(creator, country);
       await db.creator.update({ where: { id: creator.id }, data: { stripeAccountId: accountId } });
     }
     const link = await stripeV2<{ url: string }>("/v2/core/account_links", {
