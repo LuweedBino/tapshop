@@ -70,6 +70,19 @@ export function ProductForm({ product, initialType }: { product?: Product; initi
             />
           </>
         )}
+        {type !== "LEAD_MAGNET" && (
+          <label className="flex items-start gap-2 text-sm">
+            <input type="checkbox" name="collectEmails" defaultChecked={product?.collectEmails ?? false} className="mt-0.5 h-4 w-4" />
+            <span>
+              <span className="font-medium">Collect emails</span>
+              <span className="block text-xs text-neutral-500">
+                {type === "LINK"
+                  ? "Visitors enter their name and email before going to the link. They show up in Leads."
+                  : "Everyone who enters their email to buy is added to Leads, even if they don't finish paying."}
+              </span>
+            </span>
+          </label>
+        )}
         <label className="flex items-center gap-2 text-sm font-medium">
           <input type="checkbox" name="published" defaultChecked={product?.published ?? true} className="h-4 w-4" />
           Show on my store

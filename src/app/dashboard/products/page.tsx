@@ -45,7 +45,7 @@ export default async function Products() {
                   {TYPE_LABEL[p.type]}
                   {p.type !== "LINK" && <> · {priceLabel(p)}</>}
                   {p.type === "DIGITAL" && <> · {p._count.orders} sold</>}
-                  {p.type === "LEAD_MAGNET" && <> · {p._count.leads} leads</>}
+                  {(p.type === "LEAD_MAGNET" || p.collectEmails) && <> · {p._count.leads} leads</>}
                 </p>
               </Link>
               <form action={togglePublished.bind(null, p.id)}>

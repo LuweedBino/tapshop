@@ -67,6 +67,8 @@ model Product {
   fileName    String?
   url         String?
   ctaLabel    String      @default("")
+  // Digital products and links can also add visitors' emails to Leads. Lead magnets always do.
+  collectEmails Boolean   @default(false)
   published   Boolean     @default(true)
   // Archived products disappear from the store and dashboard but keep past buyers' downloads working.
   archived    Boolean     @default(false)

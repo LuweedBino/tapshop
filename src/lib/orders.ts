@@ -25,6 +25,8 @@ export async function startCheckout(productId: string, buyer: { email: string; n
   if (!product || !product.published || product.type !== "DIGITAL") throw new CheckoutError("This product is no longer available");
   if (product.creator.pausedAt) throw new CheckoutError("This store isn't available right now");
   if (product.priceCents > 0 && !canSell(product.creator)) throw new CheckoutError("This creator is not accepting payments yet");
+  // Saved before payment, so people who start checkout but don't finish still land in Leads.
+  if (product.collectEmails) await saveLead(product, buyer);
 
   const order = await db.order.create({
     data: {
@@ -102,15 +104,21 @@ export async function confirmSession(orderId: string, sessionId: string) {
   if (session.payment_status === "paid" && session.metadata?.orderId === orderId) await markPaid(orderId, session);
 }
 
+function saveLead(product: { id: string; creatorId: string }, lead: { email: string; name: string }) {
+  return db.lead.upsert({
+    where: { productId_email: { productId: product.id, email: lead.email } },
+    update: { name: lead.name || undefined },
+    create: { creatorId: product.creatorId, productId: product.id, email: lead.email, name: lead.name, downloadToken: nanoid(32) },
+  });
+}
+
+/** A lead magnet sign-up, or the email step in front of a link that collects emails. */
 export async function captureLead(productId: string, lead: { email: string; name: string }) {
   const product = await db.product.findUnique({ where: { id: productId }, include: { creator: true } });
-  if (!product || !product.published || product.type !== "LEAD_MAGNET" || product.creator.pausedAt) throw new Error("Not available");
-  const row = await db.lead.upsert({
-    where: { productId_email: { productId, email: lead.email } },
-    update: { name: lead.name || undefined },
-    create: { creatorId: product.creatorId, productId, email: lead.email, name: lead.name, downloadToken: nanoid(32) },
-  });
-  if (product.fileKey) {
+  const collects = product?.type === "LEAD_MAGNET" || (product?.type === "LINK" && product.collectEmails);
+  if (!product || !product.published || !collects || product.creator.pausedAt) throw new Error("Not available");
+  const row = await saveLead(product, lead);
+  if (product.type === "LEAD_MAGNET" && product.fileKey) {
     await sendEmail({
       to: row.email,
       subject: `Here's your ${product.title}`,
@@ -122,5 +130,5 @@ export async function captureLead(productId: string, lead: { email: string; name
       }),
     });
   }
-  return row;
+  return { lead: row, product };
 }

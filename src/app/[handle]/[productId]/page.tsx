@@ -10,7 +10,7 @@ import { BuyForm } from "@/components/BuyForm";
 
 async function load(handle: string, productId: string) {
   const product = await db.product.findUnique({ where: { id: productId }, include: { creator: true } });
-  if (!product || !product.published || product.type === "LINK" || product.creator.handle !== handle.toLowerCase() || product.creator.pausedAt) return null;
+  if (!product || !product.published || (product.type === "LINK" && !product.collectEmails) || product.creator.handle !== handle.toLowerCase() || product.creator.pausedAt) return null;
   return product;
 }
 
@@ -27,7 +27,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   const { creator } = product;
   const cover = fileUrl(product.coverKey);
   const paid = product.type === "DIGITAL" && product.priceCents > 0;
-  const cta = paid ? `${defaultCta(product)} · ${priceLabel(product)}` : defaultCta(product);
+  const cta = paid ? `${defaultCta(product)} · ${priceLabel(product)}` : product.type === "LINK" ? "Continue" : defaultCta(product);
 
   return (
     <StoreShell design={designOf(creator)} fadeAt={260}>
@@ -46,12 +46,16 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
           <div className="p-5">
             <h1 className="text-2xl font-bold leading-tight tracking-tight">{product.title}</h1>
             {product.subtitle && <p className="mt-1.5 text-[var(--card-muted)]">{product.subtitle}</p>}
-            <p className="mt-3 text-2xl font-black text-[var(--accent)]">{priceLabel(product)}</p>
+            {product.type === "LINK" ? (
+              <p className="mt-2 text-[var(--card-muted)]">Enter your email to continue.</p>
+            ) : (
+              <p className="mt-3 text-2xl font-black text-[var(--accent)]">{priceLabel(product)}</p>
+            )}
             {product.description && <div className="mt-4 whitespace-pre-line text-[15px] leading-relaxed opacity-90">{product.description}</div>}
             <div className="mt-6">
               <BuyForm
                 productId={product.id}
-                kind={product.type === "LEAD_MAGNET" ? "optin" : "buy"}
+                kind={product.type === "DIGITAL" ? "buy" : "optin"}
                 cta={cta}
                 disabledReason={paid && !canSell(creator) ? "This product isn't available for purchase yet." : undefined}
               />

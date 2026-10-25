@@ -12,7 +12,7 @@ export default async function Leads() {
     <>
       <PageHeader
         title="Leads"
-        subtitle={`${total} ${total === 1 ? "subscriber" : "subscribers"} from your lead magnets`}
+        subtitle={`${total} ${total === 1 ? "subscriber" : "subscribers"} from your lead magnets, and from products and links that collect emails`}
         action={
           total > 0 && (
             // A file download, not a page, so a plain link is right here.
@@ -22,7 +22,7 @@ export default async function Leads() {
         }
       />
       {leads.length === 0 ? (
-        <div className="card py-12 text-center text-sm text-neutral-500">No leads yet. Add a lead magnet to start building your list.</div>
+        <div className="card py-12 text-center text-sm text-neutral-500">No leads yet. Add a lead magnet, or turn on Collect emails on a product or link, to start building your list.</div>
       ) : (
         <div className="card overflow-x-auto p-0">
           <table className="w-full text-left text-sm">
