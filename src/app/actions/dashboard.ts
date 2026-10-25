@@ -11,6 +11,7 @@ import { stripe } from "@/lib/stripe";
 import { RESERVED_HANDLES } from "@/lib/format";
 import { parseSocialLinks, socialLinkError, type SocialLink } from "@/lib/socials";
 import { BUTTON_STYLES, FONTS, LAYOUTS, SOCIAL_STYLES, THEMES } from "@/lib/design";
+import { parseBannerStyle, type BannerStyle } from "@/lib/banner";
 import { parseAvatarStyle, type AvatarStyle } from "@/lib/avatar";
 import { parseIconStyle, type IconStyle } from "@/lib/iconStyle";
 import type { FormState } from "./auth";
@@ -56,6 +57,12 @@ export async function saveProfile(_: FormState, form: FormData): Promise<FormSta
   } catch {
     return { error: "Invalid photo settings" };
   }
+  let bannerStyle: BannerStyle;
+  try {
+    bannerStyle = parseBannerStyle(JSON.parse(String(form.get("bannerStyle") ?? "{}")));
+  } catch {
+    return { error: "Invalid banner settings" };
+  }
   let socialIconStyle: IconStyle;
   try {
     socialIconStyle = parseIconStyle(JSON.parse(String(form.get("socialIconStyle") ?? "{}")));
@@ -72,7 +79,7 @@ export async function saveProfile(_: FormState, form: FormData): Promise<FormSta
     const error = socialLinkError(l);
     if (error) return { error };
   }
-  await db.creator.update({ where: { id: creator.id }, data: { ...parsed.data, avatarKey, avatarStyle, bannerKey, socialLinks, socialIconStyle } });
+  await db.creator.update({ where: { id: creator.id }, data: { ...parsed.data, avatarKey, avatarStyle, bannerKey, bannerStyle, socialLinks, socialIconStyle } });
   revalidatePath(`/${creator.handle}`);
   revalidatePath(`/${handle}`);
   return { ok: "Saved" };

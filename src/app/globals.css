@@ -47,6 +47,14 @@ body {
 @keyframes si-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 /* Visitors who turned animations off in their device settings don't get them,
    except inside the dashboard preview so creators can still see what they picked. */
+/* Banner motion; --bn-s is the speed (2 means twice as fast). Scaled up so edges never show. */
+.bn-motion-zoom { animation: bn-zoom calc(16s / var(--bn-s, 1)) ease-in-out infinite alternate; }
+.bn-motion-drift { animation: bn-drift calc(20s / var(--bn-s, 1)) ease-in-out infinite alternate; }
+.bn-motion-sway { animation: bn-sway calc(10s / var(--bn-s, 1)) ease-in-out infinite alternate; }
+@keyframes bn-zoom { from { transform: scale(1); } to { transform: scale(1.18); } }
+@keyframes bn-drift { from { transform: scale(1.15) translateX(-6%); } to { transform: scale(1.15) translateX(6%); } }
+@keyframes bn-sway { from { transform: scale(1.12) rotate(-1.5deg); } to { transform: scale(1.12) rotate(1.5deg); } }
+
 @media (prefers-reduced-motion: reduce) {
-  :is(.si-link, [class*="si-in-"], [class*="si-motion-"]):not(.si-force-motion *) { animation: none !important; transition: none !important; }
+  :is(.si-link, [class*="si-in-"], [class*="si-motion-"], [class*="bn-motion-"]):not(.si-force-motion *) { animation: none !important; transition: none !important; }
 }
