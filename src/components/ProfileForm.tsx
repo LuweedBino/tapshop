@@ -4,12 +4,14 @@ import { useActionState, useState } from "react";
 import type { Creator, Product } from "@prisma/client";
 import { saveProfile } from "@/app/actions/dashboard";
 import type { FormState } from "@/app/actions/auth";
-import { SOCIALS, type Socials } from "@/lib/format";
-import { BUTTON_STYLES, designOf, designVars, FONTS, LAYOUTS, THEMES, type Design } from "@/lib/design";
+import { parseSocialLinks, type SocialLink } from "@/lib/socials";
+import { BUTTON_STYLES, designOf, designVars, FONTS, LAYOUTS, SOCIAL_STYLES, socialStyleOf, THEMES, type Design, type SocialStyle } from "@/lib/design";
 import { FONT_CLASS } from "@/lib/fonts";
 import { parseAvatarStyle, type AvatarStyle } from "@/lib/avatar";
 import { AvatarEditor } from "./AvatarEditor";
 import { FileUpload } from "./FileUpload";
+import { SocialIcon } from "./SocialIcon";
+import { SocialLinksEditor } from "./SocialLinksEditor";
 import { ProductCard, StoreFooter, StoreHeader, StoreShell } from "./Storefront";
 import { Submit } from "./Submit";
 
@@ -24,7 +26,8 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
   const [displayName, setDisplayName] = useState(creator.displayName);
   const [bio, setBio] = useState(creator.bio);
   const [showPreview, setShowPreview] = useState(false);
-  const socials = (creator.socialLinks ?? {}) as Socials;
+  const [socialLinks, setSocialLinks] = useState<SocialLink[]>(parseSocialLinks(creator.socialLinks));
+  const [socialStyle, setSocialStyle] = useState<SocialStyle>(socialStyleOf(creator.socialStyle));
   const set = <K extends keyof Design>(k: K, v: Design[K]) => setDesign((d) => ({ ...d, [k]: v }));
 
   const preview = (
@@ -32,7 +35,7 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
       design={design}
       handle={creator.handle}
       products={products}
-      creator={{ avatarKey: avatarKey || null, avatarStyle, bannerKey: bannerKey || null, displayName: displayName || " ", bio, accentColor: design.accentColor, socialLinks: creator.socialLinks }}
+      creator={{ avatarKey: avatarKey || null, avatarStyle, bannerKey: bannerKey || null, displayName: displayName || " ", bio, accentColor: design.accentColor, socialLinks: socialLinks.filter((l) => l.value.trim()), socialStyle }}
     />
   );
 
@@ -92,14 +95,27 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
           <Choice label="Product layout" name="layout" value={design.layout} options={LAYOUTS} onChange={(v) => set("layout", v)} />
         </div>
 
-        <div className="card space-y-4">
-          <h2 className="font-semibold">Social links</h2>
-          {SOCIALS.map((k) => (
-            <div key={k}>
-              <label className="label capitalize" htmlFor={`social_${k}`}>{k === "x" ? "X (Twitter)" : k}</label>
-              <input className="input" id={`social_${k}`} name={`social_${k}`} defaultValue={socials[k] ?? ""} placeholder={k === "website" ? "yoursite.com" : "@username or full URL"} autoCapitalize="none" />
-            </div>
-          ))}
+        <div className="card space-y-5">
+          <div>
+            <h2 className="font-semibold">Social links</h2>
+            <p className="mt-0.5 text-sm text-neutral-500">Add your socials, email, and anywhere else followers can find you.</p>
+          </div>
+          <SocialLinksEditor value={socialLinks} onChange={setSocialLinks} />
+          <Choice label="Show links as" name="socialStyle" value={socialStyle} options={SOCIAL_STYLES} onChange={setSocialStyle}>
+            {(k) => (
+              <span className="mb-2 flex h-6 items-center gap-1">
+                {k === "text" ? (
+                  <span className="rounded-full border border-neutral-300 px-2 text-[10px] font-semibold">Instagram</span>
+                ) : k === "icons" ? (
+                  (["instagram", "tiktok", "youtube"] as const).map((i) => (
+                    <span key={i} className="flex h-6 w-6 items-center justify-center rounded-full border border-neutral-300"><SocialIcon kind={i} size={12} /></span>
+                  ))
+                ) : (
+                  <span className="flex items-center gap-1 rounded-full border border-neutral-300 px-2 text-[10px] font-semibold"><SocialIcon kind="instagram" size={10} />Instagram</span>
+                )}
+              </span>
+            )}
+          </Choice>
         </div>
         <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
           <Submit>Save changes</Submit>

@@ -1,29 +1,11 @@
 import Link from "next/link";
 import type { Creator, Product } from "@prisma/client";
-import { fileUrl, money, SOCIALS, type Socials } from "@/lib/format";
-import { designVars, onColor, type Design, type Layout } from "@/lib/design";
+import { fileUrl, money } from "@/lib/format";
+import { parseSocialLinks, PLATFORMS, socialHref, type SocialLink } from "@/lib/socials";
+import { designVars, onColor, socialStyleOf, type Design, type Layout } from "@/lib/design";
+import { SocialIcon } from "./SocialIcon";
 import { FONT_CLASS } from "@/lib/fonts";
 import { AVATAR_SIZES, avatarFrameStyle, avatarImageStyle, parseAvatarStyle } from "@/lib/avatar";
-
-const SOCIAL_LABEL: Record<(typeof SOCIALS)[number], string> = {
-  instagram: "Instagram",
-  tiktok: "TikTok",
-  youtube: "YouTube",
-  x: "X",
-  website: "Website",
-};
-
-export function socialHref(kind: (typeof SOCIALS)[number], value: string) {
-  if (/^https?:\/\//.test(value)) return value;
-  const v = value.replace(/^@/, "");
-  return {
-    instagram: `https://instagram.com/${v}`,
-    tiktok: `https://tiktok.com/@${v}`,
-    youtube: `https://youtube.com/@${v}`,
-    x: `https://x.com/${v}`,
-    website: `https://${v}`,
-  }[kind];
-}
 
 export function Avatar({ creator, size }: { creator: Pick<Creator, "avatarKey" | "avatarStyle" | "displayName" | "accentColor">; size?: number }) {
   const src = fileUrl(creator.avatarKey);
@@ -52,11 +34,10 @@ export function StoreShell({ design, fadeAt, className = "min-h-dvh", children }
   );
 }
 
-type HeaderCreator = Pick<Creator, "avatarKey" | "avatarStyle" | "bannerKey" | "displayName" | "accentColor" | "bio" | "socialLinks">;
+type HeaderCreator = Pick<Creator, "avatarKey" | "avatarStyle" | "bannerKey" | "displayName" | "accentColor" | "bio" | "socialLinks" | "socialStyle">;
 
 export function StoreHeader({ creator }: { creator: HeaderCreator }) {
-  const socials = (creator.socialLinks ?? {}) as Socials;
-  const links = SOCIALS.filter((k) => socials[k]);
+  const links = parseSocialLinks(creator.socialLinks);
   const banner = fileUrl(creator.bannerKey);
   return (
     <header className="flex flex-col items-center text-center">
@@ -68,17 +49,35 @@ export function StoreHeader({ creator }: { creator: HeaderCreator }) {
         <Avatar creator={creator} />
         <h1 className="mt-4 text-2xl font-bold tracking-tight">{creator.displayName}</h1>
         {creator.bio && <p className="mt-2 max-w-sm whitespace-pre-line text-[15px] leading-relaxed text-[var(--page-muted)]">{creator.bio}</p>}
-        {links.length > 0 && (
-          <nav className="mt-4 flex flex-wrap justify-center gap-2">
-            {links.map((k) => (
-              <a key={k} href={socialHref(k, socials[k]!)} target="_blank" rel="noopener noreferrer" className="rounded-full border border-[var(--card-border)] bg-[var(--card)] px-3 py-1 text-xs font-semibold text-[var(--card-text)] transition hover:opacity-80">
-                {SOCIAL_LABEL[k]}
-              </a>
-            ))}
-          </nav>
-        )}
+        {links.length > 0 && <SocialLinks links={links} style={socialStyleOf(creator.socialStyle)} />}
       </div>
     </header>
+  );
+}
+
+export function SocialLinks({ links, style }: { links: SocialLink[]; style: ReturnType<typeof socialStyleOf> }) {
+  const base = "flex items-center justify-center rounded-full border border-[var(--card-border)] bg-[var(--card)] font-semibold text-[var(--card-text)] transition hover:opacity-80";
+  return (
+    <nav className={`mt-4 flex flex-wrap justify-center ${style === "icons" ? "gap-2.5" : "gap-2"}`}>
+      {links.map((l, i) => {
+        const label = PLATFORMS[l.kind].label;
+        const href = socialHref(l);
+        const props = { href, ...(href.startsWith("http") && { target: "_blank", rel: "noopener noreferrer" }) };
+        if (style === "icons") {
+          return (
+            <a key={i} {...props} aria-label={label} title={label} className={`${base} h-10 w-10`}>
+              <SocialIcon kind={l.kind} />
+            </a>
+          );
+        }
+        return (
+          <a key={i} {...props} className={`${base} gap-1.5 px-3 py-1 text-xs`}>
+            {style === "both" && <SocialIcon kind={l.kind} size={14} />}
+            {label}
+          </a>
+        );
+      })}
+    </nav>
   );
 }
 
