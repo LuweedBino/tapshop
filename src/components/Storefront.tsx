@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Creator, Product } from "@prisma/client";
 import { fileUrl, money } from "@/lib/format";
 import { parseSocialLinks, PLATFORMS, socialHref, type SocialLink } from "@/lib/socials";
-import { designVars, onColor, socialStyleOf, type Design, type Layout } from "@/lib/design";
+import { designVars, onColor, socialStyleOf, type Design, type Layout, type SocialStyle } from "@/lib/design";
+import { iconButtonStyle, iconGlyphSize, parseIconStyle, type IconStyle } from "@/lib/iconStyle";
 import { SocialIcon } from "./SocialIcon";
 import { FONT_CLASS } from "@/lib/fonts";
 import { AVATAR_SIZES, avatarFrameStyle, avatarImageStyle, parseAvatarStyle } from "@/lib/avatar";
@@ -34,7 +35,7 @@ export function StoreShell({ design, fadeAt, className = "min-h-dvh", children }
   );
 }
 
-type HeaderCreator = Pick<Creator, "avatarKey" | "avatarStyle" | "bannerKey" | "displayName" | "accentColor" | "bio" | "socialLinks" | "socialStyle">;
+type HeaderCreator = Pick<Creator, "avatarKey" | "avatarStyle" | "bannerKey" | "displayName" | "accentColor" | "bio" | "socialLinks" | "socialStyle" | "socialIconStyle" | "theme">;
 
 export function StoreHeader({ creator }: { creator: HeaderCreator }) {
   const links = parseSocialLinks(creator.socialLinks);
@@ -49,32 +50,49 @@ export function StoreHeader({ creator }: { creator: HeaderCreator }) {
         <Avatar creator={creator} />
         <h1 className="mt-4 text-2xl font-bold tracking-tight">{creator.displayName}</h1>
         {creator.bio && <p className="mt-2 max-w-sm whitespace-pre-line text-[15px] leading-relaxed text-[var(--page-muted)]">{creator.bio}</p>}
-        {links.length > 0 && <SocialLinks links={links} style={socialStyleOf(creator.socialStyle)} />}
+        {links.length > 0 && (
+          <SocialLinks
+            links={links}
+            style={socialStyleOf(creator.socialStyle)}
+            iconStyle={parseIconStyle(creator.socialIconStyle)}
+            accent={creator.accentColor}
+            dark={creator.theme === "dark" || (creator.theme === "bold" && onColor(creator.accentColor) === "#ffffff")}
+          />
+        )}
       </div>
     </header>
   );
 }
 
-export function SocialLinks({ links, style }: { links: SocialLink[]; style: ReturnType<typeof socialStyleOf> }) {
-  const base = "flex items-center justify-center rounded-full border border-[var(--card-border)] bg-[var(--card)] font-semibold text-[var(--card-text)] transition hover:opacity-80";
+export function SocialLinks({ links, style, iconStyle, accent, dark }: { links: SocialLink[]; style: SocialStyle; iconStyle: IconStyle; accent: string; dark: boolean }) {
+  const iconOnly = style === "icons";
+  const base = "si-link flex items-center justify-center border border-[var(--card-border)] bg-[var(--card)] font-semibold text-[var(--card-text)]";
   return (
-    <nav className={`mt-4 flex flex-wrap justify-center ${style === "icons" ? "gap-2.5" : "gap-2"}`}>
+    <nav className={`mt-4 flex flex-wrap justify-center ${iconOnly ? "gap-2.5" : "gap-2"}`}>
       {links.map((l, i) => {
         const label = PLATFORMS[l.kind].label;
         const href = socialHref(l);
-        const props = { href, ...(href.startsWith("http") && { target: "_blank", rel: "noopener noreferrer" }) };
-        if (style === "icons") {
-          return (
-            <a key={i} {...props} aria-label={label} title={label} className={`${base} h-10 w-10`}>
-              <SocialIcon kind={l.kind} />
-            </a>
-          );
-        }
+        const props = {
+          href,
+          ...(href.startsWith("http") && { target: "_blank", rel: "noopener noreferrer" }),
+          className: `${base} si-hover-${iconStyle.hover} ${iconOnly ? "" : `gap-1.5 py-1 text-xs ${iconStyle.shape === "none" ? "px-1" : "px-3"}`}`,
+          style: iconButtonStyle(iconStyle, l.kind, accent, dark, iconOnly),
+        };
         return (
-          <a key={i} {...props} className={`${base} gap-1.5 px-3 py-1 text-xs`}>
-            {style === "both" && <SocialIcon kind={l.kind} size={14} />}
-            {label}
-          </a>
+          <span key={i} className={`si-in-${iconStyle.entrance}`} style={{ "--i": i } as React.CSSProperties}>
+            <span className={`block si-motion-${iconStyle.motion}`}>
+              {iconOnly ? (
+                <a {...props} aria-label={label} title={label}>
+                  <SocialIcon kind={l.kind} size={iconGlyphSize(iconStyle)} />
+                </a>
+              ) : (
+                <a {...props}>
+                  {style === "both" && <SocialIcon kind={l.kind} size={14} />}
+                  {label}
+                </a>
+              )}
+            </span>
+          </span>
         );
       })}
     </nav>

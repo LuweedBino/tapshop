@@ -12,6 +12,7 @@ import { RESERVED_HANDLES } from "@/lib/format";
 import { parseSocialLinks, socialLinkError, type SocialLink } from "@/lib/socials";
 import { BUTTON_STYLES, FONTS, LAYOUTS, SOCIAL_STYLES, THEMES } from "@/lib/design";
 import { parseAvatarStyle, type AvatarStyle } from "@/lib/avatar";
+import { parseIconStyle, type IconStyle } from "@/lib/iconStyle";
 import type { FormState } from "./auth";
 
 /** Accepts a storage key only if it belongs to this creator and has the expected visibility. */
@@ -55,6 +56,12 @@ export async function saveProfile(_: FormState, form: FormData): Promise<FormSta
   } catch {
     return { error: "Invalid photo settings" };
   }
+  let socialIconStyle: IconStyle;
+  try {
+    socialIconStyle = parseIconStyle(JSON.parse(String(form.get("socialIconStyle") ?? "{}")));
+  } catch {
+    return { error: "Invalid icon settings" };
+  }
   let socialLinks: SocialLink[];
   try {
     socialLinks = parseSocialLinks(JSON.parse(String(form.get("socialLinks") ?? "[]")));
@@ -65,7 +72,7 @@ export async function saveProfile(_: FormState, form: FormData): Promise<FormSta
     const error = socialLinkError(l);
     if (error) return { error };
   }
-  await db.creator.update({ where: { id: creator.id }, data: { ...parsed.data, avatarKey, avatarStyle, bannerKey, socialLinks } });
+  await db.creator.update({ where: { id: creator.id }, data: { ...parsed.data, avatarKey, avatarStyle, bannerKey, socialLinks, socialIconStyle } });
   revalidatePath(`/${creator.handle}`);
   revalidatePath(`/${handle}`);
   return { ok: "Saved" };
