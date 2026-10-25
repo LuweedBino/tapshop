@@ -12,9 +12,24 @@ import {
   type IconStyle,
 } from "@/lib/iconStyle";
 import { Segmented } from "./Segmented";
+import { useSyncExternalStore } from "react";
+
+const REDUCED = "(prefers-reduced-motion: reduce)";
+function useReducedMotion() {
+  return useSyncExternalStore(
+    (cb) => {
+      const m = window.matchMedia(REDUCED);
+      m.addEventListener("change", cb);
+      return () => m.removeEventListener("change", cb);
+    },
+    () => window.matchMedia(REDUCED).matches,
+    () => false,
+  );
+}
 
 export function IconStyleEditor({ value, onChange }: { value: IconStyle; onChange: (s: IconStyle) => void }) {
   const set = <K extends keyof IconStyle>(k: K, v: IconStyle[K]) => onChange({ ...value, [k]: v });
+  const reduced = useReducedMotion();
   return (
     <div className="space-y-5 rounded-2xl bg-neutral-50 p-4">
       <input type="hidden" name="socialIconStyle" value={JSON.stringify(value)} />
@@ -36,6 +51,13 @@ export function IconStyleEditor({ value, onChange }: { value: IconStyle; onChang
       <Segmented label="On hover" options={ICON_HOVERS} value={value.hover} onChange={(v) => set("hover", v)} />
       <Segmented label="When the page opens" options={ICON_ENTRANCES} value={value.entrance} onChange={(v) => set("entrance", v)} />
       <Segmented label="Always-on motion" options={ICON_MOTIONS} value={value.motion} onChange={(v) => set("motion", v)} />
+      {reduced && (
+        <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs leading-relaxed text-amber-900">
+          Animations are turned off on this device, so your store won&apos;t move when <em>you</em> open it. The preview still shows them, and
+          visitors who have animations on will see them. To turn them on (Windows): Settings → Accessibility → Visual effects → Animation
+          effects. On a Mac: System Settings → Accessibility → Display → turn off Reduce motion.
+        </p>
+      )}
     </div>
   );
 }
