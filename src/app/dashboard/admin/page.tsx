@@ -3,18 +3,19 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { money } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
+import { QuickActions } from "@/components/AdminCreatorForms";
 
 export const dynamic = "force-dynamic";
 
 const date = (d: Date) => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
 export default async function Admin() {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const [creators, sales] = await Promise.all([
     db.creator.findMany({
       orderBy: { createdAt: "desc" },
       select: {
-        id: true, displayName: true, email: true, handle: true, createdAt: true, stripeAccountId: true, stripeReady: true,
+        id: true, displayName: true, email: true, handle: true, bio: true, createdAt: true, stripeAccountId: true, stripeReady: true, pausedAt: true,
         _count: { select: { products: { where: { archived: false } }, leads: true } },
       },
     }),
@@ -41,7 +42,7 @@ export default async function Admin() {
 
   return (
     <>
-      <PageHeader title="Admin" subtitle="Everyone who has signed up for TapShop, newest first. Click a name to edit or delete the account. Only you can see this page." />
+      <PageHeader title="Admin" subtitle="Everyone who has signed up for TapShop, newest first. Use the buttons under each name for quick edits, or click the name for everything else. Only you can see this page." />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         {tiles.map(([label, value]) => (
           <div key={label} className="card p-4">
@@ -73,9 +74,11 @@ export default async function Admin() {
                   <tr key={c.id}>
                     <td className="px-4 py-3">
                       <Link href={`/dashboard/admin/creators/${c.id}`} className="font-medium underline-offset-2 hover:underline">{c.displayName}</Link>
+                      {c.pausedAt && <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">Paused</span>}
                       <p className="text-xs text-neutral-500">{c.email}</p>
+                      <QuickActions creator={c} isSelf={c.id === admin.id} />
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="whitespace-nowrap px-4 py-3">
                       <Link href={`/${c.handle}`} target="_blank" className="font-medium text-neutral-700 underline-offset-2 hover:underline">/{c.handle} ↗</Link>
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">

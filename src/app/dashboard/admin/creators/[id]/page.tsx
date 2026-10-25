@@ -4,7 +4,7 @@ import { requireAdmin } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { money } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
-import { AccountForm, DeleteForm, PasswordForm, StripeForm } from "@/components/AdminCreatorForms";
+import { AccountForm, DeleteForm, PasswordForm, PauseForm, StripeForm } from "@/components/AdminCreatorForms";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +46,7 @@ export default async function AdminCreator({ params }: { params: Promise<{ id: s
         <AccountForm creator={creator} />
         <PasswordForm creatorId={creator.id} />
         <StripeForm creator={creator} />
+        <PauseForm creator={creator} isSelf={creator.id === admin.id} />
         <DeleteForm creator={creator} isSelf={creator.id === admin.id} />
       </div>
     </div>

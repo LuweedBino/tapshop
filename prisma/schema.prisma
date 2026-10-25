@@ -43,6 +43,8 @@ model Creator {
   bannerStyle     Json      @default("{}")
   stripeAccountId String?   @unique
   stripeReady     Boolean   @default(false)
+  // Set by an admin: the store goes offline and can't take new sales until it's cleared.
+  pausedAt        DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   products        Product[]
