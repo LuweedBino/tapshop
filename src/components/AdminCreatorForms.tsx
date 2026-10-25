@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useId, useRef } from "react";
 import type { Creator } from "@prisma/client";
 import { adminDeleteCreator, adminDisconnectStripe, adminSetPassword, adminSetPaused, adminUpdateCreator } from "@/app/actions/admin";
@@ -127,34 +128,56 @@ export function PauseForm({ creator, isSelf }: { creator: AdminCreator; isSelf: 
   );
 }
 
-const quick = "whitespace-nowrap rounded-lg px-2 py-1 text-xs font-medium hover:bg-neutral-100";
+const quick = "inline-flex w-full items-center gap-1.5 whitespace-nowrap rounded-lg border bg-white px-2.5 py-1.5 text-xs font-semibold transition";
+const tones = {
+  neutral: "border-neutral-300 text-neutral-900 hover:bg-neutral-50",
+  danger: "border-red-200 text-red-600 hover:bg-red-50",
+  good: "border-green-300 text-green-700 hover:bg-green-50",
+};
 
-/** Edit, password, pause and delete without leaving the Admin list. Edit, password and delete open in a pop-up. */
+// 24×24 stroke icons drawn at 14px, so they sit with text-xs labels.
+const ICONS = {
+  edit: <><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></>,
+  key: <><circle cx="7.5" cy="15.5" r="4.5" /><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14.5 8.5l2 2" /></>,
+  pause: <><rect x="6" y="4" width="4" height="16" rx="1" /><rect x="14" y="4" width="4" height="16" rx="1" /></>,
+  play: <path d="M7 4v16l13-8Z" />,
+  trash: <><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></>,
+};
+
+function Icon({ name }: { name: keyof typeof ICONS }) {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {ICONS[name]}
+    </svg>
+  );
+}
+
+/** Quick actions under each creator on the Admin list. Password and delete open in a pop-up; edit opens the full page. */
 export function QuickActions({ creator, isSelf }: { creator: AdminCreator; isSelf: boolean }) {
   const paused = Boolean(creator.pausedAt);
   const [pauseState, pause] = useActionState<FormState, FormData>(adminSetPaused.bind(null, creator.id, !paused), undefined);
   return (
-    <div className="mt-2">
-      <div className="-ml-2 flex max-w-64 flex-wrap items-center gap-0.5">
-        <Popup label="Edit account" title={`Edit ${creator.displayName}`}><AccountForm creator={creator} /></Popup>
-        <Popup label="Reset password" title={`Reset password for ${creator.displayName}`}><PasswordForm creatorId={creator.id} /></Popup>
+    <div className="mt-2.5">
+      <div className="grid w-max grid-cols-2 gap-1.5">
+        <Link href={`/dashboard/admin/creators/${creator.id}`} className={`${quick} ${tones.neutral}`}><Icon name="edit" />Edit account</Link>
+        <Popup label="Reset password" icon="key" title={`Reset password for ${creator.displayName}`}><PasswordForm creatorId={creator.id} /></Popup>
         {!(isSelf && !paused) && (
           <form action={pause} onSubmit={(e) => { if (!paused && !confirm(`Pause ${creator.displayName}? Their store goes offline and can't take new sales.`)) e.preventDefault(); }}>
-            <button className={`${quick} ${paused ? "text-green-700" : "text-neutral-600 hover:text-neutral-900"}`}>{paused ? "Resume" : "Pause"}</button>
+            <button className={`${quick} ${paused ? tones.good : tones.neutral}`}><Icon name={paused ? "play" : "pause"} />{paused ? "Resume" : "Pause"}</button>
           </form>
         )}
-        {!isSelf && <Popup label="Delete" title={`Delete ${creator.displayName}`} danger><DeleteForm creator={creator} isSelf={false} /></Popup>}
+        {!isSelf && <Popup label="Delete" icon="trash" title={`Delete ${creator.displayName}`} danger><DeleteForm creator={creator} isSelf={false} /></Popup>}
       </div>
       {pauseState?.error && <p className="mt-1 text-xs text-red-700">{pauseState.error}</p>}
     </div>
   );
 }
 
-function Popup({ label, title, danger, children }: { label: string; title: string; danger?: boolean; children: React.ReactNode }) {
+function Popup({ label, icon, title, danger, children }: { label: string; icon: keyof typeof ICONS; title: string; danger?: boolean; children: React.ReactNode }) {
   const ref = useRef<HTMLDialogElement>(null);
   return (
     <>
-      <button type="button" onClick={() => ref.current?.showModal()} className={`${quick} ${danger ? "text-red-600 hover:!bg-red-50" : "text-neutral-600 hover:text-neutral-900"}`}>{label}</button>
+      <button type="button" onClick={() => ref.current?.showModal()} className={`${quick} ${danger ? tones.danger : tones.neutral}`}><Icon name={icon} />{label}</button>
       <dialog
         ref={ref}
         aria-label={title}
