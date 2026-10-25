@@ -3,6 +3,7 @@ import type { Creator, Product } from "@prisma/client";
 import { fileUrl, money, SOCIALS, type Socials } from "@/lib/format";
 import { designVars, onColor, type Design, type Layout } from "@/lib/design";
 import { FONT_CLASS } from "@/lib/fonts";
+import { AVATAR_SIZES, avatarFrameStyle, avatarImageStyle, parseAvatarStyle } from "@/lib/avatar";
 
 const SOCIAL_LABEL: Record<(typeof SOCIALS)[number], string> = {
   instagram: "Instagram",
@@ -24,14 +25,20 @@ export function socialHref(kind: (typeof SOCIALS)[number], value: string) {
   }[kind];
 }
 
-export function Avatar({ creator, size = 96 }: { creator: Pick<Creator, "avatarKey" | "displayName" | "accentColor">; size?: number }) {
+export function Avatar({ creator, size }: { creator: Pick<Creator, "avatarKey" | "avatarStyle" | "displayName" | "accentColor">; size?: number }) {
   const src = fileUrl(creator.avatarKey);
-  return src ? (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img src={src} alt="" width={size} height={size} className="rounded-full object-cover ring-4 ring-white/90" style={{ width: size, height: size }} />
-  ) : (
-    <div className="flex items-center justify-center rounded-full text-3xl font-bold ring-4 ring-white/90" style={{ width: size, height: size, background: creator.accentColor, color: onColor(creator.accentColor) }}>
-      {creator.displayName.slice(0, 1).toUpperCase()}
+  const style = parseAvatarStyle(creator.avatarStyle);
+  const px = size ?? AVATAR_SIZES[style.size].px;
+  return (
+    <div className="shrink-0 overflow-hidden" style={{ ...avatarFrameStyle(style, creator.accentColor, px), background: creator.accentColor }}>
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" width={px} height={px} draggable={false} className="h-full w-full object-cover" style={avatarImageStyle(style)} />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center font-bold" style={{ color: onColor(creator.accentColor), fontSize: px * 0.36 }}>
+          {creator.displayName.slice(0, 1).toUpperCase()}
+        </div>
+      )}
     </div>
   );
 }
@@ -45,7 +52,7 @@ export function StoreShell({ design, fadeAt, className = "min-h-dvh", children }
   );
 }
 
-type HeaderCreator = Pick<Creator, "avatarKey" | "bannerKey" | "displayName" | "accentColor" | "bio" | "socialLinks">;
+type HeaderCreator = Pick<Creator, "avatarKey" | "avatarStyle" | "bannerKey" | "displayName" | "accentColor" | "bio" | "socialLinks">;
 
 export function StoreHeader({ creator }: { creator: HeaderCreator }) {
   const socials = (creator.socialLinks ?? {}) as Socials;
@@ -57,7 +64,7 @@ export function StoreHeader({ creator }: { creator: HeaderCreator }) {
         // eslint-disable-next-line @next/next/no-img-element
         <img src={banner} alt="" className="aspect-[3/1] w-full object-cover" />
       )}
-      <div className={`flex flex-col items-center px-5 ${banner ? "-mt-12" : "pt-10"}`}>
+      <div className={`flex flex-col items-center px-5 ${banner ? "" : "pt-10"}`} style={banner ? { marginTop: -AVATAR_SIZES[parseAvatarStyle(creator.avatarStyle).size].px / 2 } : undefined}>
         <Avatar creator={creator} />
         <h1 className="mt-4 text-2xl font-bold tracking-tight">{creator.displayName}</h1>
         {creator.bio && <p className="mt-2 max-w-sm whitespace-pre-line text-[15px] leading-relaxed text-[var(--page-muted)]">{creator.bio}</p>}

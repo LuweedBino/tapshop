@@ -7,6 +7,8 @@ import type { FormState } from "@/app/actions/auth";
 import { SOCIALS, type Socials } from "@/lib/format";
 import { BUTTON_STYLES, designOf, designVars, FONTS, LAYOUTS, THEMES, type Design } from "@/lib/design";
 import { FONT_CLASS } from "@/lib/fonts";
+import { parseAvatarStyle, type AvatarStyle } from "@/lib/avatar";
+import { AvatarEditor } from "./AvatarEditor";
 import { FileUpload } from "./FileUpload";
 import { ProductCard, StoreFooter, StoreHeader, StoreShell } from "./Storefront";
 import { Submit } from "./Submit";
@@ -17,6 +19,7 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
   const [state, action] = useActionState<FormState, FormData>(saveProfile, undefined);
   const [design, setDesign] = useState<Design>(designOf(creator));
   const [avatarKey, setAvatarKey] = useState(creator.avatarKey ?? "");
+  const [avatarStyle, setAvatarStyle] = useState<AvatarStyle>(parseAvatarStyle(creator.avatarStyle));
   const [bannerKey, setBannerKey] = useState(creator.bannerKey ?? "");
   const [displayName, setDisplayName] = useState(creator.displayName);
   const [bio, setBio] = useState(creator.bio);
@@ -29,7 +32,7 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
       design={design}
       handle={creator.handle}
       products={products}
-      creator={{ avatarKey: avatarKey || null, bannerKey: bannerKey || null, displayName: displayName || " ", bio, accentColor: design.accentColor, socialLinks: creator.socialLinks }}
+      creator={{ avatarKey: avatarKey || null, avatarStyle, bannerKey: bannerKey || null, displayName: displayName || " ", bio, accentColor: design.accentColor, socialLinks: creator.socialLinks }}
     />
   );
 
@@ -42,8 +45,13 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
         {showPreview && <div className="flex justify-center lg:hidden">{preview}</div>}
 
         <div className="card space-y-5">
+          <h2 className="font-semibold">Profile photo</h2>
+          <FileUpload name="avatarKey" visibility="public" initialKey={creator.avatarKey} accept="image/*" label="Photo" onChange={setAvatarKey} />
+          <AvatarEditor avatarKey={avatarKey} accent={design.accentColor} value={avatarStyle} onChange={setAvatarStyle} />
+        </div>
+
+        <div className="card space-y-5">
           <h2 className="font-semibold">Profile</h2>
-          <FileUpload name="avatarKey" visibility="public" initialKey={creator.avatarKey} accept="image/*" label="Profile photo" onChange={setAvatarKey} />
           <FileUpload name="bannerKey" visibility="public" initialKey={creator.bannerKey} accept="image/*" label="Banner image" hint="Optional. Shows across the top of your store. A wide image works best." onChange={setBannerKey} />
           <div>
             <label className="label" htmlFor="displayName">Display name</label>

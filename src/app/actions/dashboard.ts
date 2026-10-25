@@ -10,6 +10,7 @@ import { keyOwner } from "@/lib/storage";
 import { stripe } from "@/lib/stripe";
 import { RESERVED_HANDLES, SOCIALS } from "@/lib/format";
 import { BUTTON_STYLES, FONTS, LAYOUTS, THEMES } from "@/lib/design";
+import { parseAvatarStyle, type AvatarStyle } from "@/lib/avatar";
 import type { FormState } from "./auth";
 
 /** Accepts a storage key only if it belongs to this creator and has the expected visibility. */
@@ -46,10 +47,16 @@ export async function saveProfile(_: FormState, form: FormData): Promise<FormSta
   const avatarKey = ownKey(form.get("avatarKey"), creator.id, "public");
   const bannerKey = ownKey(form.get("bannerKey"), creator.id, "public");
   if (avatarKey === undefined || bannerKey === undefined) return { error: "Invalid image" };
+  let avatarStyle: AvatarStyle;
+  try {
+    avatarStyle = parseAvatarStyle(JSON.parse(String(form.get("avatarStyle") ?? "{}")));
+  } catch {
+    return { error: "Invalid photo settings" };
+  }
   const socialLinks = Object.fromEntries(
     SOCIALS.map((k) => [k, String(form.get(`social_${k}`) ?? "").trim().slice(0, 200)]).filter(([, v]) => v),
   );
-  await db.creator.update({ where: { id: creator.id }, data: { ...parsed.data, avatarKey, bannerKey, socialLinks } });
+  await db.creator.update({ where: { id: creator.id }, data: { ...parsed.data, avatarKey, avatarStyle, bannerKey, socialLinks } });
   revalidatePath(`/${creator.handle}`);
   revalidatePath(`/${handle}`);
   return { ok: "Saved" };
