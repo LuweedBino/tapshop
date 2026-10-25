@@ -128,7 +128,7 @@ export function PauseForm({ creator, isSelf }: { creator: AdminCreator; isSelf: 
   );
 }
 
-const quick = "inline-flex w-full items-center gap-1.5 whitespace-nowrap rounded-lg border bg-white px-2.5 py-1.5 text-xs font-semibold transition";
+const quick = "inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border bg-white px-2.5 py-1.5 text-xs font-semibold transition";
 const tones = {
   neutral: "border-neutral-300 text-neutral-900 hover:bg-neutral-50",
   danger: "border-red-200 text-red-600 hover:bg-red-50",
@@ -157,8 +157,8 @@ export function QuickActions({ creator, isSelf }: { creator: AdminCreator; isSel
   const paused = Boolean(creator.pausedAt);
   const [pauseState, pause] = useActionState<FormState, FormData>(adminSetPaused.bind(null, creator.id, !paused), undefined);
   return (
-    <div className="mt-2.5">
-      <div className="grid w-max grid-cols-2 gap-1.5">
+    <div>
+      <div className="flex flex-wrap gap-1.5">
         <Link href={`/dashboard/admin/creators/${creator.id}`} className={`${quick} ${tones.neutral}`}><Icon name="edit" />Edit account</Link>
         <Popup label="Reset password" icon="key" title={`Reset password for ${creator.displayName}`}><PasswordForm creatorId={creator.id} /></Popup>
         {!(isSelf && !paused) && (
