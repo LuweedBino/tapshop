@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireCreator } from "@/lib/auth";
+import { isAdmin, requireCreator } from "@/lib/auth";
 import { logout } from "@/app/actions/auth";
 import { DashNav } from "@/components/DashNav";
 
@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </form>
           </div>
         </div>
-        <DashNav />
+        <DashNav admin={isAdmin(creator)} />
         <form action={logout} className="hidden md:mt-6 md:block">
           <button className="px-3 text-sm text-neutral-500 hover:text-neutral-900">Sign out</button>
         </form>

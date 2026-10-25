@@ -12,11 +12,12 @@ const ITEMS = [
   { href: "/dashboard/payments", label: "Payments" },
 ];
 
-export function DashNav() {
+export function DashNav({ admin = false }: { admin?: boolean }) {
   const path = usePathname();
+  const items = admin ? [...ITEMS, { href: "/dashboard/admin", label: "Admin" }] : ITEMS;
   return (
     <nav className="flex gap-1 overflow-x-auto md:flex-col">
-      {ITEMS.map((i) => {
+      {items.map((i) => {
         const active = i.href === "/dashboard" ? path === i.href : path.startsWith(i.href);
         return (
           <Link key={i.href} href={i.href} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium ${active ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100"}`}>

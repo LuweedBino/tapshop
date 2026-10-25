@@ -10,6 +10,8 @@ export const env = {
   // Lets a store sell before its creator has connected Stripe. Payments then land in the
   // platform account, so only enable this for local testing.
   allowPlatformCharges: process.env.ALLOW_PLATFORM_CHARGES === "true",
+  // Creators whose login email is listed here can open Dashboard → Admin.
+  adminEmails: (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean),
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "TapShop <onboarding@resend.dev>",
   s3: {
