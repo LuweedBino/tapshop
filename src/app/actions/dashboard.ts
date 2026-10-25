@@ -94,6 +94,7 @@ const ProductInput = z.object({
   ctaLabel: z.string().trim().max(40).default(""),
   url: z.string().trim().max(2000).default(""),
   published: z.string().optional(),
+  collectEmails: z.string().optional(),
 });
 
 export async function saveProduct(productId: string | null, _: FormState, form: FormData): Promise<FormState> {
@@ -132,6 +133,7 @@ export async function saveProduct(productId: string | null, _: FormState, form: 
     fileKey: d.type === "LINK" ? null : fileKey,
     fileName: fileKey ? String(form.get("fileKeyName") ?? "").slice(0, 200) || "download" : null,
     published: d.published === "on",
+    collectEmails: d.type !== "LEAD_MAGNET" && d.collectEmails === "on",
   };
 
   if (productId) {

@@ -6,7 +6,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   const { token } = await params;
   const order = await db.order.findUnique({ where: { downloadToken: token }, include: { product: true } });
   const lead = order ? null : await db.lead.findUnique({ where: { downloadToken: token }, include: { product: true } });
-  const product = order?.status === "PAID" ? order.product : lead?.product;
+  // A lead token unlocks only a lead magnet's file; a digital product's file needs a paid order.
+  const product = order?.status === "PAID" ? order.product : lead?.product.type === "LEAD_MAGNET" ? lead.product : undefined;
   if (!product?.fileKey) return new NextResponse("This download link is not valid.", { status: 404 });
 
   if (order) await db.order.update({ where: { id: order.id }, data: { downloadCount: { increment: 1 } } });

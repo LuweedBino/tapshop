@@ -5,7 +5,7 @@ import { ThanksCard } from "@/components/ThanksCard";
 export default async function LeadThanks({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const lead = await db.lead.findUnique({ where: { downloadToken: token }, include: { product: true, creator: true } });
-  if (!lead) notFound();
+  if (!lead || lead.product.type !== "LEAD_MAGNET") notFound();
   return (
     <ThanksCard
       creator={lead.creator}

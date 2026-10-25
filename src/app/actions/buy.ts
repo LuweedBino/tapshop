@@ -27,11 +27,12 @@ export async function buy(productId: string, _: BuyState, form: FormData): Promi
 export async function optIn(productId: string, _: BuyState, form: FormData): Promise<BuyState> {
   const parsed = Buyer.safeParse({ email: form.get("email"), name: form.get("name") ?? "" });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  let token: string;
+  let next: string;
   try {
-    token = (await captureLead(productId, parsed.data)).downloadToken;
+    const { lead, product } = await captureLead(productId, parsed.data);
+    next = product.type === "LINK" && product.url ? product.url : `/thanks/lead/${lead.downloadToken}`;
   } catch {
     return { error: "Something went wrong, please try again" };
   }
-  redirect(`/thanks/lead/${token}`);
+  redirect(next);
 }

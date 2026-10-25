@@ -154,6 +154,14 @@ function Thumb({ product, className }: { product: Product; className: string }) 
 }
 
 export function ProductCard({ product, handle, layout = "card" }: { product: Product; handle: string; layout?: Layout }) {
+  if (product.type === "LINK" && product.collectEmails) {
+    // Goes to a page that asks for an email first, then sends the visitor on to the link.
+    return (
+      <Link href={`/${handle}/${product.id}`} className={`${CARD} px-5 py-4 text-center font-semibold`}>
+        {product.title}
+      </Link>
+    );
+  }
   if (product.type === "LINK") {
     return (
       <a href={product.url ?? "#"} target="_blank" rel="noopener noreferrer" className={`${CARD} px-5 py-4 text-center font-semibold`}>
