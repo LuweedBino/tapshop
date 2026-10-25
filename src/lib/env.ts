@@ -1,5 +1,9 @@
 export const env = {
-  appUrl: (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, ""),
+  // On Vercel, defaults to the project's production domain.
+  appUrl: (
+    process.env.APP_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000")
+  ).replace(/\/$/, ""),
   authSecret: process.env.AUTH_SECRET ?? "",
   stripeSecretKey: process.env.STRIPE_SECRET_KEY ?? "",
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",

@@ -3,11 +3,15 @@ import path from "path";
 import { nanoid } from "nanoid";
 import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { get as getBlob } from "@vercel/blob";
 import { env } from "./env";
 
 // Files live under "public/<creatorId>/..." (avatars, covers) or "private/<creatorId>/..."
-// (paid downloads). With S3_BUCKET set they go to S3 or any S3-compatible store such as
-// Cloudflare R2; otherwise they are written to ./storage for local development.
+// (paid downloads). Where they are stored depends on the environment:
+// - S3_BUCKET set: S3 or any S3-compatible store such as Cloudflare R2
+// - BLOB_READ_WRITE_TOKEN set: a private Vercel Blob store (set automatically when a Blob
+//   store is connected to the Vercel project); every file is served through our routes
+// - neither: ./storage on local disk, for development
 
 const LOCAL_ROOT = path.join(process.cwd(), "storage");
 
@@ -22,9 +26,19 @@ function s3() {
   return s3client;
 }
 
-export const usingS3 = () => Boolean(env.s3.bucket);
+export type Backend = "s3" | "blob" | "local";
+
+export function backend(): Backend {
+  if (env.s3.bucket) return "s3";
+  if (process.env.BLOB_READ_WRITE_TOKEN) return "blob";
+  return "local";
+}
+
+export const usingS3 = () => backend() === "s3";
 
 export type Visibility = "public" | "private";
+
+export const MAX_BYTES: Record<Visibility, number> = { public: 5 * 1024 * 1024, private: 500 * 1024 * 1024 };
 
 export function newKey(visibility: Visibility, creatorId: string, filename: string) {
   const safe = filename.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(-80) || "file";
@@ -42,7 +56,9 @@ function localPath(key: string) {
   return p;
 }
 
+/** Where the browser should PUT the file; null means upload through Vercel Blob's client SDK. */
 export async function uploadUrl(key: string, contentType: string) {
+  if (backend() === "blob") return null;
   if (usingS3()) {
     return getSignedUrl(s3(), new PutObjectCommand({ Bucket: env.s3.bucket, Key: key, ContentType: contentType }), {
       expiresIn: 600,
@@ -65,6 +81,21 @@ export async function readLocal(key: string) {
     fs.readFile(p + ".type", "utf8").catch(() => "application/octet-stream"),
   ]);
   return { body, contentType };
+}
+
+/** Reads a file from local disk or Vercel Blob. Returns null if it doesn't exist. */
+export async function readObject(key: string): Promise<{ body: BodyInit; contentType: string } | null> {
+  if (backend() === "blob") {
+    const res = await getBlob(key, { access: "private" }).catch(() => null);
+    if (!res || res.statusCode !== 200) return null;
+    return { body: res.stream, contentType: res.blob.contentType };
+  }
+  try {
+    const { body, contentType } = await readLocal(key);
+    return { body: new Uint8Array(body), contentType };
+  } catch {
+    return null;
+  }
 }
 
 export async function signedDownloadUrl(key: string, downloadName?: string) {

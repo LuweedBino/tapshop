@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { upload as blobUpload } from "@vercel/blob/client";
 
 type Props = {
   name: string;
@@ -12,8 +13,8 @@ type Props = {
   hint?: string;
 };
 
-// Uploads straight to storage (S3 presigned URL, or the local dev endpoint) so large files
-// never pass through a server action, then submits only the storage key with the form.
+// Uploads straight to storage (S3 presigned URL, Vercel Blob, or the local dev endpoint) so
+// large files never pass through a server action, then submits only the storage key.
 export function FileUpload({ name, visibility, initialKey, initialName, accept, label, hint }: Props) {
   const [key, setKey] = useState(initialKey ?? "");
   const [fileName, setFileName] = useState(initialName ?? "");
@@ -33,8 +34,12 @@ export function FileUpload({ name, visibility, initialKey, initialName, accept, 
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Upload failed");
-      const put = await fetch(data.url, { method: "PUT", headers: { "content-type": file.type || "application/octet-stream" }, body: file });
-      if (!put.ok) throw new Error("Upload failed");
+      if (data.url) {
+        const put = await fetch(data.url, { method: "PUT", headers: { "content-type": file.type || "application/octet-stream" }, body: file });
+        if (!put.ok) throw new Error("Upload failed");
+      } else {
+        await blobUpload(data.key, file, { access: "private", handleUploadUrl: "/api/upload/blob", contentType: file.type || undefined, multipart: file.size > 50 * 1024 * 1024 });
+      }
       setKey(data.key);
       setFileName(file.name);
       setStatus("idle");
