@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SignJWT, jwtVerify } from "jose";
 import { db } from "./db";
 import { env } from "./env";
@@ -50,6 +50,17 @@ export async function getCreator() {
 export async function requireCreator() {
   const creator = await getCreator();
   if (!creator) redirect("/login");
+  return creator;
+}
+
+export function isAdmin(creator: { email: string }) {
+  return env.adminEmails.includes(creator.email.toLowerCase());
+}
+
+/** Admin pages 404 for everyone else, so they don't reveal that they exist. */
+export async function requireAdmin() {
+  const creator = await requireCreator();
+  if (!isAdmin(creator)) notFound();
   return creator;
 }
 

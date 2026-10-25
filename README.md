@@ -39,7 +39,7 @@ Put the printed `whsec_...` in `STRIPE_WEBHOOK_SECRET`. Either connect a test St
 
 1. Import the GitHub repo in Vercel (framework: Next.js, no changes needed).
 2. In the project's **Storage** tab, add **Neon** (Postgres) and a **Blob** store with **private** access. Vercel sets `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, and `BLOB_READ_WRITE_TOKEN` for you. `npm run build` applies migrations over the direct (unpooled) connection.
-3. Add `AUTH_SECRET`, `STRIPE_SECRET_KEY`, and later `STRIPE_WEBHOOK_SECRET` under **Settings → Environment Variables**, then redeploy. `APP_URL` defaults to the project's production domain.
+3. Add `AUTH_SECRET`, `STRIPE_SECRET_KEY`, and later `STRIPE_WEBHOOK_SECRET` under **Settings → Environment Variables**, then redeploy. To see every creator who signs up, also set `ADMIN_EMAILS` to the email you log in to TapShop with; an **Admin** tab then appears in your dashboard. `APP_URL` defaults to the project's production domain.
 4. In Stripe, enable Connect and add a webhook destination at `https://<your-domain>/api/stripe/webhook` for events from **connected accounts**: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `account.updated`, `charge.refunded`. If you also use `ALLOW_PLATFORM_CHARGES`, add a second destination for **your account** and put both signing secrets in `STRIPE_WEBHOOK_SECRET`, comma-separated.
 
 S3 or Cloudflare R2 also work instead of Blob: set the `S3_*` variables and allow `PUT` from your domain in the bucket's CORS settings, since browsers upload straight to the bucket.
