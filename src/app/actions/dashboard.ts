@@ -133,19 +133,27 @@ export async function moveProduct(productId: string, direction: -1 | 1) {
   revalidatePath(`/${creator.handle}`);
 }
 
-export async function connectStripe() {
+export async function connectStripe(): Promise<FormState> {
   const creator = await requireCreator();
-  let accountId = creator.stripeAccountId;
-  if (!accountId) {
-    const account = await stripe().accounts.create({ type: "standard", email: creator.email, metadata: { creatorId: creator.id } });
-    accountId = account.id;
-    await db.creator.update({ where: { id: creator.id }, data: { stripeAccountId: accountId } });
+  let url: string;
+  try {
+    let accountId = creator.stripeAccountId;
+    if (!accountId) {
+      const account = await stripe().accounts.create({ type: "standard", email: creator.email, metadata: { creatorId: creator.id } });
+      accountId = account.id;
+      await db.creator.update({ where: { id: creator.id }, data: { stripeAccountId: accountId } });
+    }
+    const link = await stripe().accountLinks.create({
+      account: accountId,
+      type: "account_onboarding",
+      refresh_url: `${env.appUrl}/dashboard/payments?refresh=1`,
+      return_url: `${env.appUrl}/dashboard/payments?return=1`,
+    });
+    url = link.url;
+  } catch (e) {
+    console.error("[stripe connect]", e);
+    // Shown to the creator only; Stripe's message says what to fix (keys, Connect settings...).
+    return { error: `Stripe couldn't start onboarding: ${e instanceof Error ? e.message : "unknown error"}` };
   }
-  const link = await stripe().accountLinks.create({
-    account: accountId,
-    type: "account_onboarding",
-    refresh_url: `${env.appUrl}/dashboard/payments?refresh=1`,
-    return_url: `${env.appUrl}/dashboard/payments?return=1`,
-  });
-  redirect(link.url);
+  redirect(url);
 }

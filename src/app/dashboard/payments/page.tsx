@@ -2,9 +2,8 @@ import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { stripe, stripeEnabled } from "@/lib/stripe";
-import { connectStripe } from "@/app/actions/dashboard";
 import { PageHeader } from "@/components/PageHeader";
-import { Submit } from "@/components/Submit";
+import { ConnectStripeButton } from "@/components/ConnectStripeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -34,9 +33,7 @@ export default async function Payments() {
             <p className="mt-1 text-sm text-neutral-500">
               You&apos;ll be sent to Stripe to verify your details. It takes a few minutes. Lead magnets and free products work without it.
             </p>
-            <form action={connectStripe} className="mt-4">
-              <Submit pendingText="Opening Stripe…">{creator.stripeAccountId ? "Continue setup" : "Connect with Stripe"}</Submit>
-            </form>
+            <ConnectStripeButton label={creator.stripeAccountId ? "Continue setup" : "Connect with Stripe"} />
           </>
         )}
         {env.allowPlatformCharges && !creator.stripeReady && (
