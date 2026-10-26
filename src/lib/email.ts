@@ -25,3 +25,13 @@ export function deliveryEmail(opts: { buyerName: string; productTitle: string; c
 <p style="color:#666;font-size:13px">Keep this email: the link above is how you get back to your file.</p>
 </div>`;
 }
+
+export function inquiryEmail(opts: { name: string; email: string; company: string; budget: string; message: string; creatorName: string; link: string }) {
+  const row = (label: string, value: string) => (value ? `<p style="margin:4px 0"><strong>${label}:</strong> ${escape(value)}</p>` : "");
+  return `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px">
+<p>Hi ${escape(opts.creatorName)}, a brand reached out through your media kit.</p>
+${row("Name", opts.name)}${row("Email", opts.email)}${row("Company", opts.company)}${row("Budget", opts.budget)}
+<p style="white-space:pre-line;background:#f5f5f5;padding:12px 16px;border-radius:10px">${escape(opts.message)}</p>
+<p>Reply to <a href="mailto:${escape(opts.email)}">${escape(opts.email)}</a>, or see all inquiries in <a href="${opts.link}">your dashboard</a>.</p>
+</div>`;
+}

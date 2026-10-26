@@ -6,11 +6,17 @@ import { z } from "zod";
 import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { SLUG_RE } from "@/lib/pages";
+import { KIT_SLUG } from "@/lib/mediaKit";
 import type { FormState } from "./auth";
 
 const PageInput = z.object({
   title: z.string().trim().min(1, "Give the page a name").max(80),
-  slug: z.string().trim().toLowerCase().regex(SLUG_RE, "Use 1-40 lowercase letters, numbers and dashes for the link"),
+  slug: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(SLUG_RE, "Use 1-40 lowercase letters, numbers and dashes for the link")
+    .refine((s) => s !== KIT_SLUG, "That link is used by your media kit"),
   description: z.string().trim().max(300).default(""),
 });
 

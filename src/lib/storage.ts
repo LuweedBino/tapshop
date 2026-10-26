@@ -50,6 +50,14 @@ export function keyOwner(key: string) {
   return visibility === "public" || visibility === "private" ? { visibility: visibility as Visibility, creatorId } : null;
 }
 
+/** Accepts a storage key only if it belongs to this creator and has the expected visibility. */
+export function ownKey(value: FormDataEntryValue | null, creatorId: string, visibility: Visibility) {
+  const key = typeof value === "string" ? value : "";
+  if (!key) return null;
+  const owner = keyOwner(key);
+  return owner?.creatorId === creatorId && owner.visibility === visibility ? key : undefined;
+}
+
 function localPath(key: string) {
   const p = path.resolve(LOCAL_ROOT, key);
   if (!p.startsWith(LOCAL_ROOT + path.sep)) throw new Error("Bad key");

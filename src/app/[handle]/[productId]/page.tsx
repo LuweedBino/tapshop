@@ -9,8 +9,18 @@ import { Avatar, defaultCta, priceLabel, StoreFooter, StoreHeader, StoreProducts
 import { BuyForm } from "@/components/BuyForm";
 import { CopyCode } from "@/components/CopyCode";
 import { parseExtras, videoEmbed } from "@/lib/affiliate";
+import { KIT_SLUG } from "@/lib/mediaKit";
+import { MediaKitView } from "@/components/MediaKitView";
 
-// This segment is either one of the creator's extra pages (/maya/summer-sale) or a product (/maya/<id>).
+// This segment is the media kit (/maya/media-kit), one of the creator's extra pages
+// (/maya/summer-sale), or a product (/maya/<id>).
+async function loadKit(handle: string, segment: string) {
+  if (segment.toLowerCase() !== KIT_SLUG) return null;
+  const creator = await db.creator.findUnique({ where: { handle: handle.toLowerCase() }, include: { mediaKit: true } });
+  if (!creator || creator.pausedAt || !creator.mediaKit?.published) return null;
+  return { creator, kit: creator.mediaKit };
+}
+
 async function loadPage(handle: string, slug: string) {
   const creator = await db.creator.findUnique({ where: { handle: handle.toLowerCase() } });
   if (!creator || creator.pausedAt) return null;
@@ -29,6 +39,8 @@ async function load(handle: string, productId: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; productId: string }> }): Promise<Metadata> {
   const { handle, productId } = await params;
+  const kit = await loadKit(handle, productId);
+  if (kit) return { title: `${kit.creator.displayName} | Media kit`, description: kit.kit.headline || undefined };
   const page = await loadPage(handle, productId);
   if (page) return { title: `${page.title} | ${page.creator.displayName}`, description: page.description || undefined };
   const p = await load(handle, productId);
@@ -37,6 +49,11 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 
 export default async function ProductPage({ params }: { params: Promise<{ handle: string; productId: string }> }) {
   const { handle, productId } = await params;
+  if (productId.toLowerCase() === KIT_SLUG) {
+    const kit = await loadKit(handle, productId);
+    if (!kit) notFound();
+    return <MediaKitView creator={kit.creator} kit={kit.kit} />;
+  }
   const page = await loadPage(handle, productId);
   if (page) {
     const design = designOf(page.creator);

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
-import { keyOwner } from "@/lib/storage";
+import { ownKey } from "@/lib/storage";
 import { stripe, STRIPE_COUNTRIES } from "@/lib/stripe";
 import { RESERVED_HANDLES } from "@/lib/format";
 import { parseSocialLinks, socialLinkError, type SocialLink } from "@/lib/socials";
@@ -17,13 +17,6 @@ import { parseIconStyle, type IconStyle } from "@/lib/iconStyle";
 import { MAX_BUTTONS, MAX_GALLERY, normalizeUrl, videoEmbed, type AffiliateExtras } from "@/lib/affiliate";
 import type { FormState } from "./auth";
 
-/** Accepts a storage key only if it belongs to this creator and has the expected visibility. */
-function ownKey(value: FormDataEntryValue | null, creatorId: string, visibility: "public" | "private") {
-  const key = typeof value === "string" ? value : "";
-  if (!key) return null;
-  const owner = keyOwner(key);
-  return owner?.creatorId === creatorId && owner.visibility === visibility ? key : undefined;
-}
 
 const Profile = z.object({
   displayName: z.string().trim().min(1, "Enter a display name").max(80),
