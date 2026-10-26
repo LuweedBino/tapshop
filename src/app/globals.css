@@ -58,3 +58,96 @@ body {
 @media (prefers-reduced-motion: reduce) {
   :is(.si-link, [class*="si-in-"], [class*="si-motion-"], [class*="bn-motion-"]):not(.si-force-motion *) { animation: none !important; transition: none !important; }
 }
+
+/* Media kit styles. Everything reads the store's design variables, so each style works on every theme.
+   --a0/--a1 keep the page's accent so a solid-color box can swap accent and text colors inside it. */
+.mk { --mk-gap: 1rem; --a0: var(--accent); --a1: var(--on-accent); display: flex; flex-direction: column; gap: var(--mk-gap); counter-reset: mk; }
+.mk-compact { --mk-gap: 0.625rem; }
+.mk-airy { --mk-gap: 1.75rem; }
+.mk-sec { position: relative; padding: 1.25rem; border-radius: var(--card-radius); color: var(--card-text); }
+
+.mk-box-cards { background: var(--card); border: 1px solid var(--card-border); box-shadow: 0 1px 2px rgb(0 0 0 / 0.05); }
+.mk-box-flat, .mk-box-minimal, .mk-box-outline { --card-text: var(--page-text); --card-muted: var(--page-muted); --card-border: color-mix(in srgb, var(--page-text) 15%, transparent); }
+.mk-box-flat { border-radius: 0; padding-inline: 0; padding-top: var(--mk-gap); border-top: 1px solid var(--card-border); }
+.mk-box-minimal { padding: 0.5rem 0; }
+.mk-box-outline { border: 1.5px solid color-mix(in srgb, var(--a0) 60%, transparent); }
+.mk-box-glass {
+  background: color-mix(in srgb, var(--card) 55%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  backdrop-filter: blur(18px) saturate(1.5);
+  border: 1px solid color-mix(in srgb, #ffffff 40%, transparent);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 0.1), inset 0 1px 0 color-mix(in srgb, #ffffff 35%, transparent);
+}
+.mk-box-float { background: var(--card); box-shadow: 0 20px 45px -15px rgb(0 0 0 / 0.3), 0 2px 6px rgb(0 0 0 / 0.06); }
+.mk-box-tint { background: color-mix(in srgb, var(--a0) 11%, var(--card)); }
+.mk-box-gradient {
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    linear-gradient(135deg, var(--a0), color-mix(in srgb, var(--a0) 35%, #ff6ec7), color-mix(in srgb, var(--a0) 35%, #ffc861)) border-box;
+}
+.mk-box-neon {
+  background: color-mix(in srgb, var(--card) 88%, var(--a0));
+  border: 1px solid var(--a0);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--a0) 30%, transparent), 0 0 26px color-mix(in srgb, var(--a0) 45%, transparent), inset 0 0 20px color-mix(in srgb, var(--a0) 12%, transparent);
+}
+.mk-box-brutal { background: var(--card); border: 2.5px solid var(--card-text); border-radius: min(var(--card-radius), 0.5rem); box-shadow: 6px 6px 0 var(--card-text); }
+.mk-box-accent {
+  --accent: var(--a1);
+  --on-accent: var(--a0);
+  --card-text: var(--a1);
+  --card-muted: color-mix(in srgb, var(--a1) 78%, transparent);
+  --card-border: color-mix(in srgb, var(--a1) 28%, transparent);
+  --card: color-mix(in srgb, var(--a1) 16%, transparent);
+  background: var(--a0);
+}
+
+.mk-t { margin-bottom: 1rem; }
+.mk-t-label, .mk-t-accent { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--card-muted); }
+.mk-t-accent { color: var(--accent); }
+.mk-t-bold { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.15; }
+.mk-t-underline { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
+.mk-t-underline::after { content: ""; display: block; width: 2.5rem; height: 4px; margin-top: 0.5rem; border-radius: 9999px; background: var(--accent); }
+.mk-t-bar { padding-left: 0.75rem; border-left: 4px solid var(--accent); font-size: 1.15rem; font-weight: 800; line-height: 1.25; }
+.mk-t-pill { display: inline-block; padding: 0.3rem 0.8rem; border-radius: 9999px; background: var(--accent); color: var(--on-accent); font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.mk-t-numbered { font-size: 1.25rem; font-weight: 800; letter-spacing: -0.01em; }
+.mk-t-numbered::before { counter-increment: mk; content: counter(mk, decimal-leading-zero); display: block; margin-bottom: 0.15rem; font-size: 0.8rem; letter-spacing: 0.12em; color: var(--accent); }
+
+.mk-bg { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.mk-bg-glow::before, .mk-bg-glow::after, .mk-bg-aurora::before { content: ""; position: absolute; border-radius: 9999px; }
+.mk-bg-glow::before { top: -120px; left: -30%; width: 80%; aspect-ratio: 1; background: var(--accent); opacity: 0.35; filter: blur(90px); }
+.mk-bg-glow::after { top: 35%; right: -35%; width: 75%; aspect-ratio: 1; background: color-mix(in srgb, var(--accent) 45%, #ff6ec7); opacity: 0.25; filter: blur(100px); }
+.mk-bg-mesh {
+  background:
+    radial-gradient(at 15% 5%, color-mix(in srgb, var(--accent) 45%, transparent) 0, transparent 45%),
+    radial-gradient(at 85% 0%, color-mix(in srgb, var(--accent) 30%, #ff6ec7 25%) 0, transparent 45%),
+    radial-gradient(at 80% 45%, color-mix(in srgb, var(--accent) 20%, #5ee7ff 25%) 0, transparent 40%),
+    radial-gradient(at 10% 80%, color-mix(in srgb, var(--accent) 30%, transparent) 0, transparent 45%);
+}
+.mk-bg-aurora::before {
+  top: -15%; left: -40%; width: 180%; height: 70%;
+  background: linear-gradient(110deg, var(--accent), #ff6ec7, #5ee7ff, var(--accent));
+  background-size: 200% 100%;
+  opacity: 0.4; filter: blur(70px);
+  animation: mk-aurora 16s ease-in-out infinite alternate;
+}
+.mk-bg-dots { background-image: radial-gradient(color-mix(in srgb, var(--page-text) 20%, transparent) 1.2px, transparent 1.6px); background-size: 18px 18px; mask-image: linear-gradient(to bottom, #000, transparent 85%); }
+.mk-bg-grid {
+  background-image: linear-gradient(color-mix(in srgb, var(--page-text) 9%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--page-text) 9%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(ellipse at top, #000 30%, transparent 80%);
+}
+@keyframes mk-aurora { from { transform: translateX(0) rotate(-4deg); background-position: 0% 50%; } to { transform: translateX(15%) rotate(4deg); background-position: 100% 50%; } }
+
+/* Sections animate in as they scroll into view, in browsers that support scroll-driven animations. */
+@keyframes mk-fade { from { opacity: 0; transform: translateY(28px); } }
+@keyframes mk-pop { from { opacity: 0; transform: scale(0.9); } }
+@keyframes mk-slide { from { opacity: 0; transform: translateX(-32px); } }
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .mk-motion-fade > .mk-sec, .mk-motion-pop > .mk-sec, .mk-motion-slide > .mk-sec { animation: mk-fade linear both; animation-timeline: view(); animation-range: entry 0% entry 70%; }
+    .mk-motion-pop > .mk-sec { animation-name: mk-pop; }
+    .mk-motion-slide > .mk-sec { animation-name: mk-slide; }
+  }
+}
+@media (prefers-reduced-motion: reduce) { .mk-bg-aurora::before { animation: none; } }

@@ -75,9 +75,56 @@ export const BLOCKS = {
   contact: { label: "Work with me", hint: "A form brands use to reach you", schema: z.object({ intro: s(300) }) },
 } as const;
 
+/** How a section's box looks. Each is a .mk-box-* class in globals.css. */
+export const BOX_STYLES = {
+  cards: { label: "Cards" },
+  glass: { label: "Glass" },
+  float: { label: "Floating" },
+  tint: { label: "Tinted" },
+  outline: { label: "Outline" },
+  gradient: { label: "Gradient edge" },
+  neon: { label: "Neon glow" },
+  brutal: { label: "Brutalist" },
+  accent: { label: "Solid color" },
+  flat: { label: "Flat lines" },
+  minimal: { label: "Minimal" },
+} as const;
+
+/** How section titles look. Each is a .mk-t-* class. */
+export const TITLE_STYLES = {
+  label: { label: "Small caps" },
+  accent: { label: "Color caps" },
+  bold: { label: "Big & bold" },
+  underline: { label: "Underline" },
+  bar: { label: "Side bar" },
+  pill: { label: "Pill" },
+  numbered: { label: "Numbered" },
+} as const;
+
+/** Decoration behind the whole page. Each is a .mk-bg-* class. */
+export const BACKDROPS = {
+  none: { label: "None" },
+  glow: { label: "Glow" },
+  mesh: { label: "Mesh gradient" },
+  aurora: { label: "Aurora (moves)" },
+  dots: { label: "Dots" },
+  grid: { label: "Grid" },
+} as const;
+
+export const CORNERS = { sharp: { label: "Sharp" }, soft: { label: "Soft" }, round: { label: "Round" } } as const;
+export const MOTIONS = { none: { label: "None" }, fade: { label: "Fade up" }, pop: { label: "Pop in" }, slide: { label: "Slide in" } } as const;
+export const SPACINGS = { compact: { label: "Tight" }, normal: { label: "Normal" }, airy: { label: "Airy" } } as const;
+export const HEADERS = { classic: { label: "Classic" }, hero: { label: "Big name" }, card: { label: "In a box" } } as const;
+
+export type BoxStyle = keyof typeof BOX_STYLES;
+export type TitleStyle = keyof typeof TITLE_STYLES;
+const keys = <T extends object>(o: T) => Object.keys(o) as [keyof T & string, ...(keyof T & string)[]];
+
 export type BlockType = keyof typeof BLOCKS;
 type Data<T extends BlockType> = z.infer<(typeof BLOCKS)[T]["schema"]>;
-export type Block = { [T in BlockType]: { id: string; type: T; title: string; hidden: boolean } & Data<T> }[BlockType];
+/** box and heading are this section's own style; null follows the page's. */
+type Base<T> = { id: string; type: T; title: string; hidden: boolean; box: BoxStyle | null; heading: TitleStyle | null };
+export type Block = { [T in BlockType]: Base<T> & Data<T> }[BlockType];
 export type BlockOf<T extends BlockType> = Extract<Block, { type: T }>;
 export type KitStat = Omit<z.infer<typeof Stat>, "kind"> & { kind: SocialKind };
 
@@ -86,7 +133,13 @@ export const KitStyle = z.object({
   accent: z.string().regex(/^#[0-9a-f]{6}$/i).nullable().default(null),
   theme: z.enum(Object.keys(THEMES) as [keyof typeof THEMES]).nullable().default(null),
   font: z.enum(Object.keys(FONTS) as [keyof typeof FONTS]).nullable().default(null),
-  sections: z.enum(["cards", "flat"]).default("cards"),
+  sections: z.enum(keys(BOX_STYLES)).default("cards"),
+  titles: z.enum(keys(TITLE_STYLES)).default("label"),
+  backdrop: z.enum(keys(BACKDROPS)).default("none"),
+  corners: z.enum(keys(CORNERS)).nullable().default(null),
+  motion: z.enum(keys(MOTIONS)).default("none"),
+  spacing: z.enum(keys(SPACINGS)).default("normal"),
+  header: z.enum(keys(HEADERS)).default("classic"),
   align: z.enum(["center", "left"]).default("center"),
   coverKey: s(200),
   showAvatar: z.boolean().default(true),
@@ -99,7 +152,7 @@ export const newId = () => `${Date.now().toString(36)}${(seq++).toString(36)}${M
 
 export function newBlock<T extends BlockType>(type: T): BlockOf<T> {
   const data = BLOCKS[type].schema.parse({});
-  return { id: newId(), type, title: BLOCKS[type].label, hidden: false, ...data } as BlockOf<T>;
+  return { id: newId(), type, title: BLOCKS[type].label, hidden: false, box: null, heading: null, ...data } as BlockOf<T>;
 }
 
 function parseBlock(raw: unknown): Block | null {
@@ -114,6 +167,8 @@ function parseBlock(raw: unknown): Block | null {
     type,
     title: typeof r.title === "string" ? r.title.slice(0, 80) : BLOCKS[type].label,
     hidden: r.hidden === true,
+    box: Object.hasOwn(BOX_STYLES, r.box as string) ? (r.box as BoxStyle) : null,
+    heading: Object.hasOwn(TITLE_STYLES, r.heading as string) ? (r.heading as TitleStyle) : null,
     ...data.data,
   } as Block;
 }
@@ -140,6 +195,22 @@ export function parseKit(value: unknown, about = ""): KitDoc {
   const blocks = Array.isArray(v.blocks) ? v.blocks.map(parseBlock).filter((b): b is Block => b !== null) : fromV1(v, about);
   return { style: style.success ? style.data : KitStyle.parse({}), tags, blocks: blocks.slice(0, LIMITS.blocks) };
 }
+
+/** One-tap combinations of the style options, for creators who don't know where to start. */
+export const LOOKS: Record<string, { label: string; style: Partial<KitStyle> }> = {
+  classic: { label: "Classic", style: { theme: null, font: null, sections: "cards", titles: "label", backdrop: "none", corners: null, motion: "fade", spacing: "normal", header: "classic" } },
+  glass: { label: "Glass", style: { theme: "soft", font: "modern", sections: "glass", titles: "bold", backdrop: "mesh", corners: "round", motion: "fade", spacing: "normal", header: "hero" } },
+  aurora: { label: "Aurora", style: { theme: "dark", font: "modern", sections: "glass", titles: "bar", backdrop: "aurora", corners: "round", motion: "fade", spacing: "normal", header: "hero" } },
+  neon: { label: "Neon night", style: { theme: "dark", font: "techy", sections: "neon", titles: "accent", backdrop: "grid", corners: "soft", motion: "pop", spacing: "normal", header: "hero" } },
+  brutal: { label: "Brutalist", style: { theme: "clean", font: "techy", sections: "brutal", titles: "numbered", backdrop: "dots", corners: "sharp", motion: "slide", spacing: "airy", header: "classic" } },
+  editorial: { label: "Editorial", style: { theme: "clean", font: "elegant", sections: "minimal", titles: "underline", backdrop: "none", corners: "sharp", motion: "fade", spacing: "airy", header: "hero" } },
+  pastel: { label: "Pastel", style: { theme: "soft", font: "friendly", sections: "tint", titles: "pill", backdrop: "glow", corners: "round", motion: "pop", spacing: "normal", header: "classic" } },
+  gradient: { label: "Gradient", style: { theme: "clean", font: "modern", sections: "gradient", titles: "numbered", backdrop: "glow", corners: "soft", motion: "fade", spacing: "normal", header: "card" } },
+  pop: { label: "Color pop", style: { theme: "clean", font: "friendly", sections: "accent", titles: "bold", backdrop: "none", corners: "soft", motion: "pop", spacing: "compact", header: "card" } },
+  floating: { label: "Floating", style: { theme: "soft", font: "modern", sections: "float", titles: "label", backdrop: "dots", corners: "round", motion: "fade", spacing: "airy", header: "classic" } },
+  outline: { label: "Outline", style: { theme: "clean", font: "modern", sections: "outline", titles: "bar", backdrop: "grid", corners: "soft", motion: "slide", spacing: "normal", header: "classic" } },
+  mono: { label: "Mono", style: { theme: "clean", font: "modern", sections: "flat", titles: "label", backdrop: "none", corners: "sharp", motion: "none", spacing: "normal", header: "classic" } },
+};
 
 /** A starting layout for a creator who hasn't built a kit yet. */
 export function starterKit(): KitDoc {
