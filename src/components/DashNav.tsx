@@ -10,6 +10,7 @@ const ITEMS = [
   { href: "/dashboard/orders", label: "Orders" },
   { href: "/dashboard/leads", label: "Leads" },
   { href: "/dashboard/portfolio", label: "Portfolio" },
+  { href: "/dashboard/studio", label: "Studio" },
   { href: "/dashboard/payments", label: "Payments" },
 ];
 

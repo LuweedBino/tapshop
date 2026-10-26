@@ -1,0 +1,383 @@
+{
+  "project": "TapShop Studio",
+  "source_commit": "752a129582096e83863c97b2347aff7e1b819d1d",
+  "source_version": "22",
+  "export_date": "2026-10-26",
+  "font_choices": 27,
+  "animation_choices_including_none": 27,
+  "text_effect_choices_including_plain": 27,
+  "runtime_external_javascript_dependencies": [],
+  "ffmpeg_wasm": false,
+  "files": [
+    {
+      "path": "CLAUDE-INTEGRATION.md",
+      "size_bytes": 7282,
+      "sha256": "62065886ef868672fa90f8b1900ba447b61c9c37e4531ab9c8a6eafc789f4fc1"
+    },
+    {
+      "path": "FEATURE-CHECKLIST.md",
+      "size_bytes": 2884,
+      "sha256": "d135d59a5278bc285fe49902e7f8e86ce92d18f1adf0cf7cd17aa35af677dc40"
+    },
+    {
+      "path": "FONT-LICENSES.md",
+      "size_bytes": 3458,
+      "sha256": "b36a827935fe2211e7a818a6318ec47cdf947e7d1f16983a24f3d097a1344df4"
+    },
+    {
+      "path": "README.md",
+      "size_bytes": 4585,
+      "sha256": "a776fd64a4ef581c1e83d47301e7a77e652963d280dbd55350f1bd6636bfafa5"
+    },
+    {
+      "path": "VALIDATION.txt",
+      "size_bytes": 602,
+      "sha256": "47488a798c8ba832dd7a04de709c1c97e07fa0ff7d8dcab04c1c0cdd3b00d699"
+    },
+    {
+      "path": "font-sources/DejaVu-LICENSE.txt",
+      "size_bytes": 3859,
+      "sha256": "63d3ba759d12804c5b31a9d5940d855c1820d1f5999e6b0872eb1c7ff045fbc9"
+    },
+    {
+      "path": "font-sources/DejaVuSans-Bold.ttf",
+      "size_bytes": 708920,
+      "sha256": "5c1247acef7f2b8522a31742c76d6adcb5569bacc0be7ceaa4dc39dd252ce895"
+    },
+    {
+      "path": "font-sources/DejaVuSans.ttf",
+      "size_bytes": 759720,
+      "sha256": "ae7b7855e115a5966d8b1b3f80f254ccc117ec86f9965e202ee2940453837280"
+    },
+    {
+      "path": "font-sources/DejaVuSansMono-Bold.ttf",
+      "size_bytes": 334268,
+      "sha256": "3a3c502eeff669a231549e80df9f7c49de109bafe303170409e905d0b31a38fe"
+    },
+    {
+      "path": "font-sources/DejaVuSansMono-BoldOblique.ttf",
+      "size_bytes": 254960,
+      "sha256": "a5251173370e30760e6919711dcd33e149d216ca4814eb74332bda03fcc7e834"
+    },
+    {
+      "path": "font-sources/DejaVuSansMono-Oblique.ttf",
+      "size_bytes": 253448,
+      "sha256": "3d7955616e69721f7edb8e1b7a580f8fbd7d737111c6b54266ddc1d9ef13202f"
+    },
+    {
+      "path": "font-sources/DejaVuSansMono.ttf",
+      "size_bytes": 343140,
+      "sha256": "c805f9436dbc268644c1d9584f01a601a653e028e08fd74b9b949f6cf8304d88"
+    },
+    {
+      "path": "font-sources/DejaVuSerif-Bold.ttf",
+      "size_bytes": 356668,
+      "sha256": "847b33e13925f19ff87e4d934d6b3cf7cac35ce16424f6f670e40c2f377cf2df"
+    },
+    {
+      "path": "font-sources/DejaVuSerif.ttf",
+      "size_bytes": 380660,
+      "sha256": "8f2c103bfa3fd5de71f1b92b18f21906b5a26871fb7e19a9a4c9af539c3cc7ab"
+    },
+    {
+      "path": "font-sources/GUST-FONT-LICENSE.txt",
+      "size_bytes": 1377,
+      "sha256": "49ea6cb9257bbee0a3979c48a774cd221550ac1c20c95549efe45fc99cc18050"
+    },
+    {
+      "path": "font-sources/README-Latin-Modern.txt",
+      "size_bytes": 33548,
+      "sha256": "7cac4a4a78985ccb1ed429bb2eddf32eeb2e413c94493c7b268385bb7b525250"
+    },
+    {
+      "path": "font-sources/lmmono10-italic.otf",
+      "size_bytes": 63584,
+      "sha256": "14e6328a5383d2b927c47051093ce0aff60deea07e6df71b8b99ee8d9c2ff8f2"
+    },
+    {
+      "path": "font-sources/lmmono10-regular.otf",
+      "size_bytes": 64684,
+      "sha256": "22deb6d3be3ffcb40b33f0e010afb256c677d97c2a2bdee1f5740cdc97751558"
+    },
+    {
+      "path": "font-sources/lmmonocaps10-regular.otf",
+      "size_bytes": 63228,
+      "sha256": "9fb93a8f39f8e55682d09edb93c4c07d976c13bb92253b875b5b6a19e9af9e0a"
+    },
+    {
+      "path": "font-sources/lmmonoltcond10-regular.otf",
+      "size_bytes": 64160,
+      "sha256": "fd2e0afd73a6029887d222f1e379f9e977ed57f9471d48ba44fb42c52a650274"
+    },
+    {
+      "path": "font-sources/lmmonoprop10-regular.otf",
+      "size_bytes": 109500,
+      "sha256": "59036dd0b599f3e90c41dc4b063849bb36ba29058f94d386718fb9ce523d8657"
+    },
+    {
+      "path": "font-sources/lmroman10-bold.otf",
+      "size_bytes": 111240,
+      "sha256": "102fe06c430a8b681b2bf6876b7cd967ae4d47b4b6b41d915eb7913b726d9fb1"
+    },
+    {
+      "path": "font-sources/lmroman10-bolditalic.otf",
+      "size_bytes": 118204,
+      "sha256": "c37a28eed7a6e03f792b98b5e5f637b2fcda378bb4855f99284f1a88fe35f124"
+    },
+    {
+      "path": "font-sources/lmroman10-italic.otf",
+      "size_bytes": 118828,
+      "sha256": "c1fce25075567bb8dbf2151658c3b442690041db17a2d49fc9e55905ea5b7169"
+    },
+    {
+      "path": "font-sources/lmroman10-regular.otf",
+      "size_bytes": 111536,
+      "sha256": "1aa18cfefa58132c52ce5de70db1fd1154201c19cd2b2cdaffba4906a33e6852"
+    },
+    {
+      "path": "font-sources/lmromancaps10-oblique.otf",
+      "size_bytes": 116564,
+      "sha256": "603e6bb88c206f3252d2ca1a061d0faf252dd6c87501f2efa32ce2f70793b1ad"
+    },
+    {
+      "path": "font-sources/lmromancaps10-regular.otf",
+      "size_bytes": 108740,
+      "sha256": "1ab40332a969892c7ed6cb010193b5276ccef1da6798bcbd1a465fee23d29334"
+    },
+    {
+      "path": "font-sources/lmromandemi10-regular.otf",
+      "size_bytes": 111892,
+      "sha256": "63b6f9528e6117c5b0c0b1992517696ae09d05e7ca3711df0e0409d9db6df32c"
+    },
+    {
+      "path": "font-sources/lmromandunh10-regular.otf",
+      "size_bytes": 113276,
+      "sha256": "6c298b3680cc111c6e20eb2489bab9637ac316a686740fc1f8396230215e1161"
+    },
+    {
+      "path": "font-sources/lmsans10-bold.otf",
+      "size_bytes": 107448,
+      "sha256": "a597b710326c1a8a2c7238d808e5d38711638a72a32383478db4829d63afd687"
+    },
+    {
+      "path": "font-sources/lmsans10-oblique.otf",
+      "size_bytes": 101412,
+      "sha256": "1b38b36efc21f9d3f34edf6a13f9d71f59c41f824e790f5d3ee5ba5b4936f377"
+    },
+    {
+      "path": "font-sources/lmsans10-regular.otf",
+      "size_bytes": 95128,
+      "sha256": "d431b786b9b603662718e79cfe9b441f47a8b0b3e854dde89d5acb3ed7cfd682"
+    },
+    {
+      "path": "font-sources/lmsansdemicond10-regular.otf",
+      "size_bytes": 106836,
+      "sha256": "3a8cc8f72acaf6d4cc9200a838e5e118bf6f265233aa078e105559f6db6c2948"
+    },
+    {
+      "path": "font-sources/lmsansquot8-regular.otf",
+      "size_bytes": 105172,
+      "sha256": "5da041def6d17825bb9b2d1d4fef66099a1e871005c08fc8f0d29976a923f4c9"
+    },
+    {
+      "path": "integration-examples/StudioFrame.tsx",
+      "size_bytes": 500,
+      "sha256": "258db56aaa81da90ae84b9bccdef7c7186a96ef016ee243aa16a6e673e8307fb"
+    },
+    {
+      "path": "integration-examples/next-config-snippet.txt",
+      "size_bytes": 408,
+      "sha256": "12d62387d60b10d5b13bb206f32f1fce86e46574e69c6abe66f3340f31d2b177"
+    },
+    {
+      "path": "integration-examples/prepare-studio.mjs",
+      "size_bytes": 1186,
+      "sha256": "b9a0961ab16b5859f99b01a5d0bc13f50f7a4724dba00258664e6fd9e5c9a995"
+    },
+    {
+      "path": "integration-examples/route.ts.example",
+      "size_bytes": 2137,
+      "sha256": "47e3f48ab7b7441965cdbf75a8335686a881858ed066b8381886dcd4476e599d"
+    },
+    {
+      "path": "original-source/demo.webm",
+      "size_bytes": 321976,
+      "sha256": "5d7ed3979596c51e77ba192109f54b80744256f571623556d7ccd52c462edc43"
+    },
+    {
+      "path": "original-source/fonts/DejaVu-LICENSE.txt",
+      "size_bytes": 3859,
+      "sha256": "63d3ba759d12804c5b31a9d5940d855c1820d1f5999e6b0872eb1c7ff045fbc9"
+    },
+    {
+      "path": "original-source/fonts/LatinModern-LICENSE.txt",
+      "size_bytes": 7335,
+      "sha256": "5e385a99d447892ae5e2010e60b3cd45fe395d4fc93394b643f1b5591b53fd50"
+    },
+    {
+      "path": "original-source/fonts/ts-font-0.woff",
+      "size_bytes": 379400,
+      "sha256": "b5a258937b3ae0fb1672bd5b68bba0e0d3f6c1ebc21ef4f82486eb418776cd10"
+    },
+    {
+      "path": "original-source/fonts/ts-font-1.woff",
+      "size_bytes": 350676,
+      "sha256": "9ca458a8499672fefeb33c4966f2a0dfca9916e99b687104e5019f4f927c91f3"
+    },
+    {
+      "path": "original-source/fonts/ts-font-10.woff",
+      "size_bytes": 58620,
+      "sha256": "021e276826f90f6b01968417f7c5994a8c4d0f8b4de1841132882b79e0703961"
+    },
+    {
+      "path": "original-source/fonts/ts-font-11.woff",
+      "size_bytes": 58140,
+      "sha256": "3ed28f24b15b17ea113ab5c0c47678226d56128392422035f9f6ab9e01ee6e43"
+    },
+    {
+      "path": "original-source/fonts/ts-font-12.woff",
+      "size_bytes": 53144,
+      "sha256": "06458b66bda37624fd146dbdb70422954f4df2b8fd549be8335414cec6e8f8a7"
+    },
+    {
+      "path": "original-source/fonts/ts-font-13.woff",
+      "size_bytes": 59144,
+      "sha256": "ac6094c8334dfc529e5786ff27e74e1fadb452c83f0c23c98db579deb855a9bb"
+    },
+    {
+      "path": "original-source/fonts/ts-font-14.woff",
+      "size_bytes": 55052,
+      "sha256": "7986bb6a272dba9cf56a34adad834c5419855d13cb86a142eed2651a7e41f726"
+    },
+    {
+      "path": "original-source/fonts/ts-font-15.woff",
+      "size_bytes": 57708,
+      "sha256": "9242f43d7b7ae06198bb0fac3f9488b0b04c801079040f27da9efe88ae8a6abb"
+    },
+    {
+      "path": "original-source/fonts/ts-font-16.woff",
+      "size_bytes": 45436,
+      "sha256": "8ff63b0ffff75125783c425ab5b2dbdab294aa65de10d883deb158302bb09166"
+    },
+    {
+      "path": "original-source/fonts/ts-font-17.woff",
+      "size_bytes": 53992,
+      "sha256": "2c1329395768cbb75fc2893986fa5fdef0985d394567e25684a5b4accad72796"
+    },
+    {
+      "path": "original-source/fonts/ts-font-18.woff",
+      "size_bytes": 49980,
+      "sha256": "ad2b299bd9ceb22605a053367046b8fb5d723792f0093b9d62d681a3ea89ac45"
+    },
+    {
+      "path": "original-source/fonts/ts-font-19.woff",
+      "size_bytes": 53596,
+      "sha256": "cce026b442aba8d3a75471642fcffd97f44c27256157c8745f8fc1d017cb74ad"
+    },
+    {
+      "path": "original-source/fonts/ts-font-2.woff",
+      "size_bytes": 211260,
+      "sha256": "9a9115403cf53b94a18ebca45a15c21bb9e7c4b02634645c9a42eae7aeeb8a60"
+    },
+    {
+      "path": "original-source/fonts/ts-font-20.woff",
+      "size_bytes": 52704,
+      "sha256": "985f5c994c68281f174dcd93a0e09423a91a9888e073ae83f27cb7c365cb2a7f"
+    },
+    {
+      "path": "original-source/fonts/ts-font-21.woff",
+      "size_bytes": 44936,
+      "sha256": "dc50f68fd61e818b89c846593791a50495f28186c0bef1aa5f9b80ffc5f7515a"
+    },
+    {
+      "path": "original-source/fonts/ts-font-22.woff",
+      "size_bytes": 44792,
+      "sha256": "8e885c56fd7e0a4d4191da00c58cd8ed47ad58980b3a7945792d86f6dc5449bd"
+    },
+    {
+      "path": "original-source/fonts/ts-font-23.woff",
+      "size_bytes": 44044,
+      "sha256": "eec60bfcbe78285e47b72077e7bc56a71589e74c3cd4c6c9af7ad6b8c6c9f767"
+    },
+    {
+      "path": "original-source/fonts/ts-font-24.woff",
+      "size_bytes": 45184,
+      "sha256": "4b093524c13a0bed832f06df42a204f33ca10d83f0ead678d2983c789810c65f"
+    },
+    {
+      "path": "original-source/fonts/ts-font-25.woff",
+      "size_bytes": 52284,
+      "sha256": "8b564801abdc16d008991a701b0ddc3bd22eb01434fb1aa11c610a85dcc5f8d2"
+    },
+    {
+      "path": "original-source/fonts/ts-font-3.woff",
+      "size_bytes": 193936,
+      "sha256": "8e145b700b9613d7c311d4291123f5053b84e5e89038c4c8d8c2a9fe0c0da180"
+    },
+    {
+      "path": "original-source/fonts/ts-font-4.woff",
+      "size_bytes": 202180,
+      "sha256": "3836936911a42ed335a863886b936e9e6d16f044b9af8cbf224abe114326bf1c"
+    },
+    {
+      "path": "original-source/fonts/ts-font-5.woff",
+      "size_bytes": 199796,
+      "sha256": "e2afd61d0a5fdc87b4ecf32e660281c020a2cee80f71d6a49607ce6ac9bc56dd"
+    },
+    {
+      "path": "original-source/fonts/ts-font-6.woff",
+      "size_bytes": 150432,
+      "sha256": "659f75251c5ef5dda83ba1e7bb9a6d399c2cd72d1e0c28a8c8fea3abe44110d1"
+    },
+    {
+      "path": "original-source/fonts/ts-font-7.woff",
+      "size_bytes": 151656,
+      "sha256": "01ca4bb1b0f7383cd456a5cb9cfdf386d6804f9db092320baca5ae6c0e8bfca8"
+    },
+    {
+      "path": "original-source/fonts/ts-font-8.woff",
+      "size_bytes": 55780,
+      "sha256": "8dcbba701c26aaf080aaf4082f03658c3516e6d497ea47feac30df501b0a22e1"
+    },
+    {
+      "path": "original-source/fonts/ts-font-9.woff",
+      "size_bytes": 54800,
+      "sha256": "4169284f81d4e20d087c3639b2cb54465908a80fe3e51ea8626c8aeb07d7d135"
+    },
+    {
+      "path": "original-source/index.html",
+      "size_bytes": 63538,
+      "sha256": "4a0e4fca03060af895a35dbb165cdb4908efff7817a0ebe9aae2ba3de9541ec8"
+    },
+    {
+      "path": "original-source/panel-layout.js",
+      "size_bytes": 3143,
+      "sha256": "442ebe84f35c7b28fc52fa5811a220e9efcb0c0b791b7d27cd6eaf4f85b35f5f"
+    },
+    {
+      "path": "original-source/text-catalog.js",
+      "size_bytes": 2939,
+      "sha256": "fc7b46fdeaedee34ac08075aa487f1cede4205476c413fea8466745a058721d1"
+    },
+    {
+      "path": "original-source/text-fonts.css",
+      "size_bytes": 2580,
+      "sha256": "e18bfcd0f0f47ea7eaf58f93a4342a083bdb9f969751f08954301fbe6372419a"
+    },
+    {
+      "path": "original-source/timeline-strips.js",
+      "size_bytes": 10797,
+      "sha256": "3d2fdbab9249dd0c18e3a6c1b6620c56f0867009cb46fd43718cd36442f27775"
+    },
+    {
+      "path": "original-source/video.html",
+      "size_bytes": 26240,
+      "sha256": "55ea35484602b9c27aa7a6040cb785df3213e5dc16889006700b688840c416ff"
+    },
+    {
+      "path": "original-source/video.js",
+      "size_bytes": 52828,
+      "sha256": "a3c93a79f5dab0d0f541875e349bd479f07d154f22fa29a159f22f0b25431412"
+    }
+  ]
+}
