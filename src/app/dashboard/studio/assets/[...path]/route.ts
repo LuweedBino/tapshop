@@ -40,15 +40,32 @@ function allowed(path: string[]) {
   );
 }
 
+// The editor keeps designs and preferences in localStorage under forma-* / tapshop-* keys,
+// which every creator on a shared browser would otherwise see. This runs before the
+// editor's own scripts and prefixes those keys with the signed-in creator's id. Keys saved
+// before scoping existed are handed to the first creator who opens Studio, then removed.
+function storageScope(creatorId: string) {
+  const id = JSON.stringify(creatorId).replace(/</g, "\\u003c");
+  return `<script>(()=>{try{const id=${id},ls=window.localStorage,P=Storage.prototype,get=P.getItem,set=P.setItem,del=P.removeItem,own=/^(forma|tapshop)-/,scoped=k=>"studio:"+id+":"+k;` +
+    `for(const k of Object.keys(ls).filter(k=>own.test(k))){if(get.call(ls,scoped(k))===null)set.call(ls,scoped(k),get.call(ls,k));del.call(ls,k)}` +
+    `P.getItem=function(k){return get.call(this,this===ls&&own.test(k)?scoped(k):k)};` +
+    `P.setItem=function(k,v){return set.call(this,this===ls&&own.test(k)?scoped(k):k,v)};` +
+    `P.removeItem=function(k){return del.call(this,this===ls&&own.test(k)?scoped(k):k)}}catch{}})()</script>`;
+}
+
 export async function GET(_req: Request, { params }: { params: Promise<{ path: string[] }> }) {
-  await requireCreator();
+  const creator = await requireCreator();
   const { path } = await params;
   if (!allowed(path)) return new Response("Not found", { status: 404 });
   const file = resolve(ROOT, ...path);
   if (!file.startsWith(ROOT + sep)) return new Response("Not found", { status: 404 });
   try {
     const bytes = await readFile(file);
-    return new Response(new Uint8Array(bytes), {
+    const body =
+      extname(file) === ".html"
+        ? bytes.toString("utf8").replace('<meta charset="utf-8">', (m) => m + storageScope(creator.id))
+        : new Uint8Array(bytes);
+    return new Response(body, {
       headers: {
         "content-type": TYPES[extname(file)] ?? "application/octet-stream",
         "cache-control": "private, no-store",
