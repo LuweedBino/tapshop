@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { fileUrl } from "@/lib/format";
 import { canSell } from "@/lib/orders";
@@ -9,10 +9,10 @@ import { Avatar, defaultCta, priceLabel, StoreFooter, StoreHeader, StoreProducts
 import { BuyForm } from "@/components/BuyForm";
 import { CopyCode } from "@/components/CopyCode";
 import { parseExtras, videoEmbed } from "@/lib/affiliate";
-import { KIT_SLUG, parseKit } from "@/lib/mediaKit";
+import { KIT_SLUG, OLD_KIT_SLUG, parseKit } from "@/lib/mediaKit";
 import { MediaKitView } from "@/components/MediaKitView";
 
-// This segment is the media kit (/maya/media-kit), one of the creator's extra pages
+// This segment is the portfolio (/maya/portfolio), one of the creator's extra pages
 // (/maya/summer-sale), or a product (/maya/<id>).
 async function loadKit(handle: string, segment: string) {
   if (segment.toLowerCase() !== KIT_SLUG) return null;
@@ -40,7 +40,7 @@ async function load(handle: string, productId: string) {
 export async function generateMetadata({ params }: { params: Promise<{ handle: string; productId: string }> }): Promise<Metadata> {
   const { handle, productId } = await params;
   const kit = await loadKit(handle, productId);
-  if (kit) return { title: `${kit.creator.displayName} | Media kit`, description: kit.kit.headline || undefined };
+  if (kit) return { title: `${kit.creator.displayName} | Portfolio`, description: kit.kit.headline || undefined };
   const page = await loadPage(handle, productId);
   if (page) return { title: `${page.title} | ${page.creator.displayName}`, description: page.description || undefined };
   const p = await load(handle, productId);
@@ -49,9 +49,10 @@ export async function generateMetadata({ params }: { params: Promise<{ handle: s
 
 export default async function ProductPage({ params }: { params: Promise<{ handle: string; productId: string }> }) {
   const { handle, productId } = await params;
-  if (productId.toLowerCase() === KIT_SLUG) {
-    const kit = await loadKit(handle, productId);
-    if (!kit) notFound();
+  // Portfolios used to live at /maya/media-kit.
+  if (productId.toLowerCase() === OLD_KIT_SLUG) permanentRedirect(`/${handle}/${KIT_SLUG}`);
+  const kit = await loadKit(handle, productId);
+  if (kit) {
     return <MediaKitView creator={kit.creator} headline={kit.kit.headline} doc={parseKit(kit.kit.data, kit.kit.about)} updatedAt={kit.kit.updatedAt} />;
   }
   const page = await loadPage(handle, productId);

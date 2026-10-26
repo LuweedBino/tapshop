@@ -556,7 +556,7 @@ export function MediaKitBuilder({ creator, initial, updatedAt }: {
 
         <label className="card flex items-center gap-3 text-sm font-medium">
           <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} className="h-4 w-4" />
-          Show my media kit (anyone with the link can see it)
+          Show my portfolio (anyone with the link can see it)
         </label>
 
         <div className="flex gap-1 rounded-xl bg-neutral-200/70 p-1" role="tablist">
@@ -602,7 +602,7 @@ export function MediaKitBuilder({ creator, initial, updatedAt }: {
         )}
 
         <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-neutral-200 bg-neutral-50/95 px-4 py-3 backdrop-blur md:mx-0 md:rounded-xl md:border">
-          <Submit>Save media kit</Submit>
+          <Submit>Save portfolio</Submit>
           {state?.error && <span className="text-sm text-red-600">{state.error}</span>}
           {state?.ok && <span className="text-sm text-green-700">{state.ok}</span>}
         </div>

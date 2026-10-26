@@ -1,11 +1,13 @@
-// A media kit is a list of sections ("blocks") the creator adds, orders and styles.
+// A portfolio (called the media kit in code) is a list of sections ("blocks") the creator adds, orders and styles.
 // Stored in MediaKit.data as { version: 2, style, tags, blocks }. Kits saved before the
 // builder (plain stats/audience/partnerships/... fields) are converted on read.
 import { z } from "zod";
 import { FONTS, THEMES } from "./design";
 import { isSocialKind, PLATFORMS, type SocialKind } from "./socials";
 
-export const KIT_SLUG = "media-kit";
+export const KIT_SLUG = "portfolio";
+/** The link before the media kit was renamed Portfolio; it redirects. */
+export const OLD_KIT_SLUG = "media-kit";
 export const LIMITS = { blocks: 24, items: 12, gallery: 12, tags: 6 };
 
 /** Platforms that have followers worth showing a brand. */

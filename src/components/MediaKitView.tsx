@@ -648,7 +648,7 @@ export function MediaKitView({ creator, headline, doc, updatedAt, preview = fals
       <main className={`@container mx-auto max-w-xl px-4 pb-4 ${cover ? "" : "pt-10"} ${look.stack}`} style={look.vars}>
         <header className={`flex flex-col ${left ? "items-start text-left" : "items-center text-center"} ${boxed ? look.box() : ""} ${cover && style.showAvatar ? "-mt-12" : cover ? "mt-6" : ""}`}>
           {style.showAvatar && <Avatar creator={creator} />}
-          <p className="mt-4 rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--on-accent)]">Media kit</p>
+          <p className="mt-4 rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--on-accent)]">Portfolio</p>
           <h1 className={style.header === "hero" ? "mt-3 text-5xl font-black leading-[0.95] tracking-tighter @md:text-6xl" : "mt-2 text-3xl font-bold tracking-tight"}>{creator.displayName}</h1>
           {headline && <p className={`mt-2 max-w-md text-[15px] leading-relaxed ${muted} ${style.header === "hero" ? "mt-3 text-base" : ""}`}>{headline}</p>}
           {doc.tags.length > 0 && (
@@ -665,7 +665,7 @@ export function MediaKitView({ creator, headline, doc, updatedAt, preview = fals
             <BlockBody b={b} creator={creator} preview={preview} />
           </section>
         ))}
-        {blocks.length === 0 && <p className="py-10 text-center text-sm text-[var(--page-muted)]">Add sections to build your media kit.</p>}
+        {blocks.length === 0 && <p className="py-10 text-center text-sm text-[var(--page-muted)]">Add sections to build your portfolio.</p>}
 
         <div>
           <p className="pt-2 text-center text-xs text-[var(--page-muted)]">Last updated {updatedAt.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
