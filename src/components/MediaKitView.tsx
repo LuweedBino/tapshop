@@ -1,14 +1,14 @@
 import type { Creator } from "@prisma/client";
 import { fileUrl } from "@/lib/format";
 import { designOf, type Design } from "@/lib/design";
-import { formatCount, type Block, type BlockOf, type KitDoc } from "@/lib/mediaKit";
+import { formatCount, type Block, type BlockOf, type KitDoc, type KitStyle } from "@/lib/mediaKit";
 import { videoEmbed } from "@/lib/affiliate";
 import { PLATFORMS } from "@/lib/socials";
 import { Avatar, StoreFooter, StoreShell } from "./Storefront";
 import { SocialIcon } from "./SocialIcon";
 import { InquiryForm } from "./InquiryForm";
 
-type KitCreator = Pick<Creator, "id" | "displayName" | "avatarKey" | "avatarStyle" | "accentColor" | "theme" | "font" | "buttonStyle" | "layout">;
+export type KitCreator = Pick<Creator, "id" | "displayName" | "avatarKey" | "avatarStyle" | "accentColor" | "theme" | "font" | "buttonStyle" | "layout">;
 
 const INNER = "rounded-[calc(var(--card-radius)*0.75)] border border-[var(--card-border)]";
 
@@ -211,7 +211,26 @@ function isEmpty(b: Block) {
   }
 }
 
-export function MediaKitView({ creator, headline, doc, updatedAt, preview = false, className }: {
+const CORNER_RADIUS = { sharp: ["0.25rem", "0.25rem"], soft: ["0.875rem", "0.75rem"], round: ["1.75rem", "9999px"] } as const;
+
+/** The style classes and variables for a kit; shared with the builder's style samples. */
+export function kitLook(style: KitStyle) {
+  const corners = style.corners ? { "--card-radius": CORNER_RADIUS[style.corners][0], "--btn-radius": CORNER_RADIUS[style.corners][1] } : {};
+  return {
+    vars: corners as React.CSSProperties,
+    stack: `mk mk-${style.spacing} mk-motion-${style.motion}`,
+    backdrop: style.backdrop === "none" ? null : `mk-bg mk-bg-${style.backdrop}`,
+    box: (b?: Pick<Block, "box">) => `mk-sec mk-box-${b?.box ?? style.sections}`,
+    title: (b?: Pick<Block, "heading">) => `mk-t mk-t-${b?.heading ?? style.titles}`,
+  };
+}
+
+export function kitDesign(creator: KitCreator, style: KitStyle): Design {
+  const store = designOf(creator);
+  return { ...store, accentColor: style.accent ?? store.accentColor, theme: style.theme ?? store.theme, font: style.font ?? store.font };
+}
+
+export function MediaKitView({ creator, headline, doc, updatedAt, preview = false, className = "min-h-dvh" }: {
   creator: KitCreator;
   headline: string;
   doc: KitDoc;
@@ -220,25 +239,27 @@ export function MediaKitView({ creator, headline, doc, updatedAt, preview = fals
   className?: string;
 }) {
   const { style } = doc;
-  const store = designOf(creator);
-  const design: Design = { ...store, accentColor: style.accent ?? store.accentColor, theme: style.theme ?? store.theme, font: style.font ?? store.font };
+  const design = kitDesign(creator, style);
+  const look = kitLook(style);
   const cover = fileUrl(style.coverKey || null);
   const left = style.align === "left";
+  const boxed = style.header === "card";
+  const muted = boxed ? "text-[var(--card-muted)]" : "text-[var(--page-muted)]";
   const blocks = doc.blocks.filter((b) => !b.hidden && (preview || !isEmpty(b)));
-  const section = style.sections === "cards" ? "rounded-[var(--card-radius)] border border-[var(--card-border)] bg-[var(--card)] p-5 text-[var(--card-text)] shadow-sm" : "border-t border-[var(--card-border)] py-6 first:border-t-0";
   const hasContact = blocks.some((b) => b.type === "contact");
   return (
-    <StoreShell design={{ ...design, accentColor: design.accentColor }} className={className}>
+    <StoreShell design={design} className={`relative isolate overflow-hidden ${className}`}>
+      {look.backdrop && <div className={look.backdrop} aria-hidden />}
       {cover && (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={cover} alt="" className="h-44 w-full object-cover sm:h-56" />
       )}
-      <main className={`@container mx-auto max-w-xl px-4 pb-4 ${cover ? "" : "pt-10"} ${style.sections === "cards" ? "space-y-4" : ""}`}>
-        <header className={`flex flex-col ${left ? "items-start text-left" : "items-center text-center"} ${cover && style.showAvatar ? "-mt-12" : cover ? "pt-6" : ""} ${style.sections === "flat" ? "pb-6" : ""}`}>
+      <main className={`@container mx-auto max-w-xl px-4 pb-4 ${cover ? "" : "pt-10"} ${look.stack}`} style={look.vars}>
+        <header className={`flex flex-col ${left ? "items-start text-left" : "items-center text-center"} ${boxed ? look.box() : ""} ${cover && style.showAvatar ? "-mt-12" : cover ? "mt-6" : ""}`}>
           {style.showAvatar && <Avatar creator={creator} />}
           <p className="mt-4 rounded-full bg-[var(--accent)] px-3 py-1 text-xs font-bold uppercase tracking-wider text-[var(--on-accent)]">Media kit</p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight">{creator.displayName}</h1>
-          {headline && <p className="mt-2 max-w-md text-[15px] leading-relaxed text-[var(--page-muted)]">{headline}</p>}
+          <h1 className={style.header === "hero" ? "mt-3 text-5xl font-black leading-[0.95] tracking-tighter @md:text-6xl" : "mt-2 text-3xl font-bold tracking-tight"}>{creator.displayName}</h1>
+          {headline && <p className={`mt-2 max-w-md text-[15px] leading-relaxed ${muted} ${style.header === "hero" ? "mt-3 text-base" : ""}`}>{headline}</p>}
           {doc.tags.length > 0 && (
             <div className={`mt-3 flex flex-wrap gap-1.5 ${left ? "" : "justify-center"}`}>
               {doc.tags.map((t) => <span key={t} className="rounded-full border border-[var(--card-border)] bg-[var(--card)] px-2.5 py-0.5 text-xs font-semibold text-[var(--card-text)]">{t}</span>)}
@@ -248,15 +269,17 @@ export function MediaKitView({ creator, headline, doc, updatedAt, preview = fals
         </header>
 
         {blocks.map((b) => (
-          <section key={b.id} id={b.type === "contact" ? "work-with-me" : undefined} className={`${section} scroll-mt-4`}>
-            {b.title && <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-[var(--card-muted)]">{b.title}</h2>}
+          <section key={b.id} id={b.type === "contact" ? "work-with-me" : undefined} className={`${look.box(b)} scroll-mt-4`}>
+            {b.title && <h2 className={look.title(b)}>{b.title}</h2>}
             <BlockBody b={b} creator={creator} preview={preview} />
           </section>
         ))}
         {blocks.length === 0 && <p className="py-10 text-center text-sm text-[var(--page-muted)]">Add sections to build your media kit.</p>}
 
-        <p className="pt-2 text-center text-xs text-[var(--page-muted)]">Last updated {updatedAt.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
-        <StoreFooter />
+        <div>
+          <p className="pt-2 text-center text-xs text-[var(--page-muted)]">Last updated {updatedAt.toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p>
+          <StoreFooter />
+        </div>
       </main>
     </StoreShell>
   );

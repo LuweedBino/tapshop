@@ -4,14 +4,14 @@ import { useActionState, useState } from "react";
 import { saveMediaKit } from "@/app/actions/mediaKit";
 import type { FormState } from "@/app/actions/auth";
 import { FONTS, THEMES } from "@/lib/design";
-import { BLOCKS, formatCount, LIMITS, newBlock, newId, parseCount, STAT_PLATFORMS, type Block, type BlockOf, type BlockType, type KitDoc, type KitStyle } from "@/lib/mediaKit";
+import { BACKDROPS, BLOCKS, BOX_STYLES, CORNERS, formatCount, HEADERS, LIMITS, LOOKS, MOTIONS, newBlock, newId, parseCount, SPACINGS, STAT_PLATFORMS, TITLE_STYLES, type Block, type BlockOf, type BlockType, type BoxStyle, type KitDoc, type KitStyle, type TitleStyle } from "@/lib/mediaKit";
 import { PLATFORMS, type SocialKind } from "@/lib/socials";
 import { FileUpload } from "./FileUpload";
-import { MediaKitView } from "./MediaKitView";
+import { kitDesign, kitLook, MediaKitView, type KitCreator } from "./MediaKitView";
+import { StoreShell } from "./Storefront";
 import { Segmented } from "./Segmented";
 import { Submit } from "./Submit";
 
-type KitCreator = Parameters<typeof MediaKitView>[0]["creator"];
 const SWATCHES = ["#7c3aed", "#db2777", "#ea580c", "#16a34a", "#0891b2", "#2563eb", "#171717"];
 const ICONS: Record<BlockType, string> = {
   stats: "📊", highlights: "⭐", text: "📝", audience: "👥", brands: "🤝", testimonials: "💬",
@@ -303,6 +303,20 @@ function BlockCard({ b, open, first, last, onToggle, onChange, onMove, onDelete 
           <Field label="Section title">
             <input className="input" value={b.title} onChange={(e) => onChange({ title: e.target.value })} maxLength={80} placeholder="Leave empty for no title" />
           </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Box style">
+              <select className="input" value={b.box ?? ""} onChange={(e) => onChange({ box: (e.target.value || null) as BoxStyle | null })}>
+                <option value="">Same as page</option>
+                {(Object.keys(BOX_STYLES) as BoxStyle[]).map((k) => <option key={k} value={k}>{BOX_STYLES[k].label}</option>)}
+              </select>
+            </Field>
+            <Field label="Title style">
+              <select className="input" value={b.heading ?? ""} onChange={(e) => onChange({ heading: (e.target.value || null) as TitleStyle | null })}>
+                <option value="">Same as page</option>
+                {(Object.keys(TITLE_STYLES) as TitleStyle[]).map((k) => <option key={k} value={k}>{TITLE_STYLES[k].label}</option>)}
+              </select>
+            </Field>
+          </div>
           <BlockFields b={b} set={onChange} />
           <div className="flex justify-end">
             <button type="button" className="text-sm text-neutral-500 hover:text-red-600" onClick={onDelete}>Delete section</button>
@@ -341,6 +355,29 @@ function AddSection({ onAdd, disabled }: { onAdd: (t: BlockType) => void; disabl
   );
 }
 
+/** A tiny live sample of a style, used as a button to pick it. */
+function Sample({ creator, style, label, active, onClick }: { creator: KitCreator; style: KitStyle; label: string; active: boolean; onClick: () => void }) {
+  const look = kitLook(style);
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active} aria-label={label} className={`overflow-hidden rounded-xl border-2 bg-white text-left transition ${active ? "border-neutral-900" : "border-neutral-200 hover:border-neutral-400"}`}>
+      <StoreShell design={kitDesign(creator, style)} fadeAt={60} className="relative isolate h-24 overflow-hidden">
+        {look.backdrop && <div className={look.backdrop} aria-hidden />}
+        <div className={`mk mk-${style.spacing} w-[200%] origin-top-left scale-50 p-4`} style={look.vars}>
+          <div className={look.box()}>
+            <p className={look.title()}>Reach</p>
+            <p className="text-3xl font-black">1.3M</p>
+          </div>
+          <div className={look.box()}>
+            <p className={look.title()}>Rates</p>
+            <div className="h-3 w-2/3 rounded-full bg-[var(--accent)]" />
+          </div>
+        </div>
+      </StoreShell>
+      <p className="truncate px-2 py-1.5 text-xs font-semibold">{label}</p>
+    </button>
+  );
+}
+
 function StylePanel({ doc, setStyle, setTags, headline, setHeadline, creator }: {
   doc: KitDoc;
   setStyle: (patch: Partial<KitStyle>) => void;
@@ -357,8 +394,57 @@ function StylePanel({ doc, setStyle, setTags, headline, setHeadline, creator }: 
     setTag("");
   };
   const storeOr = <T extends string>(options: Record<T, { label: string }>) => ({ store: { label: "Same as store" }, ...options }) as Record<T | "store", { label: string }>;
+  const isLook = (l: Partial<KitStyle>) => (Object.keys(l) as (keyof KitStyle)[]).every((k) => l[k] === style[k]);
   return (
     <div className="space-y-5">
+      <section className="card space-y-4">
+        <div>
+          <h2 className="font-semibold">Quick looks</h2>
+          <p className="mt-0.5 text-sm text-neutral-500">Tap one to try it on. You can fine-tune everything below, and your color stays the same.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+          {Object.entries(LOOKS).map(([k, l]) => (
+            <Sample key={k} creator={creator} style={{ ...style, ...l.style }} label={l.label} active={isLook(l.style)} onClick={() => setStyle(l.style)} />
+          ))}
+        </div>
+      </section>
+
+      <section className="card space-y-5">
+        <h2 className="font-semibold">Sections</h2>
+        <div>
+          <span className="label">Box style</span>
+          <div className="grid grid-cols-3 gap-2 xl:grid-cols-4">
+            {(Object.keys(BOX_STYLES) as BoxStyle[]).map((k) => (
+              <Sample key={k} creator={creator} style={{ ...style, sections: k }} label={BOX_STYLES[k].label} active={style.sections === k} onClick={() => setStyle({ sections: k })} />
+            ))}
+          </div>
+          <p className="mt-1.5 text-xs text-neutral-500">Want one section to stand out? Open it in the Sections tab and give it its own style.</p>
+        </div>
+        <Segmented label="Titles" options={TITLE_STYLES} value={style.titles} onChange={(titles) => setStyle({ titles })} />
+        <Segmented label="Corners" options={storeOr(CORNERS)} value={style.corners ?? "store"} onChange={(v) => setStyle({ corners: v === "store" ? null : v })} />
+        <Segmented label="Spacing" options={SPACINGS} value={style.spacing} onChange={(spacing) => setStyle({ spacing })} />
+        <Segmented label="Animation as you scroll" options={MOTIONS} value={style.motion} onChange={(motion) => setStyle({ motion })} />
+      </section>
+
+      <section className="card space-y-5">
+        <h2 className="font-semibold">Color and background</h2>
+        <div>
+          <span className="label">Color</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" onClick={() => setStyle({ accent: null })} aria-pressed={style.accent === null} className={`rounded-full border px-3 py-1.5 text-sm font-medium ${style.accent === null ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300"}`}>
+              Same as store
+            </button>
+            {SWATCHES.map((c) => (
+              <button key={c} type="button" aria-label={c} onClick={() => setStyle({ accent: c })} className={`h-9 w-9 rounded-full ${style.accent === c ? "ring-2 ring-neutral-900 ring-offset-2" : ""}`} style={{ background: c }} />
+            ))}
+            <input type="color" aria-label="Custom color" value={style.accent ?? creator.accentColor} onChange={(e) => setStyle({ accent: e.target.value })} className="h-9 w-12 cursor-pointer rounded-lg border border-neutral-300 bg-white" />
+          </div>
+        </div>
+        <Segmented label="Theme" options={storeOr(THEMES)} value={style.theme ?? "store"} onChange={(v) => setStyle({ theme: v === "store" ? null : v })} />
+        <Segmented label="Background effect" options={BACKDROPS} value={style.backdrop} onChange={(backdrop) => setStyle({ backdrop })} />
+        <Segmented label="Font" options={storeOr(FONTS)} value={style.font ?? "store"} onChange={(v) => setStyle({ font: v === "store" ? null : v })} />
+      </section>
+
       <section className="card space-y-4">
         <h2 className="font-semibold">Top of the page</h2>
         <FileUpload name="" visibility="public" initialKey={style.coverKey || null} accept="image/*" label="Cover photo" hint="A wide photo across the top (optional)" onChange={(coverKey) => setStyle({ coverKey })} />
@@ -366,6 +452,8 @@ function StylePanel({ doc, setStyle, setTags, headline, setHeadline, creator }: 
           <input type="checkbox" checked={style.showAvatar} onChange={(e) => setStyle({ showAvatar: e.target.checked })} className="h-4 w-4" />
           Show my profile photo
         </label>
+        <Segmented label="Header style" options={HEADERS} value={style.header} onChange={(header) => setStyle({ header })} />
+        <Segmented label="Header alignment" options={{ center: { label: "Center" }, left: { label: "Left" } }} value={style.align} onChange={(align) => setStyle({ align })} />
         <Field label="Headline">
           <input className="input" value={headline} onChange={(e) => setHeadline(e.target.value)} maxLength={120} placeholder="e.g. Fitness creator helping busy moms get strong" />
         </Field>
@@ -388,26 +476,6 @@ function StylePanel({ doc, setStyle, setTags, headline, setHeadline, creator }: 
             </div>
           )}
         </div>
-      </section>
-
-      <section className="card space-y-5">
-        <h2 className="font-semibold">Look</h2>
-        <div>
-          <span className="label">Color</span>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => setStyle({ accent: null })} aria-pressed={style.accent === null} className={`rounded-full border px-3 py-1.5 text-sm font-medium ${style.accent === null ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300"}`}>
-              Same as store
-            </button>
-            {SWATCHES.map((c) => (
-              <button key={c} type="button" aria-label={c} onClick={() => setStyle({ accent: c })} className={`h-9 w-9 rounded-full ${style.accent === c ? "ring-2 ring-neutral-900 ring-offset-2" : ""}`} style={{ background: c }} />
-            ))}
-            <input type="color" aria-label="Custom color" value={style.accent ?? creator.accentColor} onChange={(e) => setStyle({ accent: e.target.value })} className="h-9 w-12 cursor-pointer rounded-lg border border-neutral-300 bg-white" />
-          </div>
-        </div>
-        <Segmented label="Background" options={storeOr(THEMES)} value={style.theme ?? "store"} onChange={(v) => setStyle({ theme: v === "store" ? null : v })} />
-        <Segmented label="Font" options={storeOr(FONTS)} value={style.font ?? "store"} onChange={(v) => setStyle({ font: v === "store" ? null : v })} />
-        <Segmented label="Sections" options={{ cards: { label: "Cards" }, flat: { label: "Flat with lines" } }} value={style.sections} onChange={(sections) => setStyle({ sections })} />
-        <Segmented label="Header alignment" options={{ center: { label: "Center" }, left: { label: "Left" } }} value={style.align} onChange={(align) => setStyle({ align })} />
       </section>
     </div>
   );
