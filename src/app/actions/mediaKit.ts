@@ -98,7 +98,7 @@ export async function saveMediaKit(_: FormState, form: FormData): Promise<FormSt
   };
   await db.mediaKit.upsert({ where: { creatorId: creator.id }, update: kit, create: { ...kit, creatorId: creator.id } });
   revalidatePath(`/${creator.handle}/${KIT_SLUG}`);
-  return { ok: kit.published ? "Saved. Your media kit is live." : "Saved. Turn on \"Show my media kit\" when you're ready to share it." };
+  return { ok: kit.published ? "Saved. Your portfolio is live." : "Saved. Turn on \"Show my portfolio\" when you're ready to share it." };
 }
 
 const Inquiry = z.object({
@@ -117,14 +117,14 @@ export async function sendInquiry(creatorId: string, _: InquiryState, form: Form
   const parsed = Inquiry.safeParse(Object.fromEntries(form));
   if (!parsed.success) return parsed.error.issues[0].path[0] === "website" ? { sent: true } : { error: parsed.error.issues[0].message };
   const creator = await db.creator.findUnique({ where: { id: creatorId }, include: { mediaKit: true } });
-  if (!creator || creator.pausedAt || !creator.mediaKit?.published) return { error: "This media kit isn't available right now" };
+  if (!creator || creator.pausedAt || !creator.mediaKit?.published) return { error: "This portfolio isn't available right now" };
   const { name, email, company, budget, message } = parsed.data;
   const data = { name, email, company, budget, message };
   await db.brandInquiry.create({ data: { ...data, creatorId } });
   await sendEmail({
     to: creator.email,
     subject: `New brand inquiry from ${data.company || data.name}`,
-    html: inquiryEmail({ ...data, creatorName: creator.displayName, link: `${env.appUrl}/dashboard/media-kit` }),
+    html: inquiryEmail({ ...data, creatorName: creator.displayName, link: `${env.appUrl}/dashboard/portfolio` }),
   });
   return { sent: true };
 }
@@ -132,5 +132,5 @@ export async function sendInquiry(creatorId: string, _: InquiryState, form: Form
 export async function deleteInquiry(id: string) {
   const creator = await requireCreator();
   await db.brandInquiry.deleteMany({ where: { id, creatorId: creator.id } });
-  revalidatePath("/dashboard/media-kit");
+  revalidatePath("/dashboard/portfolio");
 }
