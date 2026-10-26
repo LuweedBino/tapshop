@@ -9,7 +9,7 @@ import { Avatar, defaultCta, priceLabel, StoreFooter, StoreHeader, StoreProducts
 import { BuyForm } from "@/components/BuyForm";
 import { CopyCode } from "@/components/CopyCode";
 import { parseExtras, videoEmbed } from "@/lib/affiliate";
-import { KIT_SLUG } from "@/lib/mediaKit";
+import { KIT_SLUG, parseKit } from "@/lib/mediaKit";
 import { MediaKitView } from "@/components/MediaKitView";
 
 // This segment is the media kit (/maya/media-kit), one of the creator's extra pages
@@ -52,7 +52,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   if (productId.toLowerCase() === KIT_SLUG) {
     const kit = await loadKit(handle, productId);
     if (!kit) notFound();
-    return <MediaKitView creator={kit.creator} kit={kit.kit} />;
+    return <MediaKitView creator={kit.creator} headline={kit.kit.headline} doc={parseKit(kit.kit.data, kit.kit.about)} updatedAt={kit.kit.updatedAt} />;
   }
   const page = await loadPage(handle, productId);
   if (page) {

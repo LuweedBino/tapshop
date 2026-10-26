@@ -4,13 +4,14 @@ import { useActionState } from "react";
 import { sendInquiry, type InquiryState } from "@/app/actions/mediaKit";
 import { Submit } from "./Submit";
 
-export function InquiryForm({ creatorId, creatorName }: { creatorId: string; creatorName: string }) {
+/** In the builder's preview the form shows but can't be sent. */
+export function InquiryForm({ creatorId, creatorName, preview = false }: { creatorId: string; creatorName: string; preview?: boolean }) {
   const [state, action] = useActionState<InquiryState, FormData>(sendInquiry.bind(null, creatorId), undefined);
   if (state?.sent) {
     return <p className="rounded-[var(--btn-radius)] bg-[color-mix(in_srgb,var(--accent)_12%,transparent)] px-4 py-6 text-center font-semibold">Thanks! {creatorName} will get back to you by email.</p>;
   }
   return (
-    <form action={action} className="space-y-3">
+    <form action={action} className="space-y-3" onSubmit={(e) => preview && e.preventDefault()}>
       <div className="grid gap-3 sm:grid-cols-2">
         <input className="input" name="name" placeholder="Your name" autoComplete="name" required />
         <input className="input" name="email" type="email" placeholder="Work email" autoComplete="email" required />

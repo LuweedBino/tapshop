@@ -1,55 +1,151 @@
-// The content of a media kit, stored in MediaKit.data.
+// A media kit is a list of sections ("blocks") the creator adds, orders and styles.
+// Stored in MediaKit.data as { version: 2, style, tags, blocks }. Kits saved before the
+// builder (plain stats/audience/partnerships/... fields) are converted on read.
+import { z } from "zod";
+import { FONTS, THEMES } from "./design";
 import { isSocialKind, PLATFORMS, type SocialKind } from "./socials";
 
-export type KitStat = { kind: SocialKind; handle: string; followers: number; avgViews: number | null; engagement: number | null };
-export type KitShare = { label: string; pct: number };
-export type KitPartnership = { brand: string; logoKey: string; description: string; url: string };
-export type KitService = { name: string; price: string; description: string };
-export type KitData = {
-  stats: KitStat[];
-  /** Percent of the audience that are women, men and other. */
-  gender: { women: number; men: number; other: number } | null;
-  ages: KitShare[];
-  locations: KitShare[];
-  partnerships: KitPartnership[];
-  services: KitService[];
-  gallery: string[];
-};
-
-export const LIMITS = { stats: 10, ages: 6, locations: 6, partnerships: 12, services: 8, gallery: 9 };
 export const KIT_SLUG = "media-kit";
+export const LIMITS = { blocks: 24, items: 12, gallery: 12, tags: 6 };
 
 /** Platforms that have followers worth showing a brand. */
 export const STAT_PLATFORMS = (Object.keys(PLATFORMS) as SocialKind[]).filter((k) =>
   ["Social", "Video & streaming", "Music & podcasts"].includes(PLATFORMS[k].group) || ["substack", "patreon", "medium"].includes(k),
 );
 
-const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null);
-const str = (v: unknown) => (typeof v === "string" ? v : "");
-const list = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is Record<string, unknown> => !!x && typeof x === "object") : []);
+const id = z.string().max(40);
+const s = (max: number) => z.string().max(max).default("");
+const pct = z.number().min(0).max(100);
+const count = z.number().int().min(0).max(1e12);
+const items = <T extends z.ZodTypeAny>(item: T, max = LIMITS.items) => z.array(item).max(max).default([]);
 
-export function parseKit(value: unknown): KitData {
-  const v = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
-  const g = v.gender && typeof v.gender === "object" ? (v.gender as Record<string, unknown>) : null;
-  const shares = (x: unknown, max: number) => list(x).map((s) => ({ label: str(s.label), pct: num(s.pct) ?? 0 })).filter((s) => s.label).slice(0, max);
+const Stat = z.object({ id, kind: z.string().refine(isSocialKind), handle: s(60), followers: count.default(0), avgViews: count.nullable().default(null), engagement: pct.nullable().default(null) });
+const Share = z.object({ id, label: s(40), pct: pct.default(0) });
+
+export const BLOCKS = {
+  stats: {
+    label: "Stats",
+    hint: "Followers, views and engagement per platform",
+    schema: z.object({ items: items(Stat, 10), showTotal: z.boolean().default(true) }),
+  },
+  highlights: {
+    label: "Highlights",
+    hint: "Big numbers, like 2M monthly views",
+    schema: z.object({ items: items(z.object({ id, value: s(20), label: s(60) }), 6) }),
+  },
+  text: { label: "Text", hint: "About me, my story, what I post", schema: z.object({ body: s(3000) }) },
+  audience: {
+    label: "Audience",
+    hint: "Gender, age and top locations",
+    schema: z.object({
+      gender: z.object({ women: pct, men: pct, other: pct }).nullable().default(null),
+      ages: items(Share, 8),
+      locations: items(Share, 8),
+    }),
+  },
+  brands: {
+    label: "Brands I've worked with",
+    hint: "Past partnerships with logos",
+    schema: z.object({
+      layout: z.enum(["cards", "logos"]).default("cards"),
+      items: items(z.object({ id, brand: s(60), logoKey: s(200), description: s(300), url: s(500) }), 24),
+    }),
+  },
+  testimonials: {
+    label: "Testimonials",
+    hint: "What brands said about working with you",
+    schema: z.object({ items: items(z.object({ id, quote: s(600), name: s(80), role: s(80) }), 8) }),
+  },
+  rates: {
+    label: "Rates",
+    hint: "What brands can book and the price",
+    schema: z.object({ items: items(z.object({ id, name: s(80), price: s(40), description: s(300) })), note: s(300) }),
+  },
+  gallery: {
+    label: "Photos",
+    hint: "Your best shots or past work",
+    schema: z.object({ images: z.array(z.string().max(200)).max(LIMITS.gallery).default([]), columns: z.union([z.literal(2), z.literal(3)]).default(3) }),
+  },
+  video: { label: "Video", hint: "A YouTube, Vimeo or Loom video", schema: z.object({ url: s(500), caption: s(200) }) },
+  links: {
+    label: "Links",
+    hint: "Buttons to your best posts, website or press",
+    schema: z.object({ items: items(z.object({ id, label: s(60), url: s(500) }), 8) }),
+  },
+  contact: { label: "Work with me", hint: "A form brands use to reach you", schema: z.object({ intro: s(300) }) },
+} as const;
+
+export type BlockType = keyof typeof BLOCKS;
+type Data<T extends BlockType> = z.infer<(typeof BLOCKS)[T]["schema"]>;
+export type Block = { [T in BlockType]: { id: string; type: T; title: string; hidden: boolean } & Data<T> }[BlockType];
+export type BlockOf<T extends BlockType> = Extract<Block, { type: T }>;
+export type KitStat = Omit<z.infer<typeof Stat>, "kind"> & { kind: SocialKind };
+
+export const KitStyle = z.object({
+  /** null keeps the store's setting. */
+  accent: z.string().regex(/^#[0-9a-f]{6}$/i).nullable().default(null),
+  theme: z.enum(Object.keys(THEMES) as [keyof typeof THEMES]).nullable().default(null),
+  font: z.enum(Object.keys(FONTS) as [keyof typeof FONTS]).nullable().default(null),
+  sections: z.enum(["cards", "flat"]).default("cards"),
+  align: z.enum(["center", "left"]).default("center"),
+  coverKey: s(200),
+  showAvatar: z.boolean().default(true),
+});
+export type KitStyle = z.infer<typeof KitStyle>;
+export type KitDoc = { style: KitStyle; tags: string[]; blocks: Block[] };
+
+let seq = 0;
+export const newId = () => `${Date.now().toString(36)}${(seq++).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+export function newBlock<T extends BlockType>(type: T): BlockOf<T> {
+  const data = BLOCKS[type].schema.parse({});
+  return { id: newId(), type, title: BLOCKS[type].label, hidden: false, ...data } as BlockOf<T>;
+}
+
+function parseBlock(raw: unknown): Block | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const type = r.type as BlockType;
+  if (!Object.hasOwn(BLOCKS, type)) return null;
+  const data = BLOCKS[type].schema.safeParse(r);
+  if (!data.success) return null;
   return {
-    stats: list(v.stats)
-      .filter((s) => isSocialKind(s.kind))
-      .map((s) => ({ kind: s.kind as SocialKind, handle: str(s.handle), followers: num(s.followers) ?? 0, avgViews: num(s.avgViews), engagement: num(s.engagement) }))
-      .slice(0, LIMITS.stats),
-    gender: g ? { women: num(g.women) ?? 0, men: num(g.men) ?? 0, other: num(g.other) ?? 0 } : null,
-    ages: shares(v.ages, LIMITS.ages),
-    locations: shares(v.locations, LIMITS.locations),
-    partnerships: list(v.partnerships)
-      .map((p) => ({ brand: str(p.brand), logoKey: str(p.logoKey), description: str(p.description), url: str(p.url) }))
-      .filter((p) => p.brand)
-      .slice(0, LIMITS.partnerships),
-    services: list(v.services)
-      .map((s) => ({ name: str(s.name), price: str(s.price), description: str(s.description) }))
-      .filter((s) => s.name)
-      .slice(0, LIMITS.services),
-    gallery: (Array.isArray(v.gallery) ? v.gallery.filter((k): k is string => typeof k === "string" && k !== "") : []).slice(0, LIMITS.gallery),
-  };
+    id: typeof r.id === "string" && r.id ? r.id.slice(0, 40) : newId(),
+    type,
+    title: typeof r.title === "string" ? r.title.slice(0, 80) : BLOCKS[type].label,
+    hidden: r.hidden === true,
+    ...data.data,
+  } as Block;
+}
+
+/** Turns a kit saved before the builder into blocks, in the order the old page showed them. */
+function fromV1(v: Record<string, unknown>, about: string): Block[] {
+  const withIds = (x: unknown) => (Array.isArray(x) ? x.map((i) => ({ id: newId(), ...(i as object) })) : []);
+  const raw = [
+    { type: "stats", title: "Reach", items: withIds(v.stats) },
+    about && { type: "text", title: "About", body: about },
+    { type: "audience", title: "Audience", gender: v.gender ?? null, ages: withIds(v.ages), locations: withIds(v.locations) },
+    { type: "brands", title: "Brands I've worked with", items: withIds(v.partnerships) },
+    { type: "rates", title: "Rates", items: withIds(v.services) },
+    { type: "gallery", title: "Gallery", images: Array.isArray(v.gallery) ? v.gallery : [] },
+    { type: "contact", title: "Work with me" },
+  ].filter(Boolean);
+  return raw.map(parseBlock).filter((b): b is Block => b !== null);
+}
+
+export function parseKit(value: unknown, about = ""): KitDoc {
+  const v = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const style = KitStyle.safeParse(v.style ?? {});
+  const tags = Array.isArray(v.tags) ? v.tags.filter((t): t is string => typeof t === "string" && t.trim() !== "").map((t) => t.slice(0, 30)).slice(0, LIMITS.tags) : [];
+  const blocks = Array.isArray(v.blocks) ? v.blocks.map(parseBlock).filter((b): b is Block => b !== null) : fromV1(v, about);
+  return { style: style.success ? style.data : KitStyle.parse({}), tags, blocks: blocks.slice(0, LIMITS.blocks) };
+}
+
+/** A starting layout for a creator who hasn't built a kit yet. */
+export function starterKit(): KitDoc {
+  const intro = newBlock("text");
+  intro.title = "About me";
+  return { style: KitStyle.parse({}), tags: [], blocks: [newBlock("stats"), intro, newBlock("audience"), newBlock("brands"), newBlock("rates"), newBlock("contact")] };
 }
 
 /** "12,300", "4.5k", "1.4M" → 12300, 4500, 1400000. Null when blank or not a number. */
