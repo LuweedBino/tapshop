@@ -1,11 +1,11 @@
 import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
-import { KIT_SLUG } from "@/lib/mediaKit";
+import { KIT_SLUG, parseKit, starterKit } from "@/lib/mediaKit";
 import { deleteInquiry } from "@/app/actions/mediaKit";
 import { PageHeader } from "@/components/PageHeader";
 import { CopyLink } from "@/components/CopyLink";
-import { MediaKitForm } from "@/components/MediaKitForm";
+import { MediaKitBuilder } from "@/components/MediaKitBuilder";
 
 export default async function MediaKitPage() {
   const creator = await requireCreator();
@@ -15,16 +15,16 @@ export default async function MediaKitPage() {
   ]);
   const url = `${env.appUrl}/${creator.handle}/${KIT_SLUG}`;
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <PageHeader
         title="Media kit"
-        subtitle="A portfolio to send brands: your stats, audience, past partnerships and rates. It uses your store's design."
+        subtitle="A portfolio to send brands. Build it from sections, style it your way, and watch the preview as you go."
         action={kit?.published && <a href={url} target="_blank" className="btn-secondary">View ↗</a>}
       />
       <div className="mb-5"><CopyLink url={url} /></div>
 
       {inquiries.length > 0 && (
-        <section className="card mb-5 p-0">
+        <section className="card mb-5 max-w-3xl p-0">
           <h2 className="border-b border-neutral-200 px-4 py-3 font-semibold">Brand inquiries ({inquiries.length})</h2>
           <ul className="divide-y divide-neutral-100">
             {inquiries.map((q) => (
@@ -49,7 +49,11 @@ export default async function MediaKitPage() {
         </section>
       )}
 
-      <MediaKitForm kit={kit} />
+      <MediaKitBuilder
+        creator={creator}
+        initial={{ headline: kit?.headline ?? "", published: kit?.published ?? false, doc: kit ? parseKit(kit.data, kit.about) : starterKit() }}
+        updatedAt={kit?.updatedAt ?? new Date()}
+      />
     </div>
   );
 }

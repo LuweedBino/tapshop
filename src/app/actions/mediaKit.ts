@@ -6,95 +6,92 @@ import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { inquiryEmail, sendEmail } from "@/lib/email";
-import { normalizeUrl } from "@/lib/affiliate";
-import { isSocialKind } from "@/lib/socials";
+import { normalizeUrl, videoEmbed } from "@/lib/affiliate";
 import { ownKey } from "@/lib/storage";
-import { KIT_SLUG, LIMITS, parseCount, type KitData, type KitShare } from "@/lib/mediaKit";
+import { KIT_SLUG, parseKit, type Block, type KitDoc } from "@/lib/mediaKit";
 import type { FormState } from "./auth";
 
-const text = (form: FormData, name: string, max: number) => form.getAll(name).map((v) => String(v).trim().slice(0, max));
-const pct = (v: string) => {
-  const n = Number(v.replace("%", "").trim() || "0");
-  return Number.isFinite(n) && n >= 0 && n <= 100 ? n : null;
-};
-
-function shares(form: FormData, prefix: string, max: number): KitShare[] | string {
-  const labels = text(form, `${prefix}_label`, 40);
-  const pcts = text(form, `${prefix}_pct`, 6);
-  const out: KitShare[] = [];
-  for (let i = 0; i < Math.min(labels.length, max); i++) {
-    if (!labels[i]) continue;
-    const p = pct(pcts[i] ?? "");
-    if (p === null) return `Use a percent from 0 to 100 for "${labels[i]}"`;
-    out.push({ label: labels[i], pct: p });
+/** Checks what the builder sent: uploads must be this creator's images, links must be real links. */
+function clean(doc: KitDoc, creatorId: string): KitDoc | string {
+  const image = (key: string) => {
+    if (!key) return "";
+    return ownKey(key, creatorId, "public") ?? null;
+  };
+  const link = (url: string, what: string) => (url.trim() ? normalizeUrl(url) ?? `Enter a valid link for ${what}, or leave it empty` : "");
+  const style = { ...doc.style, coverKey: image(doc.style.coverKey) };
+  if (style.coverKey === null) return "Invalid upload";
+  const blocks: Block[] = [];
+  for (const b of doc.blocks) {
+    switch (b.type) {
+      case "brands": {
+        const out = [];
+        for (const i of b.items.filter((i) => i.brand.trim())) {
+          const logoKey = image(i.logoKey);
+          if (logoKey === null) return "Invalid upload";
+          const url = link(i.url, i.brand);
+          if (url.startsWith("Enter")) return url;
+          out.push({ ...i, logoKey, url });
+        }
+        blocks.push({ ...b, items: out });
+        break;
+      }
+      case "links": {
+        const out = [];
+        for (const i of b.items.filter((i) => i.label.trim() || i.url.trim())) {
+          const url = link(i.url, `"${i.label}"`);
+          if (!url || url.startsWith("Enter")) return url || `Add a link for "${i.label}"`;
+          out.push({ ...i, url });
+        }
+        blocks.push({ ...b, items: out });
+        break;
+      }
+      case "gallery": {
+        const images = b.images.map(image);
+        if (images.includes(null)) return "Invalid upload";
+        blocks.push({ ...b, images: images.filter((k): k is string => !!k) });
+        break;
+      }
+      case "video":
+        if (b.url.trim() && !videoEmbed(b.url)) return "Use a YouTube, Vimeo or Loom link for the video";
+        blocks.push(b);
+        break;
+      case "stats":
+        blocks.push({ ...b, items: b.items.filter((i) => i.followers > 0 || i.handle.trim()) });
+        break;
+      case "highlights":
+        blocks.push({ ...b, items: b.items.filter((i) => i.value.trim() || i.label.trim()) });
+        break;
+      case "audience":
+        blocks.push({ ...b, ages: b.ages.filter((i) => i.label.trim()), locations: b.locations.filter((i) => i.label.trim()) });
+        break;
+      case "testimonials":
+        blocks.push({ ...b, items: b.items.filter((i) => i.quote.trim()) });
+        break;
+      case "rates":
+        blocks.push({ ...b, items: b.items.filter((i) => i.name.trim()) });
+        break;
+      default:
+        blocks.push(b);
+    }
   }
-  return out;
+  return { style: style as KitDoc["style"], tags: doc.tags, blocks };
 }
 
 export async function saveMediaKit(_: FormState, form: FormData): Promise<FormState> {
   const creator = await requireCreator();
-
-  const kinds = form.getAll("stat_kind").map(String);
-  const handles = text(form, "stat_handle", 60);
-  const followers = text(form, "stat_followers", 20);
-  const views = text(form, "stat_views", 20);
-  const engagement = text(form, "stat_engagement", 6);
-  const stats: KitData["stats"] = [];
-  for (let i = 0; i < Math.min(kinds.length, LIMITS.stats); i++) {
-    const kind = kinds[i];
-    if (!isSocialKind(kind)) continue;
-    const f = parseCount(followers[i] ?? "");
-    if (f === null) return { error: "Enter follower counts like 12,300 or 12.3K" };
-    const v = views[i] ? parseCount(views[i]) : null;
-    if (views[i] && v === null) return { error: "Enter average views like 4,500 or 4.5K" };
-    const e = engagement[i] ? pct(engagement[i]) : null;
-    if (engagement[i] && e === null) return { error: "Use a percent from 0 to 100 for engagement" };
-    stats.push({ kind, handle: handles[i] ?? "", followers: f, avgViews: v, engagement: e });
+  let raw: { headline?: unknown; published?: unknown; doc?: unknown };
+  try {
+    raw = JSON.parse(String(form.get("kit") ?? "{}"));
+  } catch {
+    return { error: "Something went wrong, please try again" };
   }
-
-  const ages = shares(form, "age", LIMITS.ages);
-  if (typeof ages === "string") return { error: ages };
-  const locations = shares(form, "loc", LIMITS.locations);
-  if (typeof locations === "string") return { error: locations };
-  const [women, men, other] = ["gender_women", "gender_men", "gender_other"].map((n) => String(form.get(n) ?? "").trim());
-  let gender: KitData["gender"] = null;
-  if (women || men || other) {
-    const g = [women, men, other].map((v) => pct(v));
-    if (g.some((v) => v === null)) return { error: "Use percents from 0 to 100 for audience gender" };
-    gender = { women: g[0]!, men: g[1]!, other: g[2]! };
-  }
-
-  const brands = text(form, "partner_brand", 60);
-  const logos = form.getAll("partner_logo");
-  const descriptions = text(form, "partner_desc", 300);
-  const urls = text(form, "partner_url", 500);
-  const partnerships: KitData["partnerships"] = [];
-  for (let i = 0; i < Math.min(brands.length, LIMITS.partnerships); i++) {
-    if (!brands[i]) continue;
-    const logoKey = ownKey(logos[i] ?? null, creator.id, "public");
-    if (logoKey === undefined) return { error: "Invalid upload" };
-    const url = urls[i] ? normalizeUrl(urls[i]) : "";
-    if (url === null) return { error: `Enter a valid link for ${brands[i]}, or leave it empty` };
-    partnerships.push({ brand: brands[i], logoKey: logoKey ?? "", description: descriptions[i] ?? "", url });
-  }
-
-  const names = text(form, "service_name", 80);
-  const prices = text(form, "service_price", 40);
-  const serviceDescs = text(form, "service_desc", 300);
-  const services = names.slice(0, LIMITS.services).flatMap((name, i) => (name ? [{ name, price: prices[i] ?? "", description: serviceDescs[i] ?? "" }] : []));
-
-  const gallery: string[] = [];
-  for (const value of form.getAll("galleryKey").slice(0, LIMITS.gallery)) {
-    const key = ownKey(value, creator.id, "public");
-    if (key === undefined) return { error: "Invalid upload" };
-    if (key) gallery.push(key);
-  }
-
+  const doc = clean(parseKit(raw.doc), creator.id);
+  if (typeof doc === "string") return { error: doc };
   const kit = {
-    published: form.get("published") === "on",
-    headline: String(form.get("headline") ?? "").trim().slice(0, 120),
-    about: String(form.get("about") ?? "").trim().slice(0, 2000),
-    data: { stats, gender, ages, locations, partnerships, services, gallery } satisfies KitData,
+    published: raw.published === true,
+    headline: typeof raw.headline === "string" ? raw.headline.trim().slice(0, 120) : "",
+    about: "",
+    data: { version: 2, ...doc },
   };
   await db.mediaKit.upsert({ where: { creatorId: creator.id }, update: kit, create: { ...kit, creatorId: creator.id } });
   revalidatePath(`/${creator.handle}/${KIT_SLUG}`);
