@@ -6,6 +6,7 @@ import type { FormState } from "@/app/actions/auth";
 import { FONTS, THEMES } from "@/lib/design";
 import { BACKDROPS, BLOCKS, LAYOUTS, BOX_STYLES, CORNERS, formatCount, HEADERS, LIMITS, LOOKS, MOTIONS, newBlock, newId, parseCount, SPACINGS, STAT_PLATFORMS, TITLE_STYLES, type Block, type BlockOf, type BlockType, type BoxStyle, type KitDoc, type KitStyle, type TitleStyle } from "@/lib/mediaKit";
 import { PLATFORMS, type SocialKind } from "@/lib/socials";
+import { videoEmbed } from "@/lib/affiliate";
 import { FileUpload } from "./FileUpload";
 import { kitDesign, kitLook, MediaKitView, type KitCreator } from "./MediaKitView";
 import { StoreShell } from "./Storefront";
@@ -239,12 +240,16 @@ function BlockFields({ b, set }: { b: Block; set: (patch: Partial<Block>) => voi
     case "video":
       return (
         <div className="space-y-3">
-          <Field label="Video link">
-            <input className="input" value={b.url} onChange={(e) => set({ url: e.target.value })} placeholder="https://youtube.com/watch?v=..." autoCapitalize="none" />
-          </Field>
-          <Field label="Caption (optional)">
-            <input className="input" value={b.caption} onChange={(e) => set({ caption: e.target.value })} maxLength={200} />
-          </Field>
+          <p className="text-sm text-neutral-500">Paste links from YouTube (including Shorts), TikTok, Instagram Reels, Vimeo or Loom. Up to 8 videos.</p>
+          <Items items={b.items} onChange={(items) => set({ items })} blank={() => ({ url: "", caption: "" })} max={8} add="+ Add video">
+            {(v, put) => (
+              <div className="space-y-2">
+                <input className="input" value={v.url} onChange={(e) => put({ url: e.target.value })} placeholder="https://youtube.com/watch?v=..." autoCapitalize="none" aria-label="Video link" />
+                <input className="input" value={v.caption} onChange={(e) => put({ caption: e.target.value })} maxLength={200} placeholder="Caption (optional), e.g. Gymshark launch, 820K views" aria-label="Caption" />
+                {v.url.trim() && !videoEmbed(v.url, { social: true }) && <p className="text-xs text-red-600">This link isn&apos;t a video we can show yet.</p>}
+              </div>
+            )}
+          </Items>
         </div>
       );
     case "links":

@@ -2,7 +2,7 @@ import type { Creator } from "@prisma/client";
 import { fileUrl } from "@/lib/format";
 import { designOf, onColor, type Design } from "@/lib/design";
 import { formatCount, type Block, type BlockOf, type KitDoc, type KitStat, type KitStyle } from "@/lib/mediaKit";
-import { videoEmbed } from "@/lib/affiliate";
+import { isVerticalVideo, videoEmbed } from "@/lib/affiliate";
 import { PLATFORMS } from "@/lib/socials";
 import { Avatar, StoreFooter, StoreShell } from "./Storefront";
 import { SocialIcon } from "./SocialIcon";
@@ -442,6 +442,88 @@ function Links({ b }: { b: BlockOf<"links"> }) {
   }
 }
 
+type Clip = BlockOf<"video">["items"][number];
+
+/** One embedded player. Tall players (TikTok, Reels, Shorts) keep their shape in every layout;
+ * in a full-width column (not `cell`) they're narrowed so they don't fill the whole screen. */
+function Player({ v, className = "", tall, cell = false }: { v: Clip; className?: string; tall?: boolean; cell?: boolean }) {
+  const src = videoEmbed(v.url, { social: true });
+  const vertical = tall ?? (src ? isVerticalVideo(src, v.url) : false);
+  return (
+    <div className={`${vertical ? `mx-auto aspect-[9/16] ${cell ? "" : "max-w-[62%]"}` : "aspect-video"} w-full overflow-hidden bg-black ${className}`}>
+      {src ? (
+        <iframe src={src} title={v.caption || "Video"} className="h-full w-full" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" />
+      ) : (
+        <p className="flex h-full items-center justify-center p-4 text-center text-sm text-white/70">Add a YouTube, TikTok, Instagram, Vimeo or Loom link.</p>
+      )}
+    </div>
+  );
+}
+
+function Videos({ b }: { b: BlockOf<"video"> }) {
+  const r = "rounded-[calc(var(--card-radius)*0.75)]";
+  const cap = (v: Clip, cls = "") => v.caption && <p className={`mt-2 text-sm ${MUTED} ${cls}`}>{v.caption}</p>;
+  const [first, ...rest] = b.items;
+  switch (b.layout) {
+    case "bleed":
+      return <div className="-mx-5 space-y-4">{b.items.map((v) => <div key={v.id}><Player v={v} />{cap(v, "px-5")}</div>)}</div>;
+    case "framed":
+      return <div className="space-y-5">{b.items.map((v) => <div key={v.id}><Player v={v} className={`${r} border-[6px] border-[var(--accent)] shadow-xl`} />{cap(v)}</div>)}</div>;
+    case "grid":
+      return <div className="grid grid-cols-2 gap-3">{b.items.map((v) => <div key={v.id}><Player v={v} cell className={r} />{cap(v, "line-clamp-2 text-xs")}</div>)}</div>;
+    case "carousel":
+      return (
+        <div className={SWIPE}>
+          {b.items.map((v) => <div key={v.id} className="w-[85%] shrink-0 snap-center"><Player v={v} className={r} />{cap(v)}</div>)}
+        </div>
+      );
+    case "featured":
+      return (
+        <>
+          {first && <><Player v={first} className={r} />{cap(first, "font-semibold text-[var(--card-text)]")}</>}
+          {rest.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {rest.map((v) => <div key={v.id}><Player v={v} cell className={r} />{cap(v, "line-clamp-2 text-xs")}</div>)}
+            </div>
+          )}
+        </>
+      );
+    case "shorts":
+      return (
+        <div className={SWIPE}>
+          {b.items.map((v) => <div key={v.id} className="w-[58%] shrink-0 snap-center"><Player v={v} tall cell className={r} />{cap(v, "line-clamp-2 text-xs")}</div>)}
+        </div>
+      );
+    case "cinema":
+      return (
+        <div className="space-y-4">
+          {b.items.map((v, i) => (
+            <figure key={v.id} className={`${r} bg-neutral-950 p-3 text-white shadow-2xl`}>
+              <Player v={v} className="rounded-[calc(var(--card-radius)*0.5)]" />
+              <figcaption className="mt-3 flex items-center gap-2 px-1 text-sm">
+                <span className="rounded bg-[var(--accent)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--on-accent)]">{String(i + 1).padStart(2, "0")}</span>
+                <span className="font-semibold">{v.caption || "Watch"}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      );
+    case "list":
+      return (
+        <ul className="space-y-3">
+          {b.items.map((v) => (
+            <li key={v.id} className={`flex items-center gap-3 ${INNER} p-2`}>
+              <div className="w-[45%] shrink-0"><Player v={v} cell className="rounded-[calc(var(--card-radius)*0.5)]" /></div>
+              <p className="min-w-0 flex-1 text-sm font-semibold">{v.caption || "Video"}</p>
+            </li>
+          ))}
+        </ul>
+      );
+    default:
+      return <div className="space-y-5">{b.items.map((v) => <div key={v.id}><Player v={v} className={r} />{cap(v)}</div>)}</div>;
+  }
+}
+
 function TextBody({ b }: { b: BlockOf<"text"> }) {
   switch (b.layout) {
     case "large":
@@ -482,22 +564,8 @@ function BlockBody({ b, creator, preview }: { b: Block; creator: KitCreator; pre
       return <Rates b={b} />;
     case "gallery":
       return <Gallery b={b} />;
-    case "video": {
-      const src = videoEmbed(b.url);
-      const frame = { standard: "rounded-[calc(var(--card-radius)*0.75)]", bleed: "-mx-5 rounded-none", framed: "rounded-[calc(var(--card-radius)*0.75)] border-[6px] border-[var(--accent)] shadow-xl" }[b.layout];
-      return (
-        <>
-          {src ? (
-            <div className={`aspect-video overflow-hidden bg-black ${frame}`}>
-              <iframe src={src} title={b.title || "Video"} className="h-full w-full" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen loading="lazy" />
-            </div>
-          ) : (
-            <p className={`text-sm ${MUTED}`}>Add a YouTube, Vimeo or Loom link.</p>
-          )}
-          {b.caption && <p className={`mt-2 text-sm ${MUTED}`}>{b.caption}</p>}
-        </>
-      );
-    }
+    case "video":
+      return <Videos b={b} />;
     case "links":
       return <Links b={b} />;
     case "contact":
@@ -523,7 +591,6 @@ function isEmpty(b: Block) {
     case "text": return !b.body.trim();
     case "audience": return !b.gender && !b.ages.length && !b.locations.length;
     case "gallery": return !b.images.length;
-    case "video": return !b.url.trim();
     case "contact": return false;
     default: return !b.items.length;
   }
