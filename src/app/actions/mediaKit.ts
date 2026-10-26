@@ -51,10 +51,13 @@ function clean(doc: KitDoc, creatorId: string): KitDoc | string {
         blocks.push({ ...b, images: images.filter((k): k is string => !!k) });
         break;
       }
-      case "video":
-        if (b.url.trim() && !videoEmbed(b.url)) return "Use a YouTube, Vimeo or Loom link for the video";
-        blocks.push(b);
+      case "video": {
+        const items = b.items.filter((i) => i.url.trim());
+        const bad = items.find((i) => !videoEmbed(i.url, { social: true }));
+        if (bad) return `"${bad.url.slice(0, 60)}" isn't a video link we can show. Use a YouTube, TikTok, Instagram, Vimeo or Loom link.`;
+        blocks.push({ ...b, items });
         break;
+      }
       case "stats":
         blocks.push({ ...b, items: b.items.filter((i) => i.followers > 0 || i.handle.trim()) });
         break;

@@ -34,7 +34,17 @@ export const LAYOUTS = {
   testimonials: { cards: { label: "Cards" }, big: { label: "Big quote" }, carousel: { label: "Swipe" }, bubbles: { label: "Chat bubbles" } },
   rates: { list: { label: "List" }, cards: { label: "Price cards" }, menu: { label: "Menu" }, table: { label: "Table" } },
   gallery: { grid: { label: "Grid" }, masonry: { label: "Masonry" }, carousel: { label: "Swipe" }, collage: { label: "Collage" }, polaroid: { label: "Polaroids" } },
-  video: { standard: { label: "Standard" }, bleed: { label: "Edge to edge" }, framed: { label: "Framed" } },
+  video: {
+    standard: { label: "Stacked" },
+    bleed: { label: "Edge to edge" },
+    framed: { label: "Framed" },
+    grid: { label: "Grid" },
+    carousel: { label: "Swipe" },
+    featured: { label: "Featured + more" },
+    shorts: { label: "Vertical (Reels/TikTok)" },
+    cinema: { label: "Cinema" },
+    list: { label: "List" },
+  },
   links: { outline: { label: "Outline" }, solid: { label: "Solid" }, pills: { label: "Pills" }, cards: { label: "Cards" }, text: { label: "Text links" } },
   contact: { form: { label: "Form" }, spotlight: { label: "Spotlight" } },
 } as const;
@@ -88,7 +98,11 @@ export const BLOCKS = {
     hint: "Your best shots or past work",
     schema: z.object({ layout: layout("gallery"), images: z.array(z.string().max(200)).max(LIMITS.gallery).default([]), columns: z.union([z.literal(2), z.literal(3)]).default(3) }),
   },
-  video: { label: "Video", hint: "A YouTube, Vimeo or Loom video", schema: z.object({ layout: layout("video"), url: s(500), caption: s(200) }) },
+  video: {
+    label: "Videos",
+    hint: "YouTube, TikTok, Instagram, Vimeo or Loom videos",
+    schema: z.object({ layout: layout("video"), items: items(z.object({ id, url: s(500), caption: s(200) }), 8) }),
+  },
   links: {
     label: "Links",
     hint: "Buttons to your best posts, website or press",
@@ -181,7 +195,8 @@ function parseBlock(raw: unknown): Block | null {
   const r = raw as Record<string, unknown>;
   const type = r.type as BlockType;
   if (!Object.hasOwn(BLOCKS, type)) return null;
-  const data = BLOCKS[type].schema.safeParse(r);
+  // Video sections held one video before they held a list.
+  const data = BLOCKS[type].schema.safeParse(type === "video" && !Array.isArray(r.items) && typeof r.url === "string" ? { ...r, items: r.url ? [{ id: newId(), url: r.url, caption: r.caption ?? "" }] : [] } : r);
   if (!data.success) return null;
   return {
     id: typeof r.id === "string" && r.id ? r.id.slice(0, 40) : newId(),

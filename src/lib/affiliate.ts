@@ -41,8 +41,8 @@ export function normalizeUrl(input: string) {
   }
 }
 
-/** The embeddable player URL for a YouTube, Vimeo or Loom link, or null. */
-export function videoEmbed(link: string) {
+/** The embeddable player URL for a YouTube, Vimeo or Loom link, or null. With `social`, TikTok and Instagram links work too. */
+export function videoEmbed(link: string, { social = false } = {}) {
   const url = normalizeUrl(link);
   if (!url) return null;
   const u = new URL(url);
@@ -61,5 +61,18 @@ export function videoEmbed(link: string) {
     const lid = u.pathname.match(/^\/(?:share|embed)\/([\da-f]{16,})/)?.[1];
     if (lid) return `https://www.loom.com/embed/${lid}`;
   }
+  if (social && host === "tiktok.com") {
+    const tid = u.pathname.match(/\/video\/(\d{10,25})/)?.[1];
+    if (tid) return `https://www.tiktok.com/embed/v2/${tid}`;
+  }
+  if (social && host === "instagram.com") {
+    const code = u.pathname.match(/^\/(?:p|reels?|tv)\/([\w-]{5,40})/)?.[1];
+    if (code) return `https://www.instagram.com/reel/${code}/embed`;
+  }
   return null;
+}
+
+/** True for players that are tall rather than wide: TikTok, Instagram and YouTube Shorts. */
+export function isVerticalVideo(embed: string, link: string) {
+  return /tiktok\.com|instagram\.com/.test(embed) || /youtube\.com\/shorts\//.test(link);
 }
