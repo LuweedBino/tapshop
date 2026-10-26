@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { saveMediaKit } from "@/app/actions/mediaKit";
 import type { FormState } from "@/app/actions/auth";
 import { FONTS, THEMES } from "@/lib/design";
-import { BACKDROPS, BLOCKS, BOX_STYLES, CORNERS, formatCount, HEADERS, LIMITS, LOOKS, MOTIONS, newBlock, newId, parseCount, SPACINGS, STAT_PLATFORMS, TITLE_STYLES, type Block, type BlockOf, type BlockType, type BoxStyle, type KitDoc, type KitStyle, type TitleStyle } from "@/lib/mediaKit";
+import { BACKDROPS, BLOCKS, LAYOUTS, BOX_STYLES, CORNERS, formatCount, HEADERS, LIMITS, LOOKS, MOTIONS, newBlock, newId, parseCount, SPACINGS, STAT_PLATFORMS, TITLE_STYLES, type Block, type BlockOf, type BlockType, type BoxStyle, type KitDoc, type KitStyle, type TitleStyle } from "@/lib/mediaKit";
 import { PLATFORMS, type SocialKind } from "@/lib/socials";
 import { FileUpload } from "./FileUpload";
 import { kitDesign, kitLook, MediaKitView, type KitCreator } from "./MediaKitView";
@@ -171,7 +171,6 @@ function BlockFields({ b, set }: { b: Block; set: (patch: Partial<Block>) => voi
     case "brands":
       return (
         <div className="space-y-3">
-          <Segmented label="Show as" options={{ cards: { label: "Cards with details" }, logos: { label: "Logo wall" } }} value={b.layout} onChange={(layout) => set({ layout })} />
           <Items items={b.items} onChange={(items) => set({ items })} blank={() => ({ brand: "", logoKey: "", description: "", url: "" })} max={24} add="+ Add brand">
             {(p, put) => (
               <div className="space-y-2">
@@ -223,7 +222,9 @@ function BlockFields({ b, set }: { b: Block; set: (patch: Partial<Block>) => voi
     case "gallery":
       return (
         <div className="space-y-3">
-          <Segmented label="Photos per row" options={{ 2: { label: "2" }, 3: { label: "3" } }} value={String(b.columns) as "2" | "3"} onChange={(c) => set({ columns: c === "2" ? 2 : 3 })} />
+          {(b.layout === "grid" || b.layout === "masonry") && (
+            <Segmented label="Photos per row" options={{ 2: { label: "2" }, 3: { label: "3" } }} value={String(b.columns) as "2" | "3"} onChange={(c) => set({ columns: c === "2" ? 2 : 3 })} />
+          )}
           <Items
             items={b.images.map((key, i) => ({ id: `${i}:${key}`, key }))}
             onChange={(rows) => set({ images: rows.map((r) => r.key) })}
@@ -303,6 +304,7 @@ function BlockCard({ b, open, first, last, onToggle, onChange, onMove, onDelete 
           <Field label="Section title">
             <input className="input" value={b.title} onChange={(e) => onChange({ title: e.target.value })} maxLength={80} placeholder="Leave empty for no title" />
           </Field>
+          <Segmented label="Layout" options={LAYOUTS[b.type] as Record<string, { label: string }>} value={b.layout} onChange={(layout) => onChange({ layout } as Partial<Block>)} />
           <div className="grid grid-cols-2 gap-2">
             <Field label="Box style">
               <select className="input" value={b.box ?? ""} onChange={(e) => onChange({ box: (e.target.value || null) as BoxStyle | null })}>
@@ -316,6 +318,22 @@ function BlockCard({ b, open, first, last, onToggle, onChange, onMove, onDelete 
                 {(Object.keys(TITLE_STYLES) as TitleStyle[]).map((k) => <option key={k} value={k}>{TITLE_STYLES[k].label}</option>)}
               </select>
             </Field>
+            <Field label="Text">
+              <select className="input" value={b.align ?? ""} onChange={(e) => onChange({ align: (e.target.value || null) as Block["align"] })}>
+                <option value="">Left (default)</option>
+                <option value="center">Centered</option>
+              </select>
+            </Field>
+            <div>
+              <span className="label">Section color</span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button type="button" onClick={() => onChange({ accent: null })} aria-pressed={b.accent === null} className={`h-8 rounded-full border px-2.5 text-xs font-medium ${b.accent === null ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-300"}`}>Page</button>
+                {SWATCHES.slice(0, 4).map((c) => (
+                  <button key={c} type="button" aria-label={`Section color ${c}`} onClick={() => onChange({ accent: c })} className={`h-7 w-7 rounded-full ${b.accent === c ? "ring-2 ring-neutral-900 ring-offset-1" : ""}`} style={{ background: c }} />
+                ))}
+                <input type="color" aria-label="Custom section color" value={b.accent ?? "#7c3aed"} onChange={(e) => onChange({ accent: e.target.value })} className="h-8 w-9 cursor-pointer rounded-lg border border-neutral-300 bg-white" />
+              </div>
+            </div>
           </div>
           <BlockFields b={b} set={onChange} />
           <div className="flex justify-end">

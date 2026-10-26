@@ -22,22 +22,44 @@ const items = <T extends z.ZodTypeAny>(item: T, max = LIMITS.items) => z.array(i
 const Stat = z.object({ id, kind: z.string().refine(isSocialKind), handle: s(60), followers: count.default(0), avgViews: count.nullable().default(null), engagement: pct.nullable().default(null) });
 const Share = z.object({ id, label: s(40), pct: pct.default(0) });
 
+const keys = <T extends object>(o: T) => Object.keys(o) as [keyof T & string, ...(keyof T & string)[]];
+
+/** The ways each kind of section can lay out its content. The first is the default. */
+export const LAYOUTS = {
+  stats: { tiles: { label: "Tiles" }, list: { label: "List" }, big: { label: "Big numbers" }, chips: { label: "Compact" } },
+  highlights: { tiles: { label: "Tiles" }, row: { label: "In a row" }, stacked: { label: "Stacked" }, badges: { label: "Badges" } },
+  text: { plain: { label: "Plain" }, large: { label: "Large" }, quote: { label: "Pull quote" }, dropcap: { label: "Drop cap" } },
+  audience: { bars: { label: "Bars" }, rings: { label: "Rings" }, numbers: { label: "Big numbers" }, chips: { label: "Chips" } },
+  brands: { cards: { label: "Cards" }, logos: { label: "Logo wall" }, grid: { label: "Logo tiles" }, list: { label: "List" }, marquee: { label: "Scrolling strip" } },
+  testimonials: { cards: { label: "Cards" }, big: { label: "Big quote" }, carousel: { label: "Swipe" }, bubbles: { label: "Chat bubbles" } },
+  rates: { list: { label: "List" }, cards: { label: "Price cards" }, menu: { label: "Menu" }, table: { label: "Table" } },
+  gallery: { grid: { label: "Grid" }, masonry: { label: "Masonry" }, carousel: { label: "Swipe" }, collage: { label: "Collage" }, polaroid: { label: "Polaroids" } },
+  video: { standard: { label: "Standard" }, bleed: { label: "Edge to edge" }, framed: { label: "Framed" } },
+  links: { outline: { label: "Outline" }, solid: { label: "Solid" }, pills: { label: "Pills" }, cards: { label: "Cards" }, text: { label: "Text links" } },
+  contact: { form: { label: "Form" }, spotlight: { label: "Spotlight" } },
+} as const;
+const layout = <T extends keyof typeof LAYOUTS>(t: T) => {
+  const k = keys(LAYOUTS[t]);
+  return z.enum(k).default(k[0] as never);
+};
+
 export const BLOCKS = {
   stats: {
     label: "Stats",
     hint: "Followers, views and engagement per platform",
-    schema: z.object({ items: items(Stat, 10), showTotal: z.boolean().default(true) }),
+    schema: z.object({ layout: layout("stats"), items: items(Stat, 10), showTotal: z.boolean().default(true) }),
   },
   highlights: {
     label: "Highlights",
     hint: "Big numbers, like 2M monthly views",
-    schema: z.object({ items: items(z.object({ id, value: s(20), label: s(60) }), 6) }),
+    schema: z.object({ layout: layout("highlights"), items: items(z.object({ id, value: s(20), label: s(60) }), 6) }),
   },
-  text: { label: "Text", hint: "About me, my story, what I post", schema: z.object({ body: s(3000) }) },
+  text: { label: "Text", hint: "About me, my story, what I post", schema: z.object({ layout: layout("text"), body: s(3000) }) },
   audience: {
     label: "Audience",
     hint: "Gender, age and top locations",
     schema: z.object({
+      layout: layout("audience"),
       gender: z.object({ women: pct, men: pct, other: pct }).nullable().default(null),
       ages: items(Share, 8),
       locations: items(Share, 8),
@@ -47,32 +69,32 @@ export const BLOCKS = {
     label: "Brands I've worked with",
     hint: "Past partnerships with logos",
     schema: z.object({
-      layout: z.enum(["cards", "logos"]).default("cards"),
+      layout: layout("brands"),
       items: items(z.object({ id, brand: s(60), logoKey: s(200), description: s(300), url: s(500) }), 24),
     }),
   },
   testimonials: {
     label: "Testimonials",
     hint: "What brands said about working with you",
-    schema: z.object({ items: items(z.object({ id, quote: s(600), name: s(80), role: s(80) }), 8) }),
+    schema: z.object({ layout: layout("testimonials"), items: items(z.object({ id, quote: s(600), name: s(80), role: s(80) }), 8) }),
   },
   rates: {
     label: "Rates",
     hint: "What brands can book and the price",
-    schema: z.object({ items: items(z.object({ id, name: s(80), price: s(40), description: s(300) })), note: s(300) }),
+    schema: z.object({ layout: layout("rates"), items: items(z.object({ id, name: s(80), price: s(40), description: s(300) })), note: s(300) }),
   },
   gallery: {
     label: "Photos",
     hint: "Your best shots or past work",
-    schema: z.object({ images: z.array(z.string().max(200)).max(LIMITS.gallery).default([]), columns: z.union([z.literal(2), z.literal(3)]).default(3) }),
+    schema: z.object({ layout: layout("gallery"), images: z.array(z.string().max(200)).max(LIMITS.gallery).default([]), columns: z.union([z.literal(2), z.literal(3)]).default(3) }),
   },
-  video: { label: "Video", hint: "A YouTube, Vimeo or Loom video", schema: z.object({ url: s(500), caption: s(200) }) },
+  video: { label: "Video", hint: "A YouTube, Vimeo or Loom video", schema: z.object({ layout: layout("video"), url: s(500), caption: s(200) }) },
   links: {
     label: "Links",
     hint: "Buttons to your best posts, website or press",
-    schema: z.object({ items: items(z.object({ id, label: s(60), url: s(500) }), 8) }),
+    schema: z.object({ layout: layout("links"), items: items(z.object({ id, label: s(60), url: s(500) }), 8) }),
   },
-  contact: { label: "Work with me", hint: "A form brands use to reach you", schema: z.object({ intro: s(300) }) },
+  contact: { label: "Work with me", hint: "A form brands use to reach you", schema: z.object({ layout: layout("contact"), intro: s(300) }) },
 } as const;
 
 /** How a section's box looks. Each is a .mk-box-* class in globals.css. */
@@ -118,12 +140,11 @@ export const HEADERS = { classic: { label: "Classic" }, hero: { label: "Big name
 
 export type BoxStyle = keyof typeof BOX_STYLES;
 export type TitleStyle = keyof typeof TITLE_STYLES;
-const keys = <T extends object>(o: T) => Object.keys(o) as [keyof T & string, ...(keyof T & string)[]];
 
 export type BlockType = keyof typeof BLOCKS;
 type Data<T extends BlockType> = z.infer<(typeof BLOCKS)[T]["schema"]>;
-/** box and heading are this section's own style; null follows the page's. */
-type Base<T> = { id: string; type: T; title: string; hidden: boolean; box: BoxStyle | null; heading: TitleStyle | null };
+/** box, heading, accent and align are this section's own style; null follows the page's. */
+type Base<T> = { id: string; type: T; title: string; hidden: boolean; box: BoxStyle | null; heading: TitleStyle | null; accent: string | null; align: "left" | "center" | null };
 export type Block = { [T in BlockType]: Base<T> & Data<T> }[BlockType];
 export type BlockOf<T extends BlockType> = Extract<Block, { type: T }>;
 export type KitStat = Omit<z.infer<typeof Stat>, "kind"> & { kind: SocialKind };
@@ -152,7 +173,7 @@ export const newId = () => `${Date.now().toString(36)}${(seq++).toString(36)}${M
 
 export function newBlock<T extends BlockType>(type: T): BlockOf<T> {
   const data = BLOCKS[type].schema.parse({});
-  return { id: newId(), type, title: BLOCKS[type].label, hidden: false, box: null, heading: null, ...data } as BlockOf<T>;
+  return { id: newId(), type, title: BLOCKS[type].label, hidden: false, box: null, heading: null, accent: null, align: null, ...data } as BlockOf<T>;
 }
 
 function parseBlock(raw: unknown): Block | null {
@@ -169,6 +190,8 @@ function parseBlock(raw: unknown): Block | null {
     hidden: r.hidden === true,
     box: Object.hasOwn(BOX_STYLES, r.box as string) ? (r.box as BoxStyle) : null,
     heading: Object.hasOwn(TITLE_STYLES, r.heading as string) ? (r.heading as TitleStyle) : null,
+    accent: typeof r.accent === "string" && /^#[0-9a-f]{6}$/i.test(r.accent) ? r.accent : null,
+    align: r.align === "left" || r.align === "center" ? r.align : null,
     ...data.data,
   } as Block;
 }

@@ -92,9 +92,10 @@ body {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--a0) 30%, transparent), 0 0 26px color-mix(in srgb, var(--a0) 45%, transparent), inset 0 0 20px color-mix(in srgb, var(--a0) 12%, transparent);
 }
 .mk-box-brutal { background: var(--card); border: 2.5px solid var(--card-text); border-radius: min(var(--card-radius), 0.5rem); box-shadow: 6px 6px 0 var(--card-text); }
+/* !important so a section's own color (set inline) can't undo the swap. */
 .mk-box-accent {
-  --accent: var(--a1);
-  --on-accent: var(--a0);
+  --accent: var(--a1) !important;
+  --on-accent: var(--a0) !important;
   --card-text: var(--a1);
   --card-muted: color-mix(in srgb, var(--a1) 78%, transparent);
   --card-border: color-mix(in srgb, var(--a1) 28%, transparent);
@@ -151,3 +152,9 @@ body {
   }
 }
 @media (prefers-reduced-motion: reduce) { .mk-bg-aurora::before { animation: none; } }
+
+/* Brand logos sliding sideways in a loop; the list is drawn twice, so moving by half loops cleanly. */
+.mk-marquee { animation: mk-marquee 22s linear infinite; }
+.mk-marquee:hover { animation-play-state: paused; }
+@keyframes mk-marquee { to { transform: translateX(calc(-50% - 0.75rem)); } }
+@media (prefers-reduced-motion: reduce) { .mk-marquee { animation: none; flex-wrap: wrap; width: auto; } }
