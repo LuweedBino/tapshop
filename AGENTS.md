@@ -52,6 +52,14 @@ Import with the `@/` alias (`@/lib/db`, `@/components/...`).
 
 The feature is called **Portfolio** in the UI, but the code still uses `mediaKit` (`src/lib/mediaKit.ts`, `MediaKitBuilder`, `MediaKitView`, `actions/mediaKit.ts`, the `KIT_SLUG` / `OLD_KIT_SLUG` constants). `/dashboard/media-kit` permanently redirects to `/dashboard/portfolio`. Use "Portfolio" in anything users see. Don't rename the code unless asked.
 
+## Studio (design studio + video editor)
+
+- `/dashboard/studio` embeds a static HTML/JS editor in an iframe. Its files live in `vendor/tapshop-studio/` and are served only to signed-in creators by `src/app/dashboard/studio/assets/[...path]/route.ts` (allowlisted file names). Never move them into `public/`.
+- It's classic-script code: keep the script order in `video.html` (text-catalog → video → panel-layout → timeline-strips) and don't convert it to modules. `vendor/**` is excluded from ESLint.
+- The asset route scopes the editor's `localStorage` keys per creator; don't bypass it.
+- The editor talks to the dashboard only through `postMessage` (`tapshop:export-ready`, version 1). `StudioFrame` checks `event.origin` and `event.source`; validate any new message the same way.
+- Font licences and original font files are kept in `vendor/tapshop-studio-licenses/`.
+
 ## Payments and files (be careful here)
 
 - Paid orders are marked paid both on the thank-you page and in the Stripe webhook. That path must stay **idempotent**, and the delivery email goes out exactly once.
