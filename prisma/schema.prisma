@@ -21,37 +21,67 @@ enum OrderStatus {
 }
 
 model Creator {
-  id              String    @id @default(cuid())
-  email           String    @unique
+  id              String         @id @default(cuid())
+  email           String         @unique
   passwordHash    String
-  handle          String    @unique
+  handle          String         @unique
   displayName     String
-  bio             String    @default("")
+  bio             String         @default("")
   avatarKey       String?
   // Profile photo edits (zoom, focus point, filter, shape...); see src/lib/avatar.ts.
-  avatarStyle     Json      @default("{}")
-  accentColor     String    @default("#7c3aed")
+  avatarStyle     Json           @default("{}")
+  accentColor     String         @default("#7c3aed")
   bannerKey       String?
   // Storefront design choices; valid values live in src/lib/design.ts.
-  theme           String    @default("soft")
-  font            String    @default("modern")
-  buttonStyle     String    @default("rounded")
-  layout          String    @default("card")
-  socialLinks     Json      @default("{}")
-  socialStyle     String    @default("text")
+  theme           String         @default("soft")
+  font            String         @default("modern")
+  buttonStyle     String         @default("rounded")
+  layout          String         @default("card")
+  socialLinks     Json           @default("{}")
+  socialStyle     String         @default("text")
   // Social icon shape, colors and animations; see src/lib/iconStyle.ts.
-  socialIconStyle Json      @default("{}")
-  bannerStyle     Json      @default("{}")
-  stripeAccountId String?   @unique
-  stripeReady     Boolean   @default(false)
+  socialIconStyle Json           @default("{}")
+  bannerStyle     Json           @default("{}")
+  stripeAccountId String?        @unique
+  stripeReady     Boolean        @default(false)
   // Set by an admin: the store goes offline and can't take new sales until it's cleared.
   pausedAt        DateTime?
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
   products        Product[]
   pages           Page[]
+  mediaKit        MediaKit?
+  inquiries       BrandInquiry[]
   orders          Order[]
   leads           Lead[]
+}
+
+// A creator's portfolio for brands at /<handle>/media-kit. Stats, audience, past
+// partnerships, rates and photos live in `data` (see lib/mediaKit.ts).
+model MediaKit {
+  id        String   @id @default(cuid())
+  creatorId String   @unique
+  creator   Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  published Boolean  @default(false)
+  headline  String   @default("")
+  about     String   @default("")
+  data      Json     @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+// A message a brand sent from a media kit's "Work with me" form.
+model BrandInquiry {
+  id        String   @id @default(cuid())
+  creatorId String
+  creator   Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  company   String   @default("")
+  budget    String   @default("")
+  message   String
+  createdAt DateTime @default(now())
+
+  @@index([creatorId, createdAt])
 }
 
 // An extra storefront at /<handle>/<slug> with its own products. Products with no page are on the main store.
