@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SaveToTapShop, type StudioImage } from "./SaveToTapShop";
-import { MediaVault, saveToVault, type VaultItemView } from "./MediaVault";
+import { MediaVault, saveToVault, type VaultFolderView, type VaultItemView } from "./MediaVault";
 import { VAULT_MAX_BYTES } from "@/lib/vault";
 
 type VaultFile = { file: File; source: "design" | "video" };
@@ -21,7 +21,7 @@ function vaultFile(x: unknown): VaultFile | null {
 // the app. Keep src stable: remounting the iframe drops unsaved in-memory video edits, so
 // the Media Vault is shown beside it (with the iframe hidden) rather than replacing it.
 // allow-modals is needed for the "custom size" prompt in the design studio.
-export function StudioFrame({ products, vault }: { products: { id: string; title: string }[]; vault: VaultItemView[] }) {
+export function StudioFrame({ products, vault, folders }: { products: { id: string; title: string }[]; vault: VaultItemView[]; folders: VaultFolderView[] }) {
   const router = useRouter();
   const frame = useRef<HTMLIFrameElement>(null);
   const [image, setImage] = useState<StudioImage | null>(null);
@@ -99,7 +99,7 @@ export function StudioFrame({ products, vault }: { products: { id: string; title
         sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals"
         className={`h-[calc(100dvh-140px)] min-h-[600px] w-full rounded-xl border border-neutral-200 bg-white md:h-[calc(100dvh-64px)] ${view === "studio" ? "block" : "hidden"}`}
       />
-      {view === "vault" && <MediaVault items={vault} onBack={() => setView("studio")} onExportDesigns={exportDesigns} canExportDesigns={onDesignHome} onUse={useInStudio} />}
+      {view === "vault" && <MediaVault items={vault} folders={folders} onBack={() => setView("studio")} onExportDesigns={exportDesigns} canExportDesigns={onDesignHome} onUse={useInStudio} />}
       {saving && (
         <div role="status" className={`fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold shadow-xl ${saving.error ? "bg-red-600 text-white" : "bg-neutral-900 text-white"}`}>
           <span className="flex-1">{saving.text}</span>

@@ -6,11 +6,14 @@ import { db } from "@/lib/db";
 export async function GET() {
   const creator = await getCreator();
   if (!creator) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
-  const items = await db.vaultItem.findMany({
-    where: { creatorId: creator.id },
-    orderBy: { createdAt: "desc" },
-    take: 500,
-    select: { id: true, name: true, kind: true, size: true, contentType: true },
-  });
-  return NextResponse.json({ items }, { headers: { "cache-control": "private, no-store" } });
+  const [items, folders] = await Promise.all([
+    db.vaultItem.findMany({
+      where: { creatorId: creator.id },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+      select: { id: true, name: true, kind: true, size: true, contentType: true, folderId: true },
+    }),
+    db.vaultFolder.findMany({ where: { creatorId: creator.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+  ]);
+  return NextResponse.json({ items, folders }, { headers: { "cache-control": "private, no-store" } });
 }

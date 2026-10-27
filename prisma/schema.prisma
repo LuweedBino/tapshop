@@ -53,6 +53,7 @@ model Creator {
   mediaKit        MediaKit?
   inquiries       BrandInquiry[]
   vaultItems      VaultItem[]
+  vaultFolders    VaultFolder[]
   orders          Order[]
   leads           Lead[]
 }
@@ -186,7 +187,22 @@ model VaultItem {
   kind        String   @default("other")
   // upload | design | video
   source      String   @default("upload")
+  // null = not in a folder. Deleting a folder keeps its files (they move back out).
+  folderId    String?
+  folder      VaultFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
 
   @@index([creatorId, createdAt])
+  @@index([folderId])
+}
+
+model VaultFolder {
+  id        String      @id @default(cuid())
+  creatorId String
+  creator   Creator     @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  name      String
+  items     VaultItem[]
+  createdAt DateTime    @default(now())
+
+  @@index([creatorId])
 }
