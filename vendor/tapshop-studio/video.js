@@ -364,10 +364,24 @@ if(!inTapShop())$('vaultProject')?.remove();
 
 // Importing from the Vault: videos go on the main timeline (or on top as a layer), audio
 // gets its own track, and a saved .tapshop.json project is reopened.
-function openVaultPicker(kinds,asLayer){VaultPicker.open({title:'From your Media Vault',kinds,accept:i=>i.kind!=='project'||/\.tapshop\.json$/i.test(i.name),onPick:it=>importVaultItem(it,asLayer)})}
-async function importVaultItem(item,asLayer){if(exporting)return;let file;try{toast('Loading '+item.name+'…');file=await VaultPicker.file(item)}catch(e){toast(e.message);return}
- if(item.kind==='video'){if(asLayer){await addVideoLayer(file);return}let n=clips.length;await importFiles([file]);if(clips.length>n)showStrip(clips.at(-1).id);return}
- if(item.kind==='audio'){addTrack('audio');let t=extraTracks.at(-1);targetTrack=t.id;if(typeof expandedStrip!=='undefined')expandedStrip=t.id;await loadTrackMedia(file);renderTracks();showStrip(t.id);return}
+function openVaultPicker(kinds,asLayer){VaultPicker.open({title:'From your Media Vault',kinds,accept:i=>i.kind!=='project'||/\.tapshop\.json$/i.test(i.name),onPick:it=>importVaultItem(it,asLayer),drag:vaultDrag})}
+async function importVaultItem(item,asLayer,at){if(exporting)return;let file;try{toast('Loading '+item.name+'…');file=await VaultPicker.file(item)}catch(e){toast(e.message);return}
+ if(item.kind==='video'){if(asLayer){if(at==null){await addVideoLayer(file);return}addTrack('video');let t=extraTracks.at(-1);t.offset=at;targetTrack=t.id;if(typeof expandedStrip!=='undefined')expandedStrip=t.id;await loadTrackMedia(file);renderTracks();render();showStrip(t.id);return}let n=clips.length;await importFiles([file]);if(clips.length>n){if(at!=null){clips.at(-1).offset=at;render()}showStrip(clips.at(-1).id)}return}
+ if(item.kind==='audio'){addTrack('audio');let t=extraTracks.at(-1);if(at!=null)t.offset=at;targetTrack=t.id;if(typeof expandedStrip!=='undefined')expandedStrip=t.id;await loadTrackMedia(file);renderTracks();if(at!=null)render();showStrip(t.id);return}
  if(item.kind==='project'||/\.tapshop\.json$/i.test(item.name)){await restoreProject(file);return}
  toast(item.kind==='image'?'Images go in the Design Studio. Open it from “← Studio”.':'That file can’t go on the video timeline.')}
+// Dragging a file from the Vault picker onto the timeline: it lands where it's dropped.
+// Videos dropped on the layer rows go on top; anywhere else on the timeline they join the
+// main video. Audio always gets its own track, and a project reopens.
+let vaultDropLine=null;
+const vaultDrag={
+ over(x,y){let host=document.querySelector('.timeline .tracks');if(!vaultDropLine){vaultDropLine=document.createElement('div');vaultDropLine.className='vault-drop-line'}
+  let r=host?.getBoundingClientRect(),inside=r&&x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom&&!exporting;
+  host?.classList.toggle('vault-drop',!!inside);if(!inside){vaultDropLine.remove();return null}
+  let t=Math.max(0,(x-r.left+host.scrollLeft-LANE_START)/timelineScale);host.appendChild(vaultDropLine);vaultDropLine.style.left=(LANE_START+t*timelineScale)+'px';vaultDropLine.style.height=host.scrollHeight+'px';
+  return {label:'Drop at '+t.toFixed(1)+' s',at:t,layer:(e=>e&&e.height>0&&y>=e.top&&y<=e.bottom)(document.getElementById('extraTracks')?.getBoundingClientRect())}},
+ drop(item,x,y){let o=this.over(x,y);this.over(-1,-1);if(!o)return;if(item.kind==='project'||/\.tapshop\.json$/i.test(item.name)){importVaultItem(item);return}importVaultItem(item,item.kind==='video'&&o.layer,Math.round(o.at*10)/10)},
+ miss(){toast('Drop it on the timeline to add it')}
+};
+{let s=document.createElement('style');s.textContent='.timeline .tracks.vault-drop{outline:2px dashed #a07ae0;outline-offset:-2px;background:#a07ae014}.vault-drop-line{position:absolute;top:0;width:2px;margin-left:-1px;background:#a07ae0;box-shadow:0 0 0 1px #fff8;pointer-events:none;z-index:6}';document.head.appendChild(s)}
 if(!inTapShop()){$('vaultFrom')?.remove();$('vaultVideoPick')?.remove()}
