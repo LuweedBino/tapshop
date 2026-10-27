@@ -52,6 +52,7 @@ model Creator {
   pages           Page[]
   mediaKit        MediaKit?
   inquiries       BrandInquiry[]
+  vaultItems      VaultItem[]
   orders          Order[]
   leads           Lead[]
 }
@@ -168,5 +169,24 @@ model Lead {
   createdAt     DateTime @default(now())
 
   @@unique([productId, email])
+  @@index([creatorId, createdAt])
+}
+
+// A file in a creator's Media Vault: uploads plus designs, videos and project files saved
+// from Studio. The file itself is private storage at `key`; only its owner can open it.
+model VaultItem {
+  id          String   @id @default(cuid())
+  creatorId   String
+  creator     Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  key         String   @unique
+  name        String
+  contentType String   @default("application/octet-stream")
+  size        Int      @default(0)
+  // video | image | audio | document | project | other (see lib/vault.ts)
+  kind        String   @default("other")
+  // upload | design | video
+  source      String   @default("upload")
+  createdAt   DateTime @default(now())
+
   @@index([creatorId, createdAt])
 }

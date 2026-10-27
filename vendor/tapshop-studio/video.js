@@ -350,3 +350,14 @@ inspector();
 
 // Tapping the dimmed area outside a pop-up closes it, like the × and Esc.
 document.querySelectorAll('dialog.closable').forEach(d=>d.addEventListener('click',e=>{if(e.target!==d)return;let r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close()}));
+
+
+// Media Vault (only inside TapShop): send the exported video or the project file to the
+// dashboard, which stores it privately for this creator.
+function inTapShop(){return window.parent!==window}
+function sendToVault(items){window.parent.postMessage({type:'tapshop:vault-save',version:1,items},location.origin)}
+let lastVideoExport=null;
+const downloadWithVault=download;download=function(blob,name){if(blob?.type?.startsWith('video/')){lastVideoExport={blob,name};if(inTapShop())$('vaultVideo')?.classList.remove('hidden')}return downloadWithVault(blob,name)};
+function saveVideoToVault(){if(!inTapShop()||!lastVideoExport)return;sendToVault([{...lastVideoExport,source:'video'}]);$('vaultVideo').classList.add('hidden');$('exportDialog').close()}
+function saveProjectToVault(){if(!inTapShop()||exporting)return;let captured=null,real=download;download=(blob,name)=>{captured={blob,name}};try{saveProject()}finally{download=real}if(captured)sendToVault([{...captured,source:'video'}])}
+if(!inTapShop())$('vaultProject')?.remove();
