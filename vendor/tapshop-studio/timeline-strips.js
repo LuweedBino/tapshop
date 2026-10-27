@@ -55,9 +55,9 @@ const drawWithPlayhead=draw;draw=function(){drawWithPlayhead();placePlayhead()};
 const decorateWithPlayhead=decorateStrips;decorateStrips=function(){decorateWithPlayhead();placePlayhead()};
 function playheadTime(e){let r=tracksHost.getBoundingClientRect(),x=e.clientX-r.left+tracksHost.scrollLeft-LANE_START;return Math.max(0,Math.min(total(),x/timelineScale))}
 let playheadDrag=false;
-playheadLine.addEventListener('pointerdown',e=>{if(exporting)return;e.preventDefault();e.stopPropagation();playheadDrag=true;playheadLine.setPointerCapture(e.pointerId);pause();hideSplit()});
+playheadLine.addEventListener('pointerdown',e=>{if(exporting)return;e.preventDefault();e.stopPropagation();playheadDrag=true;playheadLine.dataset.wasPlaying=playing?'1':'';playheadLine.setPointerCapture(e.pointerId);pause();hideSplit()});
 playheadLine.addEventListener('pointermove',e=>{if(!playheadDrag)return;playhead=playheadTime(e);placePlayhead()});
-const endPlayheadDrag=e=>{if(!playheadDrag)return;playheadDrag=false;seekTimeline(playheadTime(e))};
+const endPlayheadDrag=async e=>{if(!playheadDrag)return;playheadDrag=false;let resume=playheadLine.dataset.wasPlaying;await seekTimeline(playheadTime(e));if(resume&&!playing&&!exporting&&playhead<total()-.1)togglePlay()};
 playheadLine.addEventListener('pointerup',endPlayheadDrag);playheadLine.addEventListener('pointercancel',endPlayheadDrag);
 $('ruler').addEventListener('pointerdown',e=>{if(exporting)return;seekTimeline(playheadTime(e))});
 window.addEventListener('resize',placePlayhead);placePlayhead();
@@ -82,3 +82,10 @@ function packRows(box,groupOf,modelOf){if(!box)return;let rows=[...box.querySele
 function packLanes(){packRows($('clips'),()=> 'main',id=>stripModel('main',id));packRows($('extraTracks'),id=>{let t=extraTracks.find(t=>t.id===id);return t?.lane||id},id=>stripModel('extra',id));packRows($('graphicTracks'),id=>{let t=graphicTracks.find(t=>t.id===id);return t?.lane||id},id=>stripModel('graphic',id))}
 const decorateWithLanes=decorateStrips;decorateStrips=function(){decorateWithLanes();packLanes();placePlayhead()};
 render();
+
+// Jumping to a new time (ruler tap, preview slider) while the video plays keeps it playing
+// from there, once the jumps settle. Editing a strip, splitting and the Pause button still stop it.
+let resumeTimer=null,resumeWanted=false,inSeek=0;
+const seekKeepPlaying=seekTimeline;seekTimeline=async function(t){if(playing&&!exporting)resumeWanted=true;inSeek++;try{await seekKeepPlaying(t)}finally{inSeek--}if(resumeWanted&&!exporting){clearTimeout(resumeTimer);resumeTimer=setTimeout(()=>{resumeWanted=false;if(!playing&&!exporting&&playhead<total()-.1)togglePlay()},250)}};
+// Any other pause (Pause button, tapping a strip to edit, splitting) cancels the resume.
+const pauseCancelsResume=pause;pause=function(){if(!inSeek){resumeWanted=false;clearTimeout(resumeTimer)}pauseCancelsResume()};
