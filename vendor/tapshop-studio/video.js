@@ -361,3 +361,13 @@ const downloadWithVault=download;download=function(blob,name){if(blob?.type?.sta
 function saveVideoToVault(){if(!inTapShop()||!lastVideoExport)return;sendToVault([{...lastVideoExport,source:'video'}]);$('vaultVideo').classList.add('hidden');$('exportDialog').close()}
 function saveProjectToVault(){if(!inTapShop()||exporting)return;let captured=null,real=download;download=(blob,name)=>{captured={blob,name}};try{saveProject()}finally{download=real}if(captured)sendToVault([{...captured,source:'video'}])}
 if(!inTapShop())$('vaultProject')?.remove();
+
+// Importing from the Vault: videos go on the main timeline (or on top as a layer), audio
+// gets its own track, and a saved .tapshop.json project is reopened.
+function openVaultPicker(kinds,asLayer){VaultPicker.open({title:'From your Media Vault',kinds,accept:i=>i.kind!=='project'||/\.tapshop\.json$/i.test(i.name),onPick:it=>importVaultItem(it,asLayer)})}
+async function importVaultItem(item,asLayer){if(exporting)return;let file;try{toast('Loading '+item.name+'…');file=await VaultPicker.file(item)}catch(e){toast(e.message);return}
+ if(item.kind==='video'){if(asLayer){await addVideoLayer(file);return}let n=clips.length;await importFiles([file]);if(clips.length>n)showStrip(clips.at(-1).id);return}
+ if(item.kind==='audio'){addTrack('audio');let t=extraTracks.at(-1);targetTrack=t.id;if(typeof expandedStrip!=='undefined')expandedStrip=t.id;await loadTrackMedia(file);renderTracks();showStrip(t.id);return}
+ if(item.kind==='project'||/\.tapshop\.json$/i.test(item.name)){await restoreProject(file);return}
+ toast(item.kind==='image'?'Images go in the Design Studio. Open it from “← Studio”.':'That file can’t go on the video timeline.')}
+if(!inTapShop()){$('vaultFrom')?.remove();$('vaultVideoPick')?.remove()}

@@ -26,6 +26,7 @@ const FILES = new Set([
   "timeline-strips.js",
   "text-catalog.js",
   "text-fonts.css",
+  "vault-picker.js",
   "demo.webm",
 ]);
 

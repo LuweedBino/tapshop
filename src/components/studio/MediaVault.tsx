@@ -28,7 +28,9 @@ export async function saveToVault(files: { file: File; source: "upload" | "desig
   return items.length;
 }
 
-export function MediaVault({ items, onBack, onExportDesigns, canExportDesigns }: { items: VaultItemView[]; onBack: () => void; onExportDesigns: () => void; canExportDesigns: boolean }) {
+const USABLE = new Set(["video", "audio", "image", "project"]);
+
+export function MediaVault({ items, onBack, onExportDesigns, canExportDesigns, onUse }: { items: VaultItemView[]; onBack: () => void; onExportDesigns: () => void; canExportDesigns: boolean; onUse: (item: VaultItemView) => void }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<"all" | VaultKind>("all");
@@ -119,7 +121,12 @@ export function MediaVault({ items, onBack, onExportDesigns, canExportDesigns }:
               <div className="p-2.5">
                 <p className="truncate text-sm font-semibold" title={item.name}>{item.name}</p>
                 <p className="truncate text-xs text-neutral-500">{formatBytes(item.size)} · {SOURCE_LABEL[item.source] ?? "Uploaded"}</p>
-                <div className="mt-2 flex gap-3 text-xs font-semibold">
+                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
+                  {USABLE.has(item.kind) && (
+                    <button type="button" onClick={() => onUse(item)} className="text-violet-700 hover:text-violet-900" title={item.kind === "image" ? "Add to your design" : item.kind === "project" ? "Open this project in Studio" : "Add to your video"}>
+                      Use in Studio
+                    </button>
+                  )}
                   <a href={`/api/vault/${item.id}?download=1`} className="text-neutral-700 hover:text-neutral-900">Download</a>
                   <button type="button" onClick={() => remove(item)} className="text-red-600 hover:text-red-700">Delete</button>
                 </div>
