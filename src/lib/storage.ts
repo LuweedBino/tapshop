@@ -1,9 +1,9 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { get as getBlob } from "@vercel/blob";
+import { get as getBlob, del as delBlob } from "@vercel/blob";
 import { env } from "./env";
 
 // Files live under "public/<creatorId>/..." (avatars, covers) or "private/<creatorId>/..."
@@ -116,4 +116,18 @@ export async function signedDownloadUrl(key: string, downloadName?: string) {
     }),
     { expiresIn: 300 },
   );
+}
+
+/** Removes a stored file. Best effort: a missing file is not an error. */
+export async function deleteObject(key: string) {
+  try {
+    if (usingS3()) await s3().send(new DeleteObjectCommand({ Bucket: env.s3.bucket, Key: key }));
+    else if (backend() === "blob") await delBlob(key);
+    else {
+      const p = localPath(key);
+      await Promise.all([fs.rm(p, { force: true }), fs.rm(p + ".type", { force: true })]);
+    }
+  } catch (e) {
+    console.error("deleteObject failed", key, e);
+  }
 }

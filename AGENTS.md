@@ -57,7 +57,8 @@ The feature is called **Portfolio** in the UI, but the code still uses `mediaKit
 - `/dashboard/studio` embeds a static HTML/JS editor in an iframe. Its files live in `vendor/tapshop-studio/` and are served only to signed-in creators by `src/app/dashboard/studio/assets/[...path]/route.ts` (allowlisted file names). Never move them into `public/`.
 - It's classic-script code: keep the script order in `video.html` (text-catalog → video → panel-layout → timeline-strips) and don't convert it to modules. `vendor/**` is excluded from ESLint.
 - The asset route scopes the editor's `localStorage` keys per creator; don't bypass it.
-- The editor talks to the dashboard only through `postMessage` (`tapshop:export-ready`, version 1). `StudioFrame` checks `event.origin` and `event.source`; validate any new message the same way.
+- The editor talks to the dashboard only through `postMessage`, version 1: `tapshop:export-ready` (PNG → Save to TapShop), `tapshop:open-vault`, `tapshop:vault-save` (`items: [{blob, name, source}]`), and dashboard → editor `tapshop:vault-export-all`. `StudioFrame` checks `event.origin` and `event.source`; validate any new message the same way.
+- **Media Vault**: `VaultItem` rows point at private storage keys. Files are served only to their owner by `src/app/api/vault/[id]/route.ts` (non-media types always download, `CSP: sandbox`). Uploads reuse `uploadFile(…, "private")` and `addVaultItems` checks `ownKey`.
 - Font licences and original font files are kept in `vendor/tapshop-studio-licenses/`.
 
 ## Payments and files (be careful here)
