@@ -93,6 +93,11 @@ export async function readLocal(key: string) {
 
 /** Reads a file from local disk or Vercel Blob. Returns null if it doesn't exist. */
 export async function readObject(key: string): Promise<{ body: BodyInit; contentType: string } | null> {
+  if (usingS3()) {
+    const res = await s3().send(new GetObjectCommand({ Bucket: env.s3.bucket, Key: key })).catch(() => null);
+    if (!res?.Body) return null;
+    return { body: res.Body.transformToWebStream() as unknown as ReadableStream, contentType: res.ContentType ?? "application/octet-stream" };
+  }
   if (backend() === "blob") {
     const res = await getBlob(key, { access: "private" }).catch(() => null);
     if (!res || res.statusCode !== 200) return null;

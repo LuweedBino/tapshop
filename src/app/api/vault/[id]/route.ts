@@ -14,7 +14,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const inlineSafe = /^(image\/(png|jpe?g|gif|webp|avif)|video\/|audio\/|application\/pdf|text\/plain)/.test(item.contentType);
   const download = new URL(req.url).searchParams.has("download") || !inlineSafe;
   const name = item.name.replace(/["\r\n]/g, "");
-  if (usingS3()) return NextResponse.redirect(await signedDownloadUrl(item.key, download ? name : undefined));
+  // ?raw=1 is the Studio importing the file: always stream it from here (no redirect to S3),
+  // so the editor can read it without the bucket allowing cross-origin GETs.
+  const raw = new URL(req.url).searchParams.has("raw");
+  if (usingS3() && !raw) return NextResponse.redirect(await signedDownloadUrl(item.key, download ? name : undefined));
   const file = await readObject(item.key);
   if (!file) return new NextResponse("File not found", { status: 404 });
   return new NextResponse(file.body, {

@@ -1,0 +1,40 @@
+// Media Vault picker shared by the design and video studios (only inside TapShop).
+// Lists the signed-in creator's Vault files and hands the chosen one to the page's
+// importVaultItem(item). The dashboard's "Use in Studio" arrives as tapshop:vault-import.
+(function(){
+  const inTapShop=window.parent!==window;
+  const KIND_ICON={video:'▶',image:'🖼',audio:'♫',document:'📄',project:'✳',other:'📦'};
+  const css=`.vp{width:min(560px,94vw);max-height:min(86vh,86dvh);overflow:auto;border:1px solid #8a7aa855;border-radius:16px;padding:18px;background:#fff;color:#221d2c;box-shadow:0 20px 60px #0006}
+.vp.vp-dark{background:#1d1a26;color:#eee9f7}.vp::backdrop{background:#0008}.vp h2{margin:0 0 4px;font-size:18px}.vp p{margin:0 0 12px;font-size:12px;opacity:.75}
+.vp-x{float:right;position:sticky;top:0;width:36px;height:36px;border-radius:50%;border:1px solid #8a7aa855;background:inherit;color:inherit;font-size:20px;cursor:pointer}
+.vp-list{display:grid;gap:8px}.vp-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:8px;border:1px solid #8a7aa855;border-radius:12px;background:transparent;color:inherit;cursor:pointer;font:inherit}
+.vp-item:hover,.vp-item:focus-visible{border-color:#a07ae0;background:#a07ae01a}.vp-thumb{flex:0 0 64px;height:40px;border-radius:8px;background:#8a7aa833;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:18px}
+.vp-thumb img{width:100%;height:100%;object-fit:cover}.vp-name{display:block;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vp-meta{font-size:11px;opacity:.65}
+.vp-empty{padding:24px;text-align:center;border:2px dashed #8a7aa855;border-radius:12px;font-size:13px}.vp-link{margin-top:12px;border:0;background:none;color:#8a5fd6;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}`;
+  let style=null;
+  function size(n){return n<1048576?Math.max(1,Math.round(n/1024))+' KB':(n/1048576).toFixed(1)+' MB'}
+  function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+  function dark(){return document.documentElement.dataset.theme==='dark'||(location.pathname.endsWith('video.html')&&!document.body.classList.contains('light'))}
+  async function list(){let r=await fetch('/api/vault',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error('Your Media Vault could not be loaded.');return (await r.json()).items||[]}
+  async function file(item){let r=await fetch('/api/vault/'+encodeURIComponent(item.id)+'?raw=1',{credentials:'same-origin'});if(!r.ok)throw Error('That file could not be loaded from your Media Vault.');let b=await r.blob();return new File([b],item.name,{type:item.contentType||b.type||'application/octet-stream'})}
+  async function open({title='From your Media Vault',kinds,accept,onPick}){
+    if(!inTapShop)return;
+    if(!style){style=document.createElement('style');style.textContent=css;document.head.appendChild(style)}
+    let d=document.createElement('dialog');d.className='vp'+(dark()?' vp-dark':'');d.setAttribute('aria-label',title);
+    d.innerHTML=`<button type="button" class="vp-x" aria-label="Close">×</button><h2>${esc(title)}</h2><p>Loading your files…</p><div class="vp-list"></div>`;
+    document.body.appendChild(d);d.showModal();
+    const close=()=>{d.close();d.remove()};
+    d.querySelector('.vp-x').onclick=close;d.addEventListener('cancel',e=>{e.preventDefault();close()});
+    d.addEventListener('click',e=>{if(e.target!==d)return;let r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close()});
+    let items;try{items=(await list()).filter(i=>(!kinds||kinds.includes(i.kind))&&(!accept||accept(i)))}catch(e){d.querySelector('p').textContent=e.message;return}
+    d.querySelector('p').textContent=items.length?'Tap a file to add it.':'';
+    let box=d.querySelector('.vp-list');
+    if(!items.length)box.innerHTML=`<div class="vp-empty">Nothing here yet. Upload files in your Media Vault, or use “Save to Vault”.</div>`;
+    for(const it of items){let b=document.createElement('button');b.type='button';b.className='vp-item';
+      b.innerHTML=`<span class="vp-thumb">${it.kind==='image'&&!/svg/.test(it.contentType)?`<img src="/api/vault/${encodeURIComponent(it.id)}" alt="" loading="lazy">`:(KIND_ICON[it.kind]||'📦')}</span><span style="min-width:0"><span class="vp-name">${esc(it.name)}</span><span class="vp-meta">${size(it.size)}</span></span>`;
+      b.onclick=()=>{close();onPick(it)};box.appendChild(b)}
+    let more=document.createElement('button');more.type='button';more.className='vp-link';more.textContent='Open Media Vault';more.onclick=()=>{close();window.parent.postMessage({type:'tapshop:open-vault',version:1},location.origin)};d.appendChild(more);
+  }
+  window.VaultPicker={inTapShop,list,file,open};
+  window.addEventListener('message',e=>{if(e.source!==window.parent||e.origin!==location.origin)return;let m=e.data;if(!m||m.type!=='tapshop:vault-import'||m.version!==1||!m.item||typeof m.item.id!=='string')return;if(typeof window.importVaultItem==='function')window.importVaultItem({id:m.item.id,name:String(m.item.name||'file'),kind:String(m.item.kind||'other'),contentType:String(m.item.contentType||'')})});
+})();

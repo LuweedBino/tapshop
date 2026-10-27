@@ -78,6 +78,13 @@ export function StudioFrame({ products, vault }: { products: { id: string; title
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // "Use in Studio": go back to the editor and let the page that's open import the file.
+  // The editor fetches it by id, so the server still checks it belongs to this creator.
+  function useInStudio(item: VaultItemView) {
+    setView("studio");
+    frame.current?.contentWindow?.postMessage({ type: "tapshop:vault-import", version: 1, item: { id: item.id, name: item.name, kind: item.kind, contentType: item.contentType } }, window.location.origin);
+  }
+
   function exportDesigns() {
     if (!frameOn("/index.html")) return;
     frame.current?.contentWindow?.postMessage({ type: "tapshop:vault-export-all", version: 1 }, window.location.origin);
@@ -92,7 +99,7 @@ export function StudioFrame({ products, vault }: { products: { id: string; title
         sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals"
         className={`h-[calc(100dvh-140px)] min-h-[600px] w-full rounded-xl border border-neutral-200 bg-white md:h-[calc(100dvh-64px)] ${view === "studio" ? "block" : "hidden"}`}
       />
-      {view === "vault" && <MediaVault items={vault} onBack={() => setView("studio")} onExportDesigns={exportDesigns} canExportDesigns={onDesignHome} />}
+      {view === "vault" && <MediaVault items={vault} onBack={() => setView("studio")} onExportDesigns={exportDesigns} canExportDesigns={onDesignHome} onUse={useInStudio} />}
       {saving && (
         <div role="status" className={`fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold shadow-xl ${saving.error ? "bg-red-600 text-white" : "bg-neutral-900 text-white"}`}>
           <span className="flex-1">{saving.text}</span>
