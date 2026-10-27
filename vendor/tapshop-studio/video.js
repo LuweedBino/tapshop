@@ -347,3 +347,6 @@ $('dropzone').addEventListener('drop',e=>{e.preventDefault();e.stopImmediateProp
 // On phones the clip settings only appear while a clip is selected.
 const inspectorWithPanel=inspector;inspector=function(){inspectorWithPanel();document.querySelector('.panel.right')?.classList.toggle('no-clip',!clips[selected])};
 inspector();
+
+// Tapping the dimmed area outside a pop-up closes it, like the × and Esc.
+document.querySelectorAll('dialog.closable').forEach(d=>d.addEventListener('click',e=>{if(e.target!==d)return;let r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close()}));
