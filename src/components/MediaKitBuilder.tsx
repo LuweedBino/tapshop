@@ -507,7 +507,7 @@ function StylePanel({ doc, setStyle, setTags, headline, setHeadline, creator }: 
 function Phone({ children }: { children: React.ReactNode }) {
   return (
     // Clicks are swallowed so links in the preview don't navigate away from unsaved changes.
-    <div className="h-[600px] w-[300px] shrink-0 overflow-hidden rounded-[2.5rem] border-[10px] border-neutral-900 bg-neutral-900 shadow-xl" onClickCapture={(e) => e.preventDefault()}>
+    <div className="h-[600px] w-[300px] shrink-0 overflow-hidden rounded-[2.5rem] border-[10px] border-neutral-900 bg-neutral-900 shadow-xl theme-light" onClickCapture={(e) => e.preventDefault()}>
       <div className="h-full overflow-y-auto rounded-[1.8rem]">{children}</div>
     </div>
   );

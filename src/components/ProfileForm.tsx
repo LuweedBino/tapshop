@@ -184,7 +184,7 @@ function Preview({ design, handle, products, creator }: {
 }) {
   return (
     // Clicks are swallowed so links in the preview don't navigate away from unsaved changes.
-    <div className="h-[600px] w-[300px] overflow-hidden rounded-[2.5rem] border-[10px] border-neutral-900 bg-neutral-900 shadow-xl" onClickCapture={(e) => e.preventDefault()}>
+    <div className="h-[600px] w-[300px] overflow-hidden rounded-[2.5rem] border-[10px] border-neutral-900 bg-neutral-900 shadow-xl theme-light" onClickCapture={(e) => e.preventDefault()}>
       <div className="si-force-motion h-full overflow-y-auto rounded-[1.8rem]">
         <StoreShell design={design} className="min-h-full">
           {/* Keyed so entrance animations replay whenever the icon style changes. */}
