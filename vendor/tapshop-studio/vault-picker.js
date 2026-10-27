@@ -11,6 +11,7 @@
 .vp-item:hover,.vp-item:focus-visible{border-color:#a07ae0;background:#a07ae01a}.vp-thumb{flex:0 0 64px;height:40px;border-radius:8px;background:#8a7aa833;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:18px}
 .vp-thumb img{width:100%;height:100%;object-fit:cover}.vp-name{display:block;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vp-meta{font-size:11px;opacity:.65}
 .vp.vp-hidden{opacity:0}.vp.vp-hidden::backdrop{background:transparent}.vp-item.vp-drag{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.vp-ghost{position:fixed;z-index:2147483647;pointer-events:none;transform:translate(-50%,-130%);padding:8px 12px;border-radius:12px;background:#221d2c;color:#fff;font:600 13px system-ui,sans-serif;box-shadow:0 8px 24px #0006;white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis;opacity:.92}.vp-ghost.vp-no{background:#6b6378}
+.vp-search{width:100%;box-sizing:border-box;margin:0 0 10px;padding:9px 12px;border:1px solid #8a7aa877;border-radius:10px;background:transparent;color:inherit;font:14px system-ui,sans-serif}.vp-none{padding:16px;text-align:center;font-size:13px;opacity:.75}
 .vp-folders{display:flex;gap:6px;overflow-x:auto;margin:0 0 10px;padding-bottom:2px}.vp-folder{white-space:nowrap;padding:6px 11px;border:1px solid #8a7aa855;border-radius:10px;background:transparent;color:inherit;font:600 12px system-ui,sans-serif;cursor:pointer}.vp-folder[aria-pressed=true]{background:#8a5fd6;border-color:#8a5fd6;color:#fff}
 .vp-empty{padding:24px;text-align:center;border:2px dashed #8a7aa855;border-radius:12px;font-size:13px}.vp-link{margin-top:12px;border:0;background:none;color:#8a5fd6;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}`;
   let style=null;
@@ -24,7 +25,7 @@
     if(!inTapShop)return;
     if(!style){style=document.createElement('style');style.textContent=css;document.head.appendChild(style)}
     let d=document.createElement('dialog');d.className='vp'+(dark()?' vp-dark':'');d.setAttribute('aria-label',title);
-    d.innerHTML=`<button type="button" class="vp-x" aria-label="Close">×</button><h2>${esc(title)}</h2><p>Loading your files…</p><div class="vp-folders" hidden></div><div class="vp-list"></div>`;
+    d.innerHTML=`<button type="button" class="vp-x" aria-label="Close">×</button><h2>${esc(title)}</h2><p>Loading your files…</p><input class="vp-search" type="search" placeholder="🔍 Search your files" aria-label="Search files by name" hidden><div class="vp-folders" hidden></div><div class="vp-list"></div>`;
     document.body.appendChild(d);d.showModal();
     const close=()=>{d.close();d.remove()};
     d.querySelector('.vp-x').onclick=close;d.addEventListener('cancel',e=>{e.preventDefault();close()});
@@ -36,10 +37,14 @@
     // Folder buttons, only for folders holding something this editor can use.
     let used=folders.filter(f=>items.some(i=>i.folderId===f.id)),bar=d.querySelector('.vp-folders');
     if(used.length){bar.hidden=false;for(const f of [{id:'',name:'All files'},...used]){let c=document.createElement('button');c.type='button';c.className='vp-folder';c.textContent=(f.id?'📁 ':'🗂 ')+f.name;c.setAttribute('aria-pressed',String(!f.id));
-      c.onclick=()=>{for(const x of bar.children)x.setAttribute('aria-pressed',String(x===c));for(const x of box.children)x.hidden=!!f.id&&x.dataset.folder!==f.id};bar.appendChild(c)}}
-    for(const it of items){let b=document.createElement('button');b.dataset.folder=it.folderId||'';b.type='button';b.className='vp-item';
+      c.onclick=()=>{for(const x of bar.children)x.setAttribute('aria-pressed',String(x===c));inFolder=f.id;refilter()};bar.appendChild(c)}}
+    let inFolder='',search=d.querySelector('.vp-search'),none=document.createElement('div');none.className='vp-none';none.hidden=true;none.textContent='No files match.';
+    const refilter=()=>{let words=search.value.toLowerCase().split(/\s+/).filter(Boolean),n=0;for(const x of box.querySelectorAll('.vp-item')){x.hidden=(!!inFolder&&x.dataset.folder!==inFolder)||!words.every(w=>x.dataset.name.includes(w));if(!x.hidden)n++}none.hidden=n>0||!items.length};
+    if(items.length>5){search.hidden=false;search.oninput=refilter}
+    for(const it of items){let b=document.createElement('button');b.dataset.folder=it.folderId||'';b.dataset.name=it.name.toLowerCase();b.type='button';b.className='vp-item';
       b.innerHTML=`<span class="vp-thumb">${it.kind==='image'&&!/svg/.test(it.contentType)?`<img src="/api/vault/${encodeURIComponent(it.id)}" alt="" loading="lazy">`:(KIND_ICON[it.kind]||'📦')}</span><span style="min-width:0"><span class="vp-name">${esc(it.name)}</span><span class="vp-meta">${size(it.size)}</span></span>`;
       b.onclick=()=>{if(b.dataset.dragged){delete b.dataset.dragged;return}close();onPick(it)};if(drag)draggable(b,it,d,close,drag);box.appendChild(b)}
+    box.appendChild(none);
     let more=document.createElement('button');more.type='button';more.className='vp-link';more.textContent='Open Media Vault';more.onclick=()=>{close();window.parent.postMessage({type:'tapshop:open-vault',version:1},location.origin)};d.appendChild(more);
   }
   // Drag a file out of the picker: a mouse drags after a small move; a finger holds for a
