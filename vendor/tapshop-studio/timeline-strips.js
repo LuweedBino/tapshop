@@ -38,3 +38,21 @@ render();
 // New soundtracks use the same movable audio lanes as other imported audio.
 const legacyMusicRow=$('musicStrip')?.closest('.trackrow');if(legacyMusicRow)legacyMusicRow.style.display='none';
 importMusic=async function(file){if(!file||exporting)return;addTrack('audio');let t=extraTracks.at(-1);targetTrack=t.id;expandedStrip=t.id;await loadTrackMedia(file);$('musicName').textContent='Added as '+t.name+' on the timeline';decorateStrips()};
+
+// Playhead: a vertical line through every track with a small downward triangle on top.
+// It follows playback and seeking; drag the triangle (or tap the ruler) to move it.
+const LANE_START=122; // ruler margin = row padding (12px) + track name column (110px)
+let playheadLine=document.createElement('div');playheadLine.className='timeline-playhead';playheadLine.setAttribute('aria-hidden','true');
+let playheadHead=document.createElement('div');playheadHead.className='timeline-playhead-head';playheadHead.title='Drag to move the playhead';playheadLine.appendChild(playheadHead);tracksHost.appendChild(playheadLine);
+function placePlayhead(){let x=LANE_START+playhead*timelineScale,top=$('ruler').offsetTop;playheadLine.style.left=x+'px';playheadLine.style.top=top+'px';let bottom=Math.max(tracksHost.clientHeight,...[...tracksHost.children].filter(el=>el!==playheadLine).map(el=>el.offsetTop+el.offsetHeight));playheadLine.style.height=Math.max(0,bottom-top)+'px';
+ if(playing){let left=tracksHost.scrollLeft,view=tracksHost.clientWidth;if(x>left+view-40||x<left+LANE_START)tracksHost.scrollLeft=Math.max(0,x-LANE_START-40)}}
+const drawWithPlayhead=draw;draw=function(){drawWithPlayhead();placePlayhead()};
+const decorateWithPlayhead=decorateStrips;decorateStrips=function(){decorateWithPlayhead();placePlayhead()};
+function playheadTime(e){let r=tracksHost.getBoundingClientRect(),x=e.clientX-r.left+tracksHost.scrollLeft-LANE_START;return Math.max(0,Math.min(total(),x/timelineScale))}
+let playheadDrag=false;
+playheadHead.addEventListener('pointerdown',e=>{if(exporting)return;e.preventDefault();e.stopPropagation();playheadDrag=true;playheadHead.setPointerCapture(e.pointerId);pause()});
+playheadHead.addEventListener('pointermove',e=>{if(!playheadDrag)return;playhead=playheadTime(e);placePlayhead()});
+const endPlayheadDrag=e=>{if(!playheadDrag)return;playheadDrag=false;seekTimeline(playheadTime(e))};
+playheadHead.addEventListener('pointerup',endPlayheadDrag);playheadHead.addEventListener('pointercancel',endPlayheadDrag);
+$('ruler').addEventListener('pointerdown',e=>{if(exporting)return;seekTimeline(playheadTime(e))});
+window.addEventListener('resize',placePlayhead);placePlayhead();
