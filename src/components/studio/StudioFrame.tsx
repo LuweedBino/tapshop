@@ -45,6 +45,26 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
   const [designs, setDesigns] = useState<DesignOption[] | null>(null);
   // A file waiting for the other Studio page to finish loading (it says tapshop:studio-ready).
   const pending = useRef<{ page: Page; message: unknown; at: number } | null>(null);
+  const [height, setHeight] = useState<number | null>(null);
+
+  // Size the Studio to the space left under the dashboard header, which wraps onto more rows
+  // on tablets, so the editor never runs past the bottom of the screen.
+  useEffect(() => {
+    if (view !== "studio") return;
+    function fit() {
+      const el = frame.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top + window.scrollY;
+      setHeight(Math.max(420, Math.floor(window.innerHeight - top - 12)));
+    }
+    fit();
+    window.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("resize", fit);
+    return () => {
+      window.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("resize", fit);
+    };
+  }, [view]);
 
   function frameOn(page: string) {
     try {
@@ -150,7 +170,8 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
         title="TapShop Studio"
         src="/dashboard/studio/assets/index.html"
         sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals"
-        className={`h-[calc(100dvh-140px)] min-h-[600px] w-full rounded-xl border border-neutral-200 bg-white md:h-[calc(100dvh-64px)] ${view === "studio" ? "block" : "hidden"}`}
+        style={height ? { height } : undefined}
+        className={`h-[calc(100dvh-140px)] min-h-[420px] w-full rounded-xl border border-neutral-200 bg-white md:h-[calc(100dvh-64px)] ${view === "studio" ? "block" : "hidden"}`}
       />
       {view === "vault" && <MediaVault items={vault} folders={folders} onBack={() => setView("studio")} onExportDesigns={exportDesigns} canExportDesigns={onDesignHome} onUse={useInStudio} />}
       {saving && (
