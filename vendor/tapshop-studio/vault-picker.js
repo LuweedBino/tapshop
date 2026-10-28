@@ -69,5 +69,18 @@
     });
   }
   window.VaultPicker={inTapShop,list,file,open};
-  window.addEventListener('message',e=>{if(e.source!==window.parent||e.origin!==location.origin)return;let m=e.data;if(!m||m.type!=='tapshop:vault-import'||m.version!==1||!m.item||typeof m.item.id!=='string')return;if(typeof window.importVaultItem==='function')window.importVaultItem({id:m.item.id,name:String(m.item.name||'file'),kind:String(m.item.kind||'other'),contentType:String(m.item.contentType||'')})});
+  // Dashboard → editor messages (version 1): tapshop:vault-import puts a Vault file in this
+  // page (on the design page, target {design:'new'|id} says which design), and
+  // tapshop:list-designs asks for the saved designs so "Use in Studio" can offer them.
+  const page=location.pathname.endsWith('video.html')?'video':'design';
+  function designs(){let list=[];try{list=JSON.parse(localStorage.getItem('forma-projects')||'[]')}catch{}
+    return (Array.isArray(list)?list:[]).filter(d=>d&&typeof d.id==='string').slice(0,60).map(d=>{let thumb=null;try{if(typeof svgString==='function')thumb='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgString(d))}catch{}return {id:d.id,name:String(d.name||'Untitled design'),w:+d.w||0,h:+d.h||0,thumb}})}
+  window.addEventListener('message',e=>{if(e.source!==window.parent||e.origin!==location.origin)return;let m=e.data;if(!m||m.version!==1)return;
+    if(m.type==='tapshop:list-designs'){window.parent.postMessage({type:'tapshop:designs',version:1,items:designs()},location.origin);return}
+    if(m.type!=='tapshop:vault-import'||!m.item||typeof m.item.id!=='string'||typeof window.importVaultItem!=='function')return;
+    let item={id:m.item.id,name:String(m.item.name||'file'),kind:String(m.item.kind||'other'),contentType:String(m.item.contentType||'')};
+    let t=m.target&&typeof m.target.design==='string'?{design:m.target.design}:null;
+    if(page==='design'&&t)window.importVaultItem(item,t);else window.importVaultItem(item)});
+  // After every script on the page has run, so importVaultItem is in place.
+  if(inTapShop){const ready=()=>window.parent.postMessage({type:'tapshop:studio-ready',version:1,page},location.origin);if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ready);else ready()}
 })();
