@@ -156,7 +156,12 @@ importVaultItem=async function(item,target){
 .tools-toggle{display:grid;place-items:center;width:38px;height:38px;padding:7px;flex:none}.tools-toggle svg{width:20px;height:20px}
 html[data-tools="collapsed"] .ebody{--tools-w:0px}
 html[data-tools="collapsed"] .tools{padding:0;border:0;visibility:hidden}
-@media(max-width:1000px){.ebody{--tools-w:170px;grid-template-columns:var(--tools-w) minmax(0,1fr)}.props.empty{display:none}}
+.props-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.props-head h3{margin:0}.props-min{display:none}
+@media(max-width:1000px){.ebody{--tools-w:170px;grid-template-columns:var(--tools-w) minmax(0,1fr)}.props.empty{display:none}
+ body .props{position:absolute;top:10px;right:10px;bottom:auto;width:min(260px,calc(100% - 20px));max-height:calc(100% - 20px);overflow:auto;overscroll-behavior:contain;padding:12px 14px 14px;border:1px solid var(--rim,#0002);border-radius:14px;box-shadow:0 10px 30px #0006;z-index:3;box-sizing:border-box}
+ .props label{margin:12px 0 5px}.props-head{position:sticky;top:-12px;margin:-12px -14px 0;padding:12px 14px 8px;background:inherit;z-index:1}
+ .props-min{display:grid;place-items:center;width:32px;height:32px;padding:0;flex:none;font-size:18px;line-height:1}
+ .props.min{overflow:hidden;padding-bottom:4px}.props.min>:not(.props-head){display:none}}
 @media(max-width:650px){.ebody{--tools-w:118px}.etop{gap:5px;padding:6px 8px}.etop button{padding:8px 10px}.stage{padding:10px}}
 </style>
 <script>
@@ -170,5 +175,10 @@ function fitStage(){let stage=document.getElementById('stage'),svg=stage?.queryS
  let k=Math.min(w/design.w,h/design.h);svg.style.width=Math.floor(design.w*k)+'px';svg.style.height=Math.floor(design.h*k)+'px'}
 const drawUnfitted=draw;draw=function(){drawUnfitted();fitStage()};
 new ResizeObserver(()=>fitStage()).observe(document.getElementById('stage'));
-const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();document.getElementById('props').classList.toggle('empty',!design?.els?.[selected])};
+// The settings panel gets a header with a shrink button (shown on tablets and phones, where
+// the panel floats over the canvas). Shrunk or not is kept while you edit.
+let propsMin=false;
+function togglePropsMin(){propsMin=!propsMin;properties()}
+const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();let p=document.getElementById('props'),h=p.querySelector('h3');p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('min',propsMin);
+ if(h){let head=document.createElement('div');head.className='props-head';h.replaceWith(head);head.append(h);let b=document.createElement('button');b.type='button';b.className='props-min';b.textContent=propsMin?'+':'−';b.title=propsMin?'Show settings':'Shrink settings';b.setAttribute('aria-label',b.title);b.setAttribute('aria-expanded',String(!propsMin));b.onclick=togglePropsMin;head.append(b)}};
 </script></body></html>
