@@ -4,9 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SaveToTapShop, type StudioImage } from "./SaveToTapShop";
 import { MediaVault, saveToVault, type VaultFolderView, type VaultItemView } from "./MediaVault";
+import { UseInStudio, type DesignOption, type StudioChoice } from "./UseInStudio";
 import { VAULT_MAX_BYTES } from "@/lib/vault";
 
 type VaultFile = { file: File; source: "design" | "video" };
+type Page = "design" | "video";
+const PAGE_PATH: Record<Page, string> = { design: "/index.html", video: "/video.html" };
+
+// Reads the editor's reply to tapshop:list-designs. Thumbnails must be SVG data URLs (shown in <img>, so they can't run code).
+function designOptions(x: unknown): DesignOption[] {
+  if (!Array.isArray(x)) return [];
+  return x.slice(0, 60).flatMap((d) => {
+    if (!d || typeof d !== "object" || typeof d.id !== "string" || !d.id) return [];
+    const thumb = typeof d.thumb === "string" && d.thumb.startsWith("data:image/svg+xml") ? d.thumb : null;
+    return [{ id: d.id, name: typeof d.name === "string" && d.name.trim() ? d.name.slice(0, 100) : "Untitled design", w: Number(d.w) || 0, h: Number(d.h) || 0, thumb }];
+  });
+}
 
 // Reads one item of a `tapshop:vault-save` message; anything malformed is dropped.
 function vaultFile(x: unknown): VaultFile | null {
@@ -28,6 +41,10 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
   const [view, setView] = useState<"studio" | "vault">("studio");
   const [onDesignHome, setOnDesignHome] = useState(false);
   const [saving, setSaving] = useState<{ text: string; done?: boolean; error?: boolean } | null>(null);
+  const [using, setUsing] = useState<VaultItemView | null>(null);
+  const [designs, setDesigns] = useState<DesignOption[] | null>(null);
+  // A file waiting for the other Studio page to finish loading (it says tapshop:studio-ready).
+  const pending = useRef<{ page: Page; message: unknown; at: number } | null>(null);
 
   function frameOn(page: string) {
     try {
@@ -61,6 +78,13 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
       const d = e.data;
       if (!d || d.version !== 1) return;
       if (d.type === "tapshop:open-vault") return openVault();
+      if (d.type === "tapshop:designs") return setDesigns(designOptions(d.items));
+      if (d.type === "tapshop:studio-ready") {
+        const p = pending.current;
+        if (p && p.page === d.page && Date.now() - p.at < 30000) frame.current?.contentWindow?.postMessage(p.message, window.location.origin);
+        pending.current = null;
+        return;
+      }
       if (d.type === "tapshop:vault-save" && Array.isArray(d.items)) {
         const files = d.items.slice(0, 200).map(vaultFile).filter((f: VaultFile | null): f is VaultFile => !!f);
         store(files);
@@ -78,11 +102,40 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // "Use in Studio": go back to the editor and let the page that's open import the file.
-  // The editor fetches it by id, so the server still checks it belongs to this creator.
+  // Sends a message to one Studio page, opening that page first if another one is showing.
+  // Leaving the video editor with unsaved work still asks first (its own beforeunload).
+  function sendTo(page: Page, message: unknown) {
+    const win = frame.current?.contentWindow;
+    if (!win) return;
+    if (frameOn(PAGE_PATH[page])) return win.postMessage(message, window.location.origin);
+    pending.current = { page, message, at: Date.now() };
+    win.location.href = `/dashboard/studio/assets${PAGE_PATH[page]}`;
+  }
+
+  // "Use in Studio": saved projects open straight away; other files ask where they should go.
+  // The editor fetches the file by id, so the server still checks it belongs to this creator.
   function useInStudio(item: VaultItemView) {
+    if (item.kind === "project") {
+      setView("studio");
+      return sendTo(/\.tapshop-design\.json$/i.test(item.name) ? "design" : "video", importMessage(item));
+    }
+    setUsing(item);
+    setDesigns(null);
+    frame.current?.contentWindow?.postMessage({ type: "tapshop:list-designs", version: 1 }, window.location.origin);
+    setTimeout(() => setDesigns((d) => d ?? []), 2500);
+  }
+
+  function importMessage(item: VaultItemView, design?: string) {
+    return { type: "tapshop:vault-import", version: 1, item: { id: item.id, name: item.name, kind: item.kind, contentType: item.contentType }, ...(design ? { target: { design } } : {}) };
+  }
+
+  function choose(choice: StudioChoice) {
+    if (!using) return;
+    const item = using;
+    setUsing(null);
     setView("studio");
-    frame.current?.contentWindow?.postMessage({ type: "tapshop:vault-import", version: 1, item: { id: item.id, name: item.name, kind: item.kind, contentType: item.contentType } }, window.location.origin);
+    if (choice.to === "video") sendTo("video", importMessage(item));
+    else sendTo("design", importMessage(item, choice.design));
   }
 
   function exportDesigns() {
@@ -109,6 +162,7 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
           {saving.done && <button type="button" aria-label="Dismiss" className="text-lg leading-none opacity-80" onClick={() => setSaving(null)}>×</button>}
         </div>
       )}
+      {using && <UseInStudio item={using} designs={designs} onChoose={choose} onClose={() => setUsing(null)} />}
       {image && <SaveToTapShop image={image} products={products} onClose={() => setImage(null)} />}
     </>
   );
