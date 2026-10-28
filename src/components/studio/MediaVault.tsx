@@ -4,7 +4,8 @@ import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { uploadFile } from "@/lib/upload";
 import { addVaultItems, createVaultFolder, deleteVaultFolder, deleteVaultItem, moveVaultItems, renameVaultFolder } from "@/app/actions/vault";
-import { formatBytes, VAULT_KINDS, VAULT_MAX_BYTES, type VaultKind } from "@/lib/vault";
+import { StorageMeter } from "./StorageMeter";
+import { formatBytes, VAULT_KINDS, VAULT_MAX_BYTES, VAULT_QUOTA_BYTES, type VaultKind } from "@/lib/vault";
 
 export type VaultItemView = { id: string; name: string; kind: string; size: number; contentType: string; source: string; folderId: string | null; createdAt: string };
 export type VaultFolderView = { id: string; name: string };
@@ -13,7 +14,9 @@ const ICONS: Record<string, string> = { video: "▶", image: "🖼", audio: "♫
 const SOURCE_LABEL: Record<string, string> = { upload: "Uploaded", design: "From Design Studio", video: "From Video Studio" };
 
 /** Uploads files privately and records them in the Vault. Shared by the Vault and Studio exports. */
-export async function saveToVault(files: { file: File; source: "upload" | "design" | "video" }[], onProgress?: (done: number) => void, folderId?: string | null) {
+export async function saveToVault(files: { file: File; source: "upload" | "design" | "video" }[], onProgress?: (done: number) => void, folderId?: string | null, used = 0) {
+  const adding = files.reduce((n, f) => n + f.file.size, 0);
+  if (used + adding > VAULT_QUOTA_BYTES) throw new Error(`Not enough space: ${formatBytes(adding)} won't fit in the ${formatBytes(Math.max(0, VAULT_QUOTA_BYTES - used))} you have left. Delete some files to make room.`);
   const items = [];
   let done = 0;
   for (const { file, source } of files) {
@@ -118,7 +121,7 @@ export function MediaVault({ items, folders, onBack, onExportDesigns, canExportD
     setError("");
     try {
       setBusy(`Uploading 0 of ${files.length}…`);
-      await saveToVault(files.map((file) => ({ file, source: "upload" as const })), (d) => setBusy(`Uploading ${d} of ${files.length}…`), folder?.id ?? null);
+      await saveToVault(files.map((file) => ({ file, source: "upload" as const })), (d) => setBusy(`Uploading ${d} of ${files.length}…`), folder?.id ?? null, total);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed");
@@ -145,7 +148,7 @@ export function MediaVault({ items, folders, onBack, onExportDesigns, canExportD
         <div>
           <button type="button" onClick={onBack} className="mb-2 text-sm font-semibold text-neutral-500 hover:text-neutral-900">← Back to Studio</button>
           <h1 className="text-2xl font-bold tracking-tight">Media Vault</h1>
-          <p className="text-sm text-neutral-500">{items.length} files · {formatBytes(total)} · only you can see these</p>
+          <p className="text-sm text-neutral-500">{items.length} files · only you can see these</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" className="btn-secondary" onClick={onExportDesigns} disabled={!canExportDesigns || !!busy} title={canExportDesigns ? "Save every Design Studio project here" : "Open the Studio home first"}>
@@ -155,6 +158,8 @@ export function MediaVault({ items, folders, onBack, onExportDesigns, canExportD
           <input ref={input} type="file" multiple hidden onChange={(e) => { upload(e.target.files); e.target.value = ""; }} />
         </div>
       </div>
+
+      <StorageMeter items={items} />
 
       <div className="mb-3 flex gap-2 overflow-x-auto pb-1" aria-label="Folders">
         {chip(ALL, `🗂 All files (${items.length})`, place === ALL)}
