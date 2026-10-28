@@ -11,6 +11,7 @@ export type VaultKind = keyof typeof VAULT_KINDS;
 export type VaultSource = "upload" | "design" | "video";
 
 export const VAULT_MAX_BYTES = 500 * 1024 * 1024; // the private upload limit in lib/storage.ts
+export const VAULT_QUOTA_BYTES = 5 * 1024 * 1024 * 1024; // total space per creator; change here to give more
 
 const DOCUMENT = /\.(pdf|docx?|xlsx?|pptx?|txt|rtf|csv|md|key|pages|numbers|odt|ods|odp|epub|zip)$/i;
 
@@ -28,5 +29,5 @@ export function formatBytes(n: number) {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
   if (n < 1024 * 1024 * 1024) return `${(n / 1024 / 1024).toFixed(1)} MB`;
-  return `${(n / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  return `${(n / 1024 / 1024 / 1024).toFixed(2).replace(/\.?0+$/, "")} GB`;
 }

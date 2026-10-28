@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { deleteObject, ownKey } from "@/lib/storage";
-import { vaultKind, VAULT_MAX_BYTES } from "@/lib/vault";
+import { formatBytes, vaultKind, VAULT_MAX_BYTES, VAULT_QUOTA_BYTES } from "@/lib/vault";
 
 const Item = z.object({
   key: z.string().min(1),
@@ -27,6 +27,12 @@ export async function addVaultItems(input: unknown[], folderId?: string | null):
     const key = ownKey(item.key, creator.id, "private");
     if (!key) return { error: "Invalid file" };
     rows.push({ ...item, key, creatorId: creator.id, folderId: folder, kind: vaultKind(item.contentType, item.name) });
+  }
+  const used = (await db.vaultItem.aggregate({ where: { creatorId: creator.id }, _sum: { size: true } }))._sum.size ?? 0;
+  if (used + rows.reduce((n, r) => n + r.size, 0) > VAULT_QUOTA_BYTES) {
+    // The files are already uploaded; remove them so a full Vault doesn't leave orphans behind.
+    await Promise.all(rows.map((r) => deleteObject(r.key).catch(() => {})));
+    return { error: `Your Media Vault is full (${formatBytes(VAULT_QUOTA_BYTES)}). Delete some files to make room.` };
   }
   await db.vaultItem.createMany({ data: rows, skipDuplicates: true });
   revalidatePath("/dashboard/studio");

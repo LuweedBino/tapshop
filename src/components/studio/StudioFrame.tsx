@@ -46,7 +46,7 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
     if (!files.length) return;
     try {
       setSaving({ text: `Saving 0 of ${files.length} to your Media Vault…` });
-      await saveToVault(files, (d) => setSaving({ text: `Saving ${d} of ${files.length} to your Media Vault…` }));
+      await saveToVault(files, (d) => setSaving({ text: `Saving ${d} of ${files.length} to your Media Vault…` }), null, vault.reduce((n, i) => n + i.size, 0));
       setSaving({ text: `Saved ${files.length} ${files.length === 1 ? "file" : "files"} to your Media Vault`, done: true });
       router.refresh();
     } catch (e) {
