@@ -201,4 +201,10 @@ function propsDragStart(e){if(!narrow()||e.target.closest('button')||e.button>0)
  const end=()=>{head.classList.remove('dragging');head.removeEventListener('pointermove',move);head.removeEventListener('pointerup',end);head.removeEventListener('pointercancel',end)};
  head.addEventListener('pointermove',move);head.addEventListener('pointerup',end);head.addEventListener('pointercancel',end)}
 addEventListener('resize',()=>{if(document.getElementById('props').classList.contains('moved')||propsAt)placeProps()});
+// Tapping an element always brings its settings up (even if they were shrunk); tapping empty
+// space around the canvas, or Esc, deselects it, which hides the floating panel on tablets
+// and phones. Runs in the capture phase, before the canvas's own selection handler.
+document.getElementById('stage').addEventListener('pointerdown',e=>{if(e.target.closest('[data-i]')){propsMin=false;return}
+ if(!e.target.closest('svg')&&selected>=0){selected=-1;properties();highlight()}},true);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&editorOpen()&&selected>=0&&!document.querySelector('dialog[open]')&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)){selected=-1;properties();highlight()}});
 </script></body></html>
