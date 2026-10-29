@@ -386,9 +386,24 @@ const SHAPES=[
 ];
 const SHAPE_BY_ID=Object.fromEntries(SHAPES.map(x=>[x.id,x]));
 const markupNoShapes=markup;
-markup=function(e,i){if(e.type!=='shape')return markupNoShapes(e,i);let sh=SHAPE_BY_ID[e.shape]||SHAPE_BY_ID.star,sw=Math.max(0,Math.min(60,+e.outline||0)),noFill=e.noFill&&sw>0,
- col=c=>/^#[0-9a-f]{3,8}$/i.test(c||'')?c:'#aa8de1';
- return `<path data-i="${i}" d="${sh.d}" transform="translate(${e.x} ${e.y}) scale(${e.w/100} ${e.h/100})" fill="${noFill?'none':col(e.fill)}" fill-rule="evenodd" pointer-events="all"${sw?` stroke="${col(e.outlineColor||'#292135')}" stroke-width="${sw}" stroke-linejoin="round" vector-effect="non-scaling-stroke"`:''}/>`};
+// Shapes (catalog shapes plus the older rectangle and circle) can have a border, be
+// see-through and hold centred text. Text sits in each shape's own text area (e.g. a speech
+// bubble's balloon, not its tail) and sizes itself to fit unless a size is set.
+const TEXT_BOX={speech:[.08,.06,.92,.66],speechR:[.08,.06,.92,.66],chat:[.12,.1,.88,.7],thought:[.14,.12,.86,.6],shout:[.26,.28,.74,.72],banner:[.15,.22,.85,.78],tag:[.38,.16,.94,.84],pill:[.12,.12,.88,.88],star:[.32,.38,.68,.72],sparkle:[.3,.3,.7,.7],burst:[.22,.22,.78,.78],seal:[.18,.18,.82,.82],heart:[.2,.14,.8,.62],triangle:[.3,.5,.7,.88],arrow:[.06,.36,.6,.64],arrow2:[.3,.36,.7,.64],pin:[.3,.22,.7,.5],cloud:[.16,.3,.84,.76],play:[.6,.6,.6,.6],circle:[.15,.15,.85,.85],ring:[.3,.3,.7,.7],half:[.15,.5,.85,.95],octagon:[.15,.15,.85,.85],hexagon:[.14,.2,.86,.8],pentagon:[.2,.3,.8,.8],diamond:[.25,.25,.75,.75]};
+const SHAPE_FONTS=['Arial','Georgia','Verdana','Courier New','Trebuchet MS','Impact'];
+function isShape(e){return e&&(e.type==='shape'||e.type==='rect'||e.type==='circle')}
+function hexOk(c,f){return /^#[0-9a-f]{3,8}$/i.test(c||'')?c:f}
+function shapeBorder(e){let on=e.stroke??(+e.outline>0);return on||e.noFill?Math.max(1,Math.min(60,+e.outline||4)):0}
+function autoInk(fill){let m=/^#([0-9a-f]{6})$/i.exec(fill||'');if(!m)return '#292135';let n=parseInt(m[1],16),l=(.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))/255;return l<.6?'#ffffff':'#292135'}
+function shapeText(e){let t=String(e.text||'');if(!t.trim())return '';let tb=TEXT_BOX[e.type==='shape'?e.shape:e.type]||[.12,.12,.88,.88],bw=e.w*(tb[2]-tb[0])||e.w*.5,bh=e.h*(tb[3]-tb[1])||e.h*.3,
+ lines=t.split('\n').slice(0,12),longest=Math.max(1,...lines.map(l=>l.length)),bold=e.textBold?'bold':'normal',
+ size=+e.textSize>0?+e.textSize:Math.max(6,Math.min(bh/(lines.length*1.2),bw/(longest*(e.textBold?.62:.56)))),lh=size*1.2,cx=e.x+e.w*(tb[0]+tb[2])/2,top=e.y+e.h*(tb[1]+tb[3])/2-(lines.length-1)*lh/2,
+ font=SHAPE_FONTS.includes(e.font)?e.font:'Arial',ink=hexOk(e.textColor,autoInk(e.noFill?'#ffffff':e.fill));
+ return `<text x="${cx}" y="${top}" text-anchor="middle" dominant-baseline="central" font-size="${Math.round(size)}" font-family="${font}" font-weight="${bold}" fill="${ink}" pointer-events="none">${lines.map((l,j)=>`<tspan x="${cx}" y="${top+j*lh}">${esc(l)}</tspan>`).join('')}</text>`}
+markup=function(e,i){if(!isShape(e))return markupNoShapes(e,i);let sw=shapeBorder(e),op=Math.max(.1,Math.min(1,+(e.opacity??1))),line=hexOk(e.outlineColor,'#292135'),fill=e.noFill?'none':hexOk(e.fill,'#aa8de1'),body;
+ if(e.type==='shape'){let sh=SHAPE_BY_ID[e.shape]||SHAPE_BY_ID.star;body=`<path d="${sh.d}" transform="translate(${e.x} ${e.y}) scale(${e.w/100} ${e.h/100})" fill="${fill}" fill-rule="evenodd" pointer-events="all"${sw?` stroke="${line}" stroke-width="${sw}" stroke-linejoin="round" vector-effect="non-scaling-stroke"`:''}/>`}
+ else{body=markupNoShapes(e,i).replace(` data-i="${i}"`,'').replace(/ fill="[^"]*"/,` fill="${fill}" pointer-events="all"${sw?` stroke="${line}" stroke-width="${sw}"`:''}`)}
+ return `<g data-i="${i}"${op<1?` opacity="${op}"`:''}>${body}${shapeText(e)}</g>`};
 function shapeIcon(sh){return `<svg viewBox="-4 -4 108 108" aria-hidden="true"><path d="${sh.d}" fill="currentColor" fill-rule="evenodd" transform="${sh.ar&&sh.ar!==1?(sh.ar>1?`translate(0 ${50-50/sh.ar}) scale(1 ${1/sh.ar})`:`translate(${50-50*sh.ar} 0) scale(${sh.ar} 1)`):''}"/></svg>`}
 function openShapes(){let d=document.getElementById('shapesDialog');if(!d){d=document.createElement('dialog');d.id='shapesDialog';d.className='shapes-dialog';d.setAttribute('aria-label','Shapes');
   let groups=[...new Set(SHAPES.map(x=>x.group))];
@@ -398,15 +413,33 @@ function openShapes(){let d=document.getElementById('shapesDialog');if(!d){d=doc
  d.showModal()}
 function addShapeKind(id){let sh=SHAPE_BY_ID[id];if(!sh)return;if(id==='rect'||id==='circle')return addShape(id);
  let ar=sh.ar||1,base=Math.round(Math.min(design.w,design.h)*.32),w=ar>=1?Math.round(Math.min(design.w*.8,base*Math.sqrt(ar)*(ar>4?1.6:1))):Math.round(base*ar),h=Math.max(4,Math.round(w/ar));
- add({type:'shape',shape:id,x:Math.round((design.w-w)/2),y:Math.round((design.h-h)/2),w,h,fill:'#aa8de1',lock:sh.lock??ar!==1,ar})}
-// Outline and "no fill" for catalog shapes, added under the colour in their settings.
-const propertiesNoOutline=properties;properties=function(){propertiesNoOutline();let el=design?.els?.[selected],p=document.getElementById('props');if(el?.type!=='shape')return;
- let wrap=document.createElement('div');wrap.innerHTML=`<label>Outline</label><div class="vpair"><input type="range" min="0" max="30" value="${+el.outline||0}" aria-label="Outline thickness" oninput="update('outline',+this.value)"><input type="color" value="${/^#[0-9a-f]{6}$/i.test(el.outlineColor||'')?el.outlineColor:'#292135'}" aria-label="Outline colour" oninput="update('outlineColor',this.value)"></div>
- <label class="vcheck"><input type="checkbox" ${el.noFill?'checked':''} onchange="if(this.checked&&!(+design.els[selected].outline)){design.els[selected].outline=4}update('noFill',this.checked);properties()"> Outline only (no fill)</label>`;p.append(...wrap.childNodes);placeProps()};
+ add({type:'shape',shape:id,x:Math.round((design.w-w)/2),y:Math.round((design.h-h)/2),w,h,fill:'#aa8de1',lock:sh.lock??ar!==1,ar,...(/^(speech|speechR|chat|thought|shout|banner|pill|tag)$/.test(id)?{text:'Your text'}:{})})}
+// Fill, border, see-through and text settings for shapes, added under the size controls.
+const propertiesNoOutline=properties;properties=function(){propertiesNoOutline();let el=design?.els?.[selected],p=document.getElementById('props');if(!isShape(el))return;
+ let on=!!shapeBorder(el)&&!el.noFill?true:!!(el.stroke??(+el.outline>0)),wrap=document.createElement('div');
+ wrap.innerHTML=`<label class="vcheck"><input type="checkbox" ${el.noFill?'checked':''} onchange="shapeSet({noFill:this.checked,...(this.checked?{stroke:true}:{})},true)"> No fill (border only)</label>
+ <label class="vcheck"><input type="checkbox" id="shapeBorderOn" ${on||el.noFill?'checked':''} ${el.noFill?'disabled':''} onchange="shapeSet({stroke:this.checked},true)"> Border</label>
+ ${on||el.noFill?`<div class="vpair"><input type="range" min="1" max="30" value="${+el.outline||4}" aria-label="Border thickness" oninput="update('outline',+this.value)"><input type="color" value="${hexOk(el.outlineColor,'#292135').length===7?hexOk(el.outlineColor,'#292135'):'#292135'}" aria-label="Border colour" oninput="update('outlineColor',this.value)"></div>`:''}
+ <label>See-through</label><input type="range" min="10" max="100" value="${Math.round((el.opacity??1)*100)}" aria-label="Transparency" oninput="update('opacity',this.value/100)">
+ <label for="shapeText">Text inside</label><textarea id="shapeText" placeholder="Type here…" oninput="update('text',this.value)">${esc(el.text||'')}</textarea>
+ <div class="vpair"><select aria-label="Font" onchange="update('font',this.value)">${SHAPE_FONTS.map(f=>`<option ${f===(el.font||'Arial')?'selected':''}>${f}</option>`).join('')}</select><button type="button" class="shape-bold${el.textBold?' on':''}" aria-pressed="${!!el.textBold}" onclick="shapeSet({textBold:!design.els[selected].textBold},true)">B</button><input type="color" value="${hexOk(el.textColor,autoInk(el.noFill?'#ffffff':el.fill)).length===7?hexOk(el.textColor,autoInk(el.noFill?'#ffffff':el.fill)):'#292135'}" aria-label="Text colour" oninput="update('textColor',this.value)"></div>
+ <label class="vcheck"><input type="checkbox" ${+el.textSize>0?'':'checked'} onchange="shapeSet({textSize:this.checked?0:shapeAutoSize()},true)"> Fit text to the shape</label>
+ ${+el.textSize>0?`<div class="vpair"><input type="range" min="6" max="300" value="${+el.textSize}" aria-label="Text size" oninput="update('textSize',+this.value)"><span>${+el.textSize}</span></div>`:''}
+ <p class="hint">Double-tap a shape to type in it.</p>`;p.append(...wrap.childNodes);placeProps()};
+function shapeSet(patch,refresh){let e=design?.els?.[selected];if(!e)return;checkpoint();Object.assign(e,patch);draw();save();if(refresh)properties()}
+function shapeAutoSize(){let n=document.querySelector(`#stage svg [data-i="${selected}"] text`);return n?Math.round(+n.getAttribute('font-size')):40}
+// Double-tap (or double-click) a shape to type in it.
+// The canvas captures the pointer, so the event's target is the canvas: find the shape under the pointer instead.
+function typeInShape(x,y){let hit=document.elementsFromPoint(x,y).map(n=>n.closest?.('#stage [data-i]')).find(Boolean),el=hit&&design.els[+hit.dataset.i];if(!isShape(el))return;selected=+hit.dataset.i;propsMin=false;properties();highlight();let t=document.getElementById('shapeText');if(t){t.focus();t.setSelectionRange(t.value.length,t.value.length)}}
+document.getElementById('stage').addEventListener('dblclick',e=>typeInShape(e.clientX,e.clientY));
+// Touch screens don't always send dblclick, so two quick taps on the same spot count too.
+let lastTap=null;addEventListener('pointerup',e=>{if(e.pointerType==='mouse'||!e.target.closest?.('#stage'))return;let now=Date.now(),t=lastTap;lastTap={x:e.clientX,y:e.clientY,at:now};
+ if(t&&now-t.at<350&&Math.hypot(e.clientX-t.x,e.clientY-t.y)<24){lastTap=null;setTimeout(()=>typeInShape(e.clientX,e.clientY))}});
 {let s=document.createElement('style');s.textContent=`.shapes-dialog{width:min(560px,94vw);max-height:min(86vh,86dvh);overflow:auto;border:1px solid #8a7aa855;border-radius:18px;padding:0 18px 18px;background:#fff;color:#221d2c;box-shadow:0 20px 60px #0006}
 .shapes-dialog::backdrop{background:#0007}html[data-theme="dark"] .shapes-dialog{background:#1d1a26;color:#eee9f7}
 .shapes-top{position:sticky;top:0;display:flex;align-items:center;justify-content:space-between;padding:14px 0 6px;background:inherit;z-index:1}.shapes-top h2{margin:0;font-size:18px}
 .shapes-x{width:36px;height:36px;border-radius:50%;padding:0;font-size:20px}.shapes-dialog h3{margin:14px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:.7}
 .shapes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}.shapes-grid button{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 4px;font-size:11px;line-height:1.2;min-width:0}
+.shape-bold{flex:none;width:38px;font-weight:800;padding:6px 0}.shape-bold.on{background:#9b6cf0;color:#fff;border-color:#9b6cf0}.props #shapeText{min-height:60px}
 .shapes-grid svg{width:40px;height:40px;color:#9b6cf0}.shapes-grid span{overflow:hidden;text-overflow:ellipsis;max-width:100%}`;document.head.appendChild(s)}
 </script></body></html>
