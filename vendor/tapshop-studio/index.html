@@ -206,14 +206,27 @@ let propsMin=false;
 function togglePropsMin(){propsMin=!propsMin;properties()}
 // The panel title says what is selected (anything markup() draws as a rectangle is one).
 const SETTINGS_TITLE={text:'T  Text settings',circle:'○  Circle settings',image:'🖼  Image settings',video:'▶  Video settings'};
-const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();let p=document.getElementById('props'),el=design?.els?.[selected];if(el?.type==='video')p.innerHTML=videoPanel(el);let h=p.querySelector('h3');if(h&&el)h.textContent=SETTINGS_TITLE[el.type]||'▢  Rectangle settings';p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('min',propsMin);
+const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();let p=document.getElementById('props'),el=design?.els?.[selected];if(el?.type==='video')p.innerHTML=videoPanel(el);
+ else if(el&&el.type!=='text'){p.querySelectorAll('input[type=number]').forEach(i=>{let k=/'([wh])'/.exec(i.getAttribute('onchange')||'')?.[1];if(k)i.setAttribute('onchange',`videoSize('${k}',this.value)`)});
+  let l=document.createElement('label');l.className='vcheck';l.innerHTML=`<input type="checkbox" ${lockOf(el)?'checked':''}> Keep its shape when resizing`;l.querySelector('input').onchange=ev=>{checkpoint();el.lock=ev.target.checked;if(el.lock)el.ar=el.w/el.h;save()};
+  let size=[...p.querySelectorAll('input[type=number]')].at(-1);(size||p.lastChild)?.after(l)}let h=p.querySelector('h3');if(h&&el)h.textContent=SETTINGS_TITLE[el.type]||'▢  Rectangle settings';p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('min',propsMin);
  if(h){let head=document.createElement('div');head.className='props-head';h.replaceWith(head);head.append(h);let b=document.createElement('button');b.type='button';b.className='props-min';b.textContent=propsMin?'+':'−';b.title=propsMin?'Show settings':'Shrink settings';b.setAttribute('aria-label',b.title);b.setAttribute('aria-expanded',String(!propsMin));b.onclick=togglePropsMin;head.append(b);head.addEventListener('pointerdown',propsDragStart)}placeProps()};
 // On tablets and phones the panel opens centred over the canvas and can be dragged by its
 // title bar; where you leave it is kept until the page reloads. It always stays on screen.
 let propsAt=null;
 function narrow(){return matchMedia('(max-width:1000px)').matches}
-function placeProps(){let p=document.getElementById('props'),box=p.parentElement;if(!propsAt||!narrow()){p.classList.remove('moved');p.style.left=p.style.top='';return}
+function placeProps(){let p=document.getElementById('props'),box=p.parentElement;if(!narrow()){p.classList.remove('moved');p.style.left=p.style.top='';return}
+ if(!propsAt){let spot=freeSpot(p,box);if(!spot){p.classList.remove('moved');p.style.left=p.style.top='';return}p.classList.add('moved');p.style.left=spot.x+'px';p.style.top=spot.y+'px';return}
  let x=Math.max(4,Math.min(propsAt.x,box.clientWidth-p.offsetWidth-4)),y=Math.max(4,Math.min(propsAt.y,box.clientHeight-p.offsetHeight-4));p.classList.add('moved');p.style.left=x+'px';p.style.top=y+'px'}
+// Until the panel is dragged somewhere, it opens where it covers as little as possible of the
+// selected element (centred over the canvas when that's clear), so the element stays tappable.
+function freeSpot(p,box){let n=document.querySelector(`#stage svg [data-i="${selected}"]`),st=document.getElementById('stage');if(!n||!st||getComputedStyle(p).display==='none')return null;
+ let b=box.getBoundingClientRect(),sr=st.getBoundingClientRect(),r=n.getBoundingClientRect(),pw=p.offsetWidth,ph=p.offsetHeight,
+  S={x:sr.left-b.left,y:sr.top-b.top,w:sr.width,h:sr.height},E={x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height},G=8,
+  clamp=(x,y)=>({x:Math.max(S.x+4,Math.min(x,S.x+S.w-pw-4)),y:Math.max(S.y+4,Math.min(y,S.y+S.h-ph-4))}),
+  spots=[[S.x+(S.w-pw)/2,S.y+(S.h-ph)/2],[E.x+E.w/2-pw/2,E.y+E.h+G],[E.x+E.w/2-pw/2,E.y-ph-G],[E.x+E.w+G,E.y+E.h/2-ph/2],[E.x-pw-G,E.y+E.h/2-ph/2],[S.x+G,S.y+G],[S.x+S.w-pw-G,S.y+G],[S.x+G,S.y+S.h-ph-G],[S.x+S.w-pw-G,S.y+S.h-ph-G]].map(([x,y])=>clamp(x,y)),
+  cover=q=>Math.max(0,Math.min(q.x+pw,E.x+E.w)-Math.max(q.x,E.x))*Math.max(0,Math.min(q.y+ph,E.y+E.h)-Math.max(q.y,E.y));
+ let best=spots[0];for(const q of spots)if(cover(q)<cover(best)-1)best=q;return {x:Math.round(best.x),y:Math.round(best.y)}}
 function propsDragStart(e){if(!narrow()||e.target.closest('button')||e.button>0)return;let p=document.getElementById('props'),head=e.currentTarget,pr=p.getBoundingClientRect(),br=p.parentElement.getBoundingClientRect(),dx=e.clientX-pr.left,dy=e.clientY-pr.top;
  e.preventDefault();head.setPointerCapture(e.pointerId);head.classList.add('dragging');
  const move=ev=>{propsAt={x:ev.clientX-br.left-dx,y:ev.clientY-br.top-dy};placeProps()};
@@ -282,42 +295,48 @@ function videoTrim(k,val){let e=selVideo();if(!e)return;let n=parseFloat(val),d=
 function videoTrimHere(k){let e=selVideo(),v=stageVideo(e);if(!e||!v)return;videoTrim(k,v.currentTime)}
 async function videoCover(){let e=selVideo();if(!e)return;let v=stageVideo(e),t=v?v.currentTime:0;toast('Taking the cover picture…');
  try{let info=await videoInfo({id:e.vaultId},t);if(!info.poster)throw Error('That picture could not be taken.');checkpoint();e.poster=info.poster;save();if(selVideo()===e)properties();toast('Cover picture updated ('+fmtS(t)+' s).')}catch(err){toast(err.message)}}
-function videoSize(k,val){let e=selVideo();if(!e)return;let n=Math.max(1,Math.round(+val||1));checkpoint();
- if(e.lock!==false){let ar=e.ar||(e.ar=e.w/e.h);if(k==='w'){e.w=n;e.h=Math.max(1,Math.round(n/ar))}else{e.h=n;e.w=Math.max(1,Math.round(n*ar))}}else e[k]=n;
+function videoSize(k,val){let e=design?.els?.[selected];if(!e||e.type==='text')return;let n=Math.max(1,Math.round(+val||1));checkpoint();
+ if(lockOf(e)){let ar=e.ar||(e.ar=e.w/e.h);if(k==='w'){e.w=n;e.h=Math.max(1,Math.round(n/ar))}else{e.h=n;e.w=Math.max(1,Math.round(n*ar))}}else e[k]=n;
  draw();save();properties()}
 function videoFillCanvas(){let e=selVideo();if(!e)return;checkpoint();Object.assign(e,{x:0,y:0,w:design.w,h:design.h,fit:'cover'});draw();save();properties()}
 function videoOpenEditor(){let e=selVideo();if(!e||!inTapShop())return;save();window.parent.postMessage({type:'tapshop:edit-video',version:1,item:{id:e.vaultId,name:e.name||'Video'}},location.origin)}
 
-// Resize handles for a selected video: a solid border, a dot on each corner and a bar on each
-// side. With "Keep its shape" ticked, every handle keeps the video's proportions (sides scale
-// from the middle of the opposite edge); otherwise corners resize freely and sides stretch one way.
+// Resize handles for the selected element: a solid border, a dot on each corner and a bar on
+// each side. With "Keep its shape" ticked, every handle keeps the proportions (sides scale from
+// the middle of the opposite edge); otherwise corners resize freely and sides stretch one way.
+// Text always scales (its font size) so letters are never squashed.
+function lockOf(e){return e.type==='text'?true:e.type==='video'||e.type==='image'?e.lock!==false:e.lock===true}
+function boxOf(svg,e){if(e.type!=='text')return {x:e.x,y:e.y,w:e.w,h:e.h};let n=svg.querySelector(`[data-i="${design.els.indexOf(e)}"]`);if(!n)return {x:e.x,y:e.y,w:1,h:1};let b=n.getBBox();return {x:b.x,y:b.y,w:Math.max(1,b.width),h:Math.max(1,b.height)}}
 const HANDLES={nw:'nwse',n:'ns',ne:'nesw',e:'ew',se:'nwse',s:'ns',sw:'nesw',w:'ew'};
 let resizing=null;
 const highlightBase=highlight;highlight=function(){highlightBase();let svg=document.querySelector('#stage svg'),e=design?.els?.[selected];if(!svg)return;svg.querySelectorAll('[data-handle],[data-frame]').forEach(n=>n.remove());
- if(!e||e.type!=='video')return;svg.querySelector('[data-selection]')?.remove();
+ if(!e)return;svg.querySelector('[data-selection]')?.remove();
  let mk=tag=>document.createElementNS(NS,tag),frame=mk('rect');frame.setAttribute('fill','none');frame.setAttribute('stroke','#8854ec');frame.setAttribute('pointer-events','none');frame.dataset.frame='1';svg.appendChild(frame);
  for(const [h,cur] of Object.entries(HANDLES)){let g=mk('g');g.dataset.handle=h;g.setAttribute('style',`cursor:${cur}-resize;touch-action:none`);g.setAttribute('aria-label','Resize');
   let hit=mk('circle');hit.setAttribute('fill','transparent');g.append(hit,mk(h.length===1?'rect':'circle'));g.addEventListener('pointerdown',ev=>resizeStart(ev,h));svg.appendChild(g)}
  placeHandles(svg,e)};
 // Moves the existing handles instead of rebuilding them: a finger's touch stays tied to the
 // node it started on, so replacing that node mid-drag would cut the resize short.
-function placeHandles(svg,e){let k=design.w/Math.max(1,svg.getBoundingClientRect().width),line=2*k,set=(n,a)=>{for(const [x,v] of Object.entries(a))n.setAttribute(x,v)};
+function placeHandles(svg,el){let e=boxOf(svg,el),k=design.w/Math.max(1,svg.getBoundingClientRect().width),line=2*k,set=(n,a)=>{for(const [x,v] of Object.entries(a))n.setAttribute(x,v)};
  let f=svg.querySelector('[data-frame]');if(f)set(f,{x:e.x,y:e.y,width:e.w,height:e.h,'stroke-width':line});
  svg.querySelectorAll('[data-handle]').forEach(g=>{let h=g.dataset.handle,cx=e.x+(h.includes('w')?0:h.includes('e')?e.w:e.w/2),cy=e.y+(h.includes('n')?0:h.includes('s')?e.h:e.h/2),horiz=h==='n'||h==='s',[hit,mark]=g.children;
   set(hit,{cx,cy,r:18*k});set(mark,{fill:'#fff',stroke:'#8854ec','stroke-width':line});
   if(h.length===1)set(mark,{x:cx-(horiz?12:4)*k,y:cy-(horiz?4:12)*k,width:(horiz?24:8)*k,height:(horiz?8:24)*k,rx:4*k});else set(mark,{cx,cy,r:7*k})})}
 function resizeStart(ev,h){let e=design.els[selected],svg=document.querySelector('#stage svg');if(!e||!svg||resizing)return;ev.preventDefault();ev.stopPropagation();checkpoint();try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch{}
- resizing={h,e,svg,p0:point(ev,svg),s:{x:e.x,y:e.y,w:e.w,h:e.h},ar:e.ar||e.w/e.h,id:ev.pointerId};
+ let s0=boxOf(svg,e);resizing={h,e,svg,p0:point(ev,svg),s:s0,ar:e.type==='text'?s0.w/s0.h:e.ar||e.w/e.h,id:ev.pointerId,orig:{x:e.x,y:e.y,w:e.w,h:e.h,size:e.size}};
  addEventListener('pointermove',resizeMove);addEventListener('pointerup',resizeEnd);addEventListener('pointercancel',resizeEnd)}
 function resizeBox(r,dx,dy){let {h,s,ar}=r,MIN=20,L=h.includes('w'),R=h.includes('e'),T=h.includes('n'),B=h.includes('s');
- if(r.e.lock===false){let x1=s.x,y1=s.y,x2=s.x+s.w,y2=s.y+s.h;if(L)x1=Math.min(x1+dx,x2-MIN);if(R)x2=Math.max(x2+dx,x1+MIN);if(T)y1=Math.min(y1+dy,y2-MIN);if(B)y2=Math.max(y2+dy,y1+MIN);return {x:x1,y:y1,w:x2-x1,h:y2-y1}}
+ if(!lockOf(r.e)){let x1=s.x,y1=s.y,x2=s.x+s.w,y2=s.y+s.h;if(L)x1=Math.min(x1+dx,x2-MIN);if(R)x2=Math.max(x2+dx,x1+MIN);if(T)y1=Math.min(y1+dy,y2-MIN);if(B)y2=Math.max(y2+dy,y1+MIN);return {x:x1,y:y1,w:x2-x1,h:y2-y1}}
  let fromW=s.w+(L?-dx:R?dx:0),fromH=(s.h+(T?-dy:B?dy:0))*ar,w;
  if(h.length===2)w=Math.abs(fromW-s.w)/s.w>=Math.abs(fromH/ar-s.h)/s.h?fromW:fromH;else w=(L||R)?fromW:fromH;
  w=Math.max(w,MIN,MIN*ar);let hh=w/ar,x=L?s.x+s.w-w:R?s.x:s.x+(s.w-w)/2,y=T?s.y+s.h-hh:B?s.y:s.y+(s.h-hh)/2;return {x,y,w,h:hh}}
-function resizeMove(ev){let r=resizing;if(!r||ev.pointerId!==r.id)return;let p=point(ev,r.svg),b=resizeBox(r,p.x-r.p0.x,p.y-r.p0.y);
- Object.assign(r.e,{x:Math.round(b.x),y:Math.round(b.y),w:Math.max(1,Math.round(b.w)),h:Math.max(1,Math.round(b.h))});
- let n=r.svg.querySelector(`[data-i="${selected}"]`);if(n){for(const [a,v] of [['x',r.e.x],['y',r.e.y],['width',r.e.w],['height',r.e.h]])n.setAttribute(a,v);let d=n.firstElementChild;if(d)d.style.borderRadius=videoRadius(r.e)+'px'}placeHandles(r.svg,r.e)}
+function resizeMove(ev){let r=resizing;if(!r||ev.pointerId!==r.id)return;let p=point(ev,r.svg),b=resizeBox(r,p.x-r.p0.x,p.y-r.p0.y),e=r.e,n=r.svg.querySelector(`[data-i="${selected}"]`);
+ if(e.type==='text'){let k=b.w/r.s.w;e.size=Math.max(6,Math.round(r.orig.size*k));k=e.size/r.orig.size;e.x=Math.round(b.x+(r.orig.x-r.s.x)*k);e.y=Math.round(b.y+(r.orig.y-r.s.y)*k)}
+ else Object.assign(e,{x:Math.round(b.x),y:Math.round(b.y),w:Math.max(1,Math.round(b.w)),h:Math.max(1,Math.round(b.h))});
+ if(n){if(e.type==='video'){for(const [a,v] of [['x',e.x],['y',e.y],['width',e.w],['height',e.h]])n.setAttribute(a,v);let d=n.firstElementChild;if(d)d.style.borderRadius=videoRadius(e)+'px'}
+  else{let t=document.createElementNS(NS,'g');t.innerHTML=markup(e,selected);n.replaceWith(t.firstElementChild)}}
+ placeHandles(r.svg,e)}
 function resizeEnd(ev){let r=resizing;if(!r||ev.pointerId!==r.id)return;resizing=null;removeEventListener('pointermove',resizeMove);removeEventListener('pointerup',resizeEnd);removeEventListener('pointercancel',resizeEnd);
- if(r.e.x===r.s.x&&r.e.y===r.s.y&&r.e.w===r.s.w&&r.e.h===r.s.h){history.pop();return}draw();save();properties()}
+ let o=r.orig;if(r.e.x===o.x&&r.e.y===o.y&&r.e.w===o.w&&r.e.h===o.h&&r.e.size===o.size){history.pop();return}draw();save();properties()}
 const fitStageBase=fitStage;fitStage=function(){fitStageBase();if(design&&document.querySelector('#stage svg'))highlight()};
 </script></body></html>
