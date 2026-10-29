@@ -689,35 +689,50 @@ function drawVideoEl(ctx,e,v){if(!v||v.readyState<2)return;let r=videoRadius(e),
 async function runVideoExport(){let d=document.getElementById('videoExport'),go=d.querySelector('#vexpGo'),prog=d.querySelector('.vexp-progress'),bar=prog.querySelector('span'),msg=prog.querySelector('p');
  let secs=Math.max(1,Math.min(60,+d.querySelector('#vexpLen').value||5)),scale=+d.querySelector('#vexpSize').value||1,mime=videoMime();if(!mime||vexp)return;
  go.disabled=true;prog.hidden=false;msg.textContent='Getting ready…';selected=-1;properties();draw();
+ // Each video gets its own player for the recording, started right now (inside the tap) so
+ // phones and tablets allow it, sound included. The canvas players are left alone, so a video
+ // paused on the canvas still plays in the download.
+ let actx=null;try{actx=window.__vexpAudio=window.__vexpAudio||new AudioContext();actx.resume?.()}catch{}
+ let xv=new Map();design.els.forEach((e,i)=>{if(e.hidden||e.type!=='video')return;let v=document.createElement('video');v.playsInline=true;v.preload='auto';v.muted=e.muted===false?false:true;v.playbackRate=v.defaultPlaybackRate=+e.speed||1;
+  let url=videoUrls.get(e.vaultId);v.src=url||'';if(!url)loadVideoUrl(e.vaultId).then(u=>{v.src=u;v.play().catch(()=>{})}).catch(()=>{});
+  v.play().catch(()=>{if(!v.muted){v.muted=true;v.play().catch(()=>{});v._noSound=true}});xv.set(i,v)});
  let svg=document.querySelector('#stage svg'),W=Math.round(design.w*scale/2)*2,H=Math.round(design.h*scale/2)*2,c=document.createElement('canvas');c.width=W;c.height=H;let ctx=c.getContext('2d');
  // split the design into layers, back to front: runs of still elements, animated texts, videos
  let layers=[],run=[];const flush=()=>{if(run.length){layers.push({kind:'still',idx:run});run=[]}};
  design.els.forEach((e,i)=>{if(e.hidden)return;if(e.type==='video'){flush();layers.push({kind:'video',i,e})}else if(e.type==='text'&&e.anim&&e.anim!=='none'){flush();layers.push({kind:'anim',i,e})}else run.push(i)});flush();
  try{for(const L of layers){if(L.kind==='still'){L.img=await svgImage(svgOf(L.idx,L===layers[0]))}else if(L.kind==='anim'){L.img=await svgImage(svgOf([L.i],false));let g=svg.querySelector(`[data-i="${L.i}"]`);L.node=g;let bb=g.getBBox();L.box={x:bb.x,y:bb.y,w:bb.width,h:bb.height};L.anims=g.getAnimations?.()||[];L.anims.forEach(a=>a.pause())}
-   else{L.v=svg.querySelector(`video[data-vid="${CSS.escape(L.e.vid||'')}"]`)}}
+   else{L.v=xv.get(L.i)}}
+  // wait until every video can show its first frame
+  await Promise.all([...xv.values()].map(v=>v.readyState>=2?0:new Promise(r=>{let t=setTimeout(r,8000);v.addEventListener('loadeddata',()=>{clearTimeout(t);r()},{once:true})})));
   let bgFirst=layers[0]?.kind!=='still';
   // sound: videos with sound on are mixed into the recording
-  let actx=null,dest=null,stream=c.captureStream(30);
-  for(const L of layers)if(L.kind==='video'&&L.v&&L.e.muted===false){try{actx=window.__vexpAudio=window.__vexpAudio||new AudioContext();actx.resume?.();dest=dest||actx.createMediaStreamDestination();if(!L.v._srcNode){L.v._srcNode=actx.createMediaElementSource(L.v);L.v._srcNode.connect(actx.destination)}L.v._srcNode.connect(dest)}catch{}}
+  let dest=null,stream=c.captureStream(30);
+  for(const L of layers)if(L.kind==='video'&&L.v&&!L.v.muted&&actx){try{dest=dest||actx.createMediaStreamDestination();actx.createMediaElementSource(L.v).connect(dest)}catch{}}
   dest?.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
-  for(const L of layers)if(L.kind==='video'&&L.v){L.v.pause();L.v.currentTime=+L.e.start||0}
-  await new Promise(r=>setTimeout(r,300));
+  await new Promise(r=>setTimeout(r,250));
   let rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:W*H>1e6?8e6:4e6}),chunks=[];vexp={rec,cancelled:false};rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
   let done=new Promise(r=>rec.onstop=r);
   const frame=t=>{ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);ctx.setTransform(scale*W/(design.w*scale),0,0,scale*H/(design.h*scale),0,0);if(bgFirst){ctx.fillStyle=design.bg;ctx.fillRect(0,0,design.w,design.h)}
-   for(const L of layers){if(L.kind==='still')ctx.drawImage(L.img,0,0,design.w,design.h);else if(L.kind==='video')drawVideoEl(ctx,L.e,L.v);
+   for(const L of layers){if(L.kind==='still')ctx.drawImage(L.img,0,0,design.w,design.h);else if(L.kind==='video'){syncExportVideo(L.e,L.v,t);drawVideoEl(ctx,L.e,L.v)}
     else{L.anims.forEach(a=>{try{a.currentTime=t*1000}catch{}});let cs=getComputedStyle(L.node),op=parseFloat(cs.opacity),m=new DOMMatrix(cs.transform==='none'?undefined:cs.transform),b=L.box,ox=b.x+b.w/2,oy=b.y+b.h/2;
      ctx.save();ctx.globalAlpha=isNaN(op)?1:op;if(cs.filter&&cs.filter!=='none'&&'filter' in ctx)ctx.filter=cs.filter;let clip=parseInset(cs.clipPath,b);
      ctx.translate(ox,oy);ctx.transform(m.a,m.b,m.c,m.d,m.e,m.f);ctx.translate(-ox,-oy);if(clip){ctx.beginPath();ctx.rect(clip.x,clip.y,clip.w,clip.h);ctx.clip()}ctx.drawImage(L.img,0,0,design.w,design.h);ctx.restore()}}};
-  frame(0);rec.start(250);for(const L of layers)if(L.kind==='video'&&L.v&&!L.e.paused)L.v.play().catch(()=>{});
+  for(const L of layers)if(L.kind==='video'&&L.v){try{L.v.currentTime=+L.e.start||0}catch{}L.v.play().catch(()=>{})}
+  frame(0);rec.start(250);
   let t0=performance.now();await new Promise(res=>{const tick=()=>{if(vexp.cancelled)return res();let t=(performance.now()-t0)/1000;if(t>=secs){frame(secs);return res()}frame(t);bar.style.width=Math.round(t/secs*100)+'%';msg.textContent=`Recording… ${Math.floor(t)} of ${secs} s`;setTimeout(tick,1000/30)};tick()});
   if(rec.state==='recording')rec.stop();await done;stream.getTracks().forEach(t=>t.stop());
-  if(vexp.cancelled){msg.textContent='Cancelled.'}else{let blob=new Blob(chunks,{type:mime.split(';')[0]}),ext=/mp4/.test(mime)?'mp4':'webm',name=(design.name||'design').replace(/[^a-z0-9 -]/gi,'')+'.'+ext;bar.style.width='100%';
-   msg.innerHTML='Your video is ready.';let acts=d.querySelector('.vexp-actions');acts.innerHTML='';let dl=document.createElement('button');dl.className='primary';dl.textContent='⬇ Download';dl.onclick=()=>{let a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000)};acts.append(dl);
+  if(vexp.cancelled){msg.textContent='Cancelled.'}else{let noSound=[...xv.values()].some(v=>v._noSound);let blob=new Blob(chunks,{type:mime.split(';')[0]}),ext=/mp4/.test(mime)?'mp4':'webm',name=(design.name||'design').replace(/[^a-z0-9 -]/gi,'')+'.'+ext;bar.style.width='100%';
+   msg.textContent='Your video is ready.'+(noSound?' (The browser blocked the video’s sound, so this one is silent.)':'');let acts=d.querySelector('.vexp-actions');acts.innerHTML='';let dl=document.createElement('button');dl.className='primary';dl.textContent='⬇ Download';dl.onclick=()=>{let a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000)};acts.append(dl);
    if(inTapShop()){let sv=document.createElement('button');sv.textContent='Save to Vault';sv.onclick=()=>{sendToVault([{blob,name,source:'design'}]);sv.disabled=true;sv.textContent='Sent to your Vault'};acts.append(sv)}
    vexp.result=blob}}
  catch(err){msg.textContent=err.message||'The video could not be made.';go.disabled=false}
- finally{vexp=null;draw()}}
+ finally{vexp=null;xv.forEach(v=>{v.pause();v.removeAttribute('src');v.load()});draw()}}
+// Keeps a recording video in step with the recording clock: its trim, speed and loop setting
+// decide where it should be; it's nudged back if it drifts (e.g. after a slow frame).
+function syncExportVideo(e,v,t){if(!v||v.readyState<1)return;let s=Math.max(0,+e.start||0),d=Number.isFinite(v.duration)?v.duration:(e.duration||0),end=e.end&&e.end>s?Math.min(e.end,d||e.end):d,len=Math.max(.05,end-s),sp=+e.speed||1,
+ want=e.loop===false?Math.min(s+t*sp,end):s+((t*sp)%len);
+ if(e.loop===false&&want>=end-.02){if(!v.paused)v.pause();if(Math.abs(v.currentTime-end)>.1&&!v.seeking)v.currentTime=Math.max(s,end-.04);return}
+ if(!v.seeking&&Math.abs(v.currentTime-want)>.3)v.currentTime=want;if(v.paused)v.play().catch(()=>{})}
 {let st=document.createElement('style');st.textContent=`.groupbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0 4px;padding:6px 8px;border-radius:10px;background:#9b6cf022;font-size:12px;font-weight:600}.groupbar button{padding:5px 10px;font-size:12px}
 .lpickbox{flex:none;width:16px;height:16px;margin:0 2px;accent-color:#9b6cf0}.layers-list li.grouped{box-shadow:inset 4px 0 0 var(--gc)}.layers-group{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}.layers-group button{flex:1;font-size:12px;padding:7px 8px}.layers-group .hint{margin:0;font-size:11px}
 .vexp label{display:block;font-size:12px;margin:12px 0 5px;opacity:.8}.vexp input,.vexp select{width:100%;box-sizing:border-box;padding:8px;border:1px solid #8a7aa855;border-radius:8px;background:transparent;color:inherit}
