@@ -498,3 +498,29 @@ const insertGraphicTrackVE=insertGraphicTrack;insertGraphicTrack=function(event)
 const presetPointsVE=presetPoints;presetPoints=function(kind){let c=typeof kind==='string'&&kind.startsWith('cat:')&&STUDIO_SHAPE_BY_ID[kind.slice(4)];if(!c)return presetPointsVE(kind);
  let a=SHAPE_ASPECT[kind]||1,el=document.createElementNS('http://www.w3.org/2000/svg','path');el.setAttribute('d',c.d.split(/(?=M)/)[0]);let L=el.getTotalLength(),n=40,pts=[];
  for(let i=0;i<n;i++){let q=el.getPointAtLength(L*i/n);pts.push([(q.x/100-.5)*a,q.y/100-.5,1])}return pts};
+// ---- Position buttons and snapping for text, shape and sticker tracks (like the design
+// studio): while dragging one, faint lines show the frame's centre and thirds, and its edges or
+// centre snap to them, to the frame edges and to other visible tracks; the snapped line is pink.
+let veSnapOn=true,veGuides=null;try{veSnapOn=localStorage.getItem('tapshop-video-snap')!=='off'}catch{}
+function veVisible(t){let l=playhead-t.offset;return !t.hidden&&l>=0&&l<t.length&&(t.type==='text'||t.type==='shape')}
+canvas.addEventListener('pointermove',()=>{let g=textGesture;veGuides=null;if(!g||g.rotate||g.resize||g.stretch||exporting||!veSnapOn)return;let t=graphicTracks.find(t=>t.id===g.id);if(!t)return;
+ let W=canvas.width,H=canvas.height,r=canvas.getBoundingClientRect(),th=8*W/Math.max(1,r.width),b=textBounds(t),xs=[0,W/3,W/2,2*W/3,W],ys=[0,H/3,H/2,2*H/3,H];
+ for(const o of graphicTracks)if(o!==t&&veVisible(o)){let q=textBounds(o);xs.push(q.x,q.x+q.w/2,q.x+q.w);ys.push(q.y,q.y+q.h/2,q.y+q.h)}
+ const best=(vals,targets)=>{let m=null;for(const v of vals)for(const tg of targets){let d=tg-v;if(Math.abs(d)<=th&&(!m||Math.abs(d)<Math.abs(m.d)))m={d,t:tg}}return m};
+ let sx=best([b.x,b.x+b.w/2,b.x+b.w],xs),sy=best([b.y,b.y+b.h/2,b.y+b.h],ys);
+ if(sx)t.x=Math.min(100,Math.max(0,t.x+sx.d/W*100));if(sy)t.y=Math.min(100,Math.max(0,t.y+sy.d/H*100));veGuides={x:sx?.t,y:sy?.t};draw()});
+const veClearGuides=()=>{if(veGuides){veGuides=null;draw()}};canvas.addEventListener('pointerup',veClearGuides);canvas.addEventListener('pointercancel',veClearGuides);
+const drawNoGuides=draw;draw=function(){drawNoGuides();if(!veGuides||exporting)return;let W=canvas.width,H=canvas.height,k=W/1280;ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.globalAlpha=1;ctx.filter='none';ctx.shadowBlur=0;
+ ctx.lineWidth=Math.max(1,1.5*k);ctx.strokeStyle='rgba(180,140,255,.55)';ctx.setLineDash([8*k,8*k]);ctx.beginPath();for(const f of [1/3,1/2,2/3]){ctx.moveTo(W*f,0);ctx.lineTo(W*f,H);ctx.moveTo(0,H*f);ctx.lineTo(W,H*f)}ctx.stroke();
+ ctx.setLineDash([]);ctx.strokeStyle='#ff3ea5';ctx.lineWidth=Math.max(1.5,2.5*k);ctx.beginPath();if(veGuides.x!=null){ctx.moveTo(veGuides.x,0);ctx.lineTo(veGuides.x,H)}if(veGuides.y!=null){ctx.moveTo(0,veGuides.y);ctx.lineTo(W,veGuides.y)}ctx.stroke();ctx.restore()};
+// faint grid also shows the moment a drag starts, before any snap
+canvas.addEventListener('pointerdown',()=>{requestAnimationFrame(()=>{let g=textGesture;if(g&&!g.rotate&&!g.resize&&!g.stretch&&veSnapOn&&!exporting){veGuides=veGuides||{};draw()}})});
+function vePlace(id,where){let t=graphicTracks.find(t=>t.id===id);if(!t||exporting)return;let W=canvas.width,H=canvas.height,b=textBounds(t),m=Math.min(W,H)*.05,dx=0,dy=0;
+ if(where==='left')dx=m-b.x;if(where==='hcenter')dx=W/2-(b.x+b.w/2);if(where==='right')dx=W-m-(b.x+b.w);if(where==='top')dy=m-b.y;if(where==='vcenter')dy=H/2-(b.y+b.h/2);if(where==='bottom')dy=H-m-(b.y+b.h);
+ t.x=Math.round(Math.min(100,Math.max(0,t.x+dx/W*100))*10)/10;t.y=Math.round(Math.min(100,Math.max(0,t.y+dy/H*100))*10)/10;renderGraphicTracks()}
+function veSetSnap(on){veSnapOn=on;try{localStorage.setItem('tapshop-video-snap',on?'on':'off')}catch{}renderGraphicTracks()}
+function vePositionFields(t){let b=(w,l,tt)=>`<button type="button" class="graphic-toggle ve-pos" title="${tt}" aria-label="${tt}" onclick="vePlace('${t.id}','${w}')">${l}</button>`;
+ return `<label class="ve-posrow">Position<span>${b('left','⇤','Left edge')}${b('hcenter','↔','Centre')}${b('right','⇥','Right edge')}${b('top','⤒','Top')}${b('vcenter','↕','Middle')}${b('bottom','⤓','Bottom')}</span></label><label>Snap & guides<button type="button" class="graphic-toggle" aria-pressed="${veSnapOn}" onclick="veSetSnap(${!veSnapOn})">${veSnapOn?'On':'Off'}</button></label>`}
+const textExtraFieldsPos=textExtraFields;textExtraFields=t=>vePositionFields(t)+textExtraFieldsPos(t);
+const shapeExtraFieldsPos=shapeExtraFields;shapeExtraFields=t=>vePositionFields(t)+shapeExtraFieldsPos(t);
+{let st=document.createElement('style');st.textContent='.ve-posrow{flex-basis:260px!important}.ve-posrow>span{display:flex;gap:4px;flex-wrap:wrap}.ve-pos{min-width:38px;padding:6px 8px}';document.head.appendChild(st)}
