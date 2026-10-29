@@ -158,10 +158,12 @@ html[data-tools="collapsed"] .ebody{--tools-w:0px}
 html[data-tools="collapsed"] .tools{padding:0;border:0;visibility:hidden}
 .props-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.props-head h3{margin:0}.props-min{display:none}
 @media(max-width:1000px){.ebody{--tools-w:170px;grid-template-columns:var(--tools-w) minmax(0,1fr)}.props.empty{display:none}
- body .props{position:absolute;top:10px;right:10px;bottom:auto;width:min(260px,calc(100% - 20px));max-height:calc(100% - 20px);overflow:auto;overscroll-behavior:contain;padding:12px 14px 14px;border:1px solid var(--rim,#0002);border-radius:14px;box-shadow:0 10px 30px #0006;z-index:3;box-sizing:border-box}
+ body .props{position:absolute;top:50%;left:calc(var(--tools-w) + (100% - var(--tools-w)) / 2);right:auto;bottom:auto;transform:translate(-50%,-50%);width:min(260px,calc(100% - 20px));max-height:calc(100% - 20px);overflow:auto;overscroll-behavior:contain;padding:12px 14px 14px;border:1px solid var(--rim,#0002);border-radius:14px;box-shadow:0 10px 30px #0006;z-index:3;box-sizing:border-box}
  .props label{margin:12px 0 5px}.props-head{position:sticky;top:-12px;margin:-12px -14px 0;padding:12px 14px 8px;background:inherit;z-index:1}
  .props-min{display:grid;place-items:center;width:32px;height:32px;padding:0;flex:none;font-size:18px;line-height:1}
- .props.min{overflow:hidden;padding-bottom:4px}.props.min>:not(.props-head){display:none}}
+ .props.min{overflow:hidden;padding-bottom:4px}.props.min>:not(.props-head){display:none}
+ body .props.moved{transform:none}.props-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}.props-head.dragging{cursor:grabbing}
+ .props-head h3::before{content:'⠿ ';opacity:.6}}
 @media(max-width:650px){.ebody{--tools-w:118px}.etop{gap:5px;padding:6px 8px}.etop button{padding:8px 10px}.stage{padding:10px}}
 </style>
 <script>
@@ -180,5 +182,17 @@ new ResizeObserver(()=>fitStage()).observe(document.getElementById('stage'));
 let propsMin=false;
 function togglePropsMin(){propsMin=!propsMin;properties()}
 const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();let p=document.getElementById('props'),h=p.querySelector('h3');p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('min',propsMin);
- if(h){let head=document.createElement('div');head.className='props-head';h.replaceWith(head);head.append(h);let b=document.createElement('button');b.type='button';b.className='props-min';b.textContent=propsMin?'+':'−';b.title=propsMin?'Show settings':'Shrink settings';b.setAttribute('aria-label',b.title);b.setAttribute('aria-expanded',String(!propsMin));b.onclick=togglePropsMin;head.append(b)}};
+ if(h){let head=document.createElement('div');head.className='props-head';h.replaceWith(head);head.append(h);let b=document.createElement('button');b.type='button';b.className='props-min';b.textContent=propsMin?'+':'−';b.title=propsMin?'Show settings':'Shrink settings';b.setAttribute('aria-label',b.title);b.setAttribute('aria-expanded',String(!propsMin));b.onclick=togglePropsMin;head.append(b);head.addEventListener('pointerdown',propsDragStart)}placeProps()};
+// On tablets and phones the panel opens centred over the canvas and can be dragged by its
+// title bar; where you leave it is kept until the page reloads. It always stays on screen.
+let propsAt=null;
+function narrow(){return matchMedia('(max-width:1000px)').matches}
+function placeProps(){let p=document.getElementById('props'),box=p.parentElement;if(!propsAt||!narrow()){p.classList.remove('moved');p.style.left=p.style.top='';return}
+ let x=Math.max(4,Math.min(propsAt.x,box.clientWidth-p.offsetWidth-4)),y=Math.max(4,Math.min(propsAt.y,box.clientHeight-p.offsetHeight-4));p.classList.add('moved');p.style.left=x+'px';p.style.top=y+'px'}
+function propsDragStart(e){if(!narrow()||e.target.closest('button')||e.button>0)return;let p=document.getElementById('props'),head=e.currentTarget,pr=p.getBoundingClientRect(),br=p.parentElement.getBoundingClientRect(),dx=e.clientX-pr.left,dy=e.clientY-pr.top;
+ e.preventDefault();head.setPointerCapture(e.pointerId);head.classList.add('dragging');
+ const move=ev=>{propsAt={x:ev.clientX-br.left-dx,y:ev.clientY-br.top-dy};placeProps()};
+ const end=()=>{head.classList.remove('dragging');head.removeEventListener('pointermove',move);head.removeEventListener('pointerup',end);head.removeEventListener('pointercancel',end)};
+ head.addEventListener('pointermove',move);head.addEventListener('pointerup',end);head.addEventListener('pointercancel',end)}
+addEventListener('resize',()=>{if(document.getElementById('props').classList.contains('moved')||propsAt)placeProps()});
 </script></body></html>
