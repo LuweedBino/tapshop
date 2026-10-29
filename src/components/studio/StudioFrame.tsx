@@ -99,6 +99,11 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
       if (!d || d.version !== 1) return;
       if (d.type === "tapshop:open-vault") return openVault();
       if (d.type === "tapshop:designs") return setDesigns(designOptions(d.items));
+      // A design's video → "Open in Video Editor". The editor fetches it by id, so the server still checks ownership.
+      if (d.type === "tapshop:edit-video" && d.item && typeof d.item.id === "string" && d.item.id) {
+        const name = typeof d.item.name === "string" && d.item.name.trim() ? d.item.name.slice(0, 200) : "Video";
+        return sendTo("video", { type: "tapshop:vault-import", version: 1, item: { id: d.item.id, name, kind: "video", contentType: "video/*" } });
+      }
       if (d.type === "tapshop:studio-ready") {
         const p = pending.current;
         if (p && p.page === d.page && Date.now() - p.at < 30000) frame.current?.contentWindow?.postMessage(p.message, window.location.origin);

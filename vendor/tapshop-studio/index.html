@@ -118,21 +118,40 @@ render();
 // Videos in designs. They stay in the Media Vault (too big for browser storage) and are
 // referenced by id. The canvas plays them; thumbnails, PNG/SVG downloads and Vault copies
 // use a still frame (poster) taken when the video was added.
-let liveVideo=false;
+let liveVideo=false,clipSeq=0;
+// Each video element has its own id (vid) so the canvas can keep the same playing <video>
+// when it redraws, instead of restarting it on every change.
+// Videos are downloaded once and played from memory: the Vault route streams whole files
+// (no Range support on every storage backend), and only a local copy can always be seeked
+// for trim and cover pictures.
+const videoUrls=new Map(),videoLoads=new Map();
+function loadVideoUrl(id){if(videoUrls.has(id))return Promise.resolve(videoUrls.get(id));
+ if(!videoLoads.has(id))videoLoads.set(id,fetch('/api/vault/'+encodeURIComponent(id)+'?raw=1',{credentials:'same-origin'}).then(r=>{if(!r.ok)throw Error('That video could not be loaded from your Media Vault.');return r.blob()}).then(b=>{let u=URL.createObjectURL(b);videoUrls.set(id,u);return u}).finally(()=>videoLoads.delete(id)));
+ return videoLoads.get(id)}
+function vidOf(e){return e.vid||(e.vid='v'+Math.random().toString(36).slice(2,10))}
+function videoRadius(e){return Math.max(0,Math.min(100,+e.radius||0))/100*Math.min(e.w,e.h)/2}
 const markupStill=markup;
-markup=function(e,i){if(e.type!=='video')return markupStill(e,i);let box=`x="${e.x}" y="${e.y}" width="${e.w}" height="${e.h}"`;
- if(liveVideo)return `<foreignObject data-i="${i}" ${box}><video xmlns="http://www.w3.org/1999/xhtml" src="/api/vault/${encodeURIComponent(e.vaultId)}" poster="${esc(e.poster||'')}" muted loop autoplay playsinline style="width:100%;height:100%;object-fit:contain;display:block"></video></foreignObject>`;
- return e.poster?`<image data-i="${i}" href="${esc(e.poster)}" ${box} preserveAspectRatio="xMidYMid meet"/>`:`<rect data-i="${i}" ${box} fill="#2b2338"/>`};
-const drawStill=draw;draw=function(){liveVideo=true;try{drawStill()}finally{liveVideo=false}};
-function videoInfo(item){return new Promise((res,rej)=>{let v=document.createElement('video'),done=false,t=setTimeout(()=>fail('That video took too long to load.'),20000);
+markup=function(e,i){if(e.type!=='video')return markupStill(e,i);let box=`x="${e.x}" y="${e.y}" width="${e.w}" height="${e.h}"`,r=videoRadius(e),bw=Math.max(0,Math.min(200,+e.border||0)),bc=/^#[0-9a-f]{3,8}$/i.test(e.borderColor||'')?e.borderColor:'#ffffff',op=Math.max(.05,Math.min(1,+(e.opacity??1))),fill=e.fit==='cover';
+ if(liveVideo)return `<foreignObject data-i="${i}" ${box}><div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;box-sizing:border-box;overflow:hidden;border-radius:${r}px;border:${bw}px solid ${bc};opacity:${op}"><video data-vid="${esc(vidOf(e))}" data-vault="${esc(e.vaultId)}" ${videoUrls.has(e.vaultId)?`src="${videoUrls.get(e.vaultId)}"`:''} poster="${esc(e.poster||'')}" muted ${e.paused?'':'autoplay'} playsinline preload="auto" style="width:100%;height:100%;object-fit:${fill?'cover':'contain'};display:block"></video></div></foreignObject>`;
+ let id='vclip'+(++clipSeq),inner=e.poster?`<image href="${esc(e.poster)}" ${box} preserveAspectRatio="xMidYMid ${fill?'slice':'meet'}" clip-path="url(#${id})"/>`:`<rect ${box} fill="#2b2338" clip-path="url(#${id})"/>`;
+ return `<g data-i="${i}" opacity="${op}"><clipPath id="${id}"><rect ${box} rx="${r}"/></clipPath>${inner}${bw?`<rect x="${e.x+bw/2}" y="${e.y+bw/2}" width="${Math.max(0,e.w-bw)}" height="${Math.max(0,e.h-bw)}" rx="${Math.max(0,r-bw/2)}" fill="none" stroke="${bc}" stroke-width="${bw}"/>`:''}</g>`};
+const drawStill=draw;draw=function(){let stage=document.getElementById('stage'),old=new Map(),seen=new Set();
+ for(const e of design?.els||[])if(e.type==='video'){if(seen.has(e.vid))e.vid=null;seen.add(vidOf(e))}
+ stage?.querySelectorAll('video[data-vid]').forEach(v=>old.set(v.dataset.vid,v));
+ liveVideo=true;try{drawStill()}finally{liveVideo=false}
+ stage?.querySelectorAll('video[data-vid]').forEach(v=>{let o=old.get(v.dataset.vid);if(o){o.style.cssText=v.style.cssText;o.poster=v.poster;v.replaceWith(o);old.delete(v.dataset.vid)}});
+ stage?.querySelectorAll('video[data-vault]:not([src])').forEach(v=>loadVideoUrl(v.dataset.vault).then(u=>{if(!v.getAttribute('src')){v.src=u;syncVideos()}}).catch(err=>toast(err.message)));
+ syncVideos()};
+// Takes a still picture from a Vault video at time `at` (default: just after the start).
+function videoInfo(item,at){return loadVideoUrl(item.id).then(url=>new Promise((res,rej)=>{let v=document.createElement('video'),done=false,t=setTimeout(()=>fail('That video took too long to load.'),20000);
  const fail=m=>{if(done)return;done=true;clearTimeout(t);v.removeAttribute('src');v.load();rej(Error(m))};
  v.muted=true;v.playsInline=true;v.preload='auto';
- v.onloadeddata=()=>{v.currentTime=Number.isFinite(v.duration)?Math.min(.5,v.duration/4):.1};
+ v.onloadeddata=()=>{let d=Number.isFinite(v.duration)?v.duration:0;v.currentTime=at!=null?Math.max(0,Math.min(at,d?d-.05:at)):(d?Math.min(.5,d/4):.1)};
  v.onseeked=()=>{if(done)return;done=true;clearTimeout(t);let k=Math.min(1,640/Math.max(v.videoWidth,v.videoHeight,1)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(v.videoWidth*k));c.height=Math.max(1,Math.round(v.videoHeight*k));let poster='';try{c.getContext('2d').drawImage(v,0,0,c.width,c.height);poster=c.toDataURL('image/jpeg',.75)}catch{}
-  res({w:v.videoWidth||1280,h:v.videoHeight||720,poster});v.removeAttribute('src');v.load()};
- v.onerror=()=>fail('That video could not be opened.');v.src='/api/vault/'+encodeURIComponent(item.id)+'?raw=1'})}
+  res({w:v.videoWidth||1280,h:v.videoHeight||720,poster,duration:Number.isFinite(v.duration)?Math.round(v.duration*10)/10:0});v.removeAttribute('src');v.load()};
+ v.onerror=()=>fail('That video could not be opened.');v.src=url}))}
 async function addVaultVideo(item){toast('Loading '+item.name+'…');let info;try{info=await videoInfo(item)}catch(e){toast(e.message);return}
- let el={type:'video',vaultId:item.id,name:item.name,poster:info.poster};
+ let el={type:'video',vaultId:item.id,name:item.name,poster:info.poster,ar:info.w/info.h,duration:info.duration};
  if(!editorOpen()){let k=Math.min(1,1920/Math.max(info.w,info.h)),w=Math.max(100,Math.round(info.w*k)),h=Math.max(100,Math.round(info.h*k));hidePicker();blank(item.name.replace(/\.[^.]+$/,''),w,h);add({...el,x:0,y:0,w,h})}
  else{let w=Math.round(design.w*.6),h=Math.round(w*info.h/info.w);add({...el,x:Math.round((design.w-w)/2),y:Math.round((design.h-h)/2),w,h})}
  toast('Video added to your design.')}
@@ -187,7 +206,7 @@ let propsMin=false;
 function togglePropsMin(){propsMin=!propsMin;properties()}
 // The panel title says what is selected (anything markup() draws as a rectangle is one).
 const SETTINGS_TITLE={text:'T  Text settings',circle:'○  Circle settings',image:'🖼  Image settings',video:'▶  Video settings'};
-const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();let p=document.getElementById('props'),h=p.querySelector('h3'),el=design?.els?.[selected];if(h&&el)h.textContent=SETTINGS_TITLE[el.type]||'▢  Rectangle settings';p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('min',propsMin);
+const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();let p=document.getElementById('props'),el=design?.els?.[selected];if(el?.type==='video')p.innerHTML=videoPanel(el);let h=p.querySelector('h3');if(h&&el)h.textContent=SETTINGS_TITLE[el.type]||'▢  Rectangle settings';p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('min',propsMin);
  if(h){let head=document.createElement('div');head.className='props-head';h.replaceWith(head);head.append(h);let b=document.createElement('button');b.type='button';b.className='props-min';b.textContent=propsMin?'+':'−';b.title=propsMin?'Show settings':'Shrink settings';b.setAttribute('aria-label',b.title);b.setAttribute('aria-expanded',String(!propsMin));b.onclick=togglePropsMin;head.append(b);head.addEventListener('pointerdown',propsDragStart)}placeProps()};
 // On tablets and phones the panel opens centred over the canvas and can be dragged by its
 // title bar; where you leave it is kept until the page reloads. It always stays on screen.
@@ -207,4 +226,62 @@ addEventListener('resize',()=>{if(document.getElementById('props').classList.con
 document.getElementById('stage').addEventListener('pointerdown',e=>{if(e.target.closest('[data-i]')){propsMin=false;return}
  if(!e.target.closest('svg')&&selected>=0){selected=-1;properties();highlight()}},true);
 addEventListener('keydown',e=>{if(e.key==='Escape'&&editorOpen()&&selected>=0&&!document.querySelector('dialog[open]')&&!/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement?.tagName)){selected=-1;properties();highlight()}});
+</script><style>
+.vrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.vrow button{flex:1 1 0;min-width:0;padding:7px 6px;font-size:12px;white-space:nowrap}
+.vpair{display:flex;gap:6px;align-items:center}.vpair input{min-width:0}.vpair span{opacity:.7;font-size:12px;flex:none}.props .vpair input[type=color]{width:44px;flex:none;padding:2px}
+.vcover{display:flex;gap:8px;align-items:center}.vcover img{width:64px;height:40px;object-fit:cover;border-radius:6px;flex:none}.vcover button{flex:1;font-size:12px;padding:7px 6px}
+.props input[type=range]{padding:0;border:0;background:none;box-shadow:none;accent-color:#9b6cf0}.props .vcheck{display:flex;gap:8px;align-items:center;cursor:pointer}.props .vcheck input{width:auto}.vwide{width:100%;margin-top:10px}
+</style>
+<script>
+// Video settings: playback (play/pause, sound, loop, speed), trim, cover picture, and look
+// (fit, corners, border, see-through, size). Playback settings only affect the canvas;
+// the look also applies to PNG/SVG downloads, which use the cover picture.
+const VIDEO_SPEEDS=[.25,.5,.75,1,1.5,2];
+function fmtS(t){return (Math.round((+t||0)*10)/10).toFixed(1)}
+function stageVideo(e){return e&&document.querySelector(`#stage video[data-vid="${CSS.escape(e.vid||'')}"]`)}
+function videoEl(v){return design?.els?.find(e=>e.type==='video'&&e.vid===v.dataset.vid)}
+function trimRange(e,v){let s=Math.max(0,+e.start||0),d=Number.isFinite(v?.duration)?v.duration:(e.duration||Infinity),end=e.end&&e.end>s?Math.min(e.end,d):d;return [s,end]}
+function trimCheck(v,ended){let e=videoEl(v);if(!e)return;let [s,end]=trimRange(e,v);
+ if(v.currentTime<s-.05)v.currentTime=s;
+ else if(ended||v.currentTime>=end-.03){if(e.loop!==false){v.currentTime=s;if(v.paused&&!e.paused)v.play().catch(()=>{})}else if(!v.paused)v.pause()}}
+function syncVideos(){document.querySelectorAll('#stage video[data-vid]').forEach(v=>{let e=videoEl(v);if(!e)return;
+ v.muted=e.muted!==false;v.defaultPlaybackRate=v.playbackRate=+e.speed||1;v.loop=false;
+ if(!v._watch){v._watch=true;
+  v.addEventListener('loadedmetadata',()=>{let e=videoEl(v);if(!e)return;if(Number.isFinite(v.duration)&&!e.duration){e.duration=Math.round(v.duration*10)/10;if(design.els[selected]===e&&!document.querySelector('#props :focus'))properties()}if(e.start)v.currentTime=e.start});
+  v.addEventListener('timeupdate',()=>trimCheck(v));v.addEventListener('ended',()=>trimCheck(v,true))}
+ if(e.paused){if(!v.paused)v.pause()}else if(v.paused&&!(e.loop===false&&v.ended))v.play().catch(()=>{if(!v.muted){v.muted=true;v.play().catch(()=>{});toast('Tap “Muted” again to hear the video.')}})})}
+function selVideo(){let e=design?.els?.[selected];return e?.type==='video'?e:null}
+function videoPanel(e){let d=e.duration||0,end=e.end||d;return `<h3></h3>
+<div class="vrow"><button type="button" onclick="videoToggle('paused')">${e.paused?'▶ Play':'⏸ Pause'}</button><button type="button" onclick="videoToggle('muted')" title="Turn the sound on or off">${e.muted===false?'🔊 Sound':'🔇 Muted'}</button><button type="button" onclick="videoToggle('loop')">${e.loop===false?'➡ Once':'🔁 Loop'}</button></div>
+<label>Speed</label><select onchange="update('speed',+this.value);syncVideos()">${VIDEO_SPEEDS.map(x=>`<option value="${x}" ${(+e.speed||1)===x?'selected':''}>${x===1?'Normal (1×)':x+'×'}</option>`).join('')}</select>
+<label>Trim${d?` · video is ${fmtS(d)} s`:''}</label><div class="vpair"><input type="number" min="0" step="0.1" ${d?`max="${d}"`:''} value="${fmtS(e.start)}" aria-label="Start at (seconds)" onchange="videoTrim('start',this.value)"><span>to</span><input type="number" min="0" step="0.1" ${d?`max="${d}"`:''} value="${end?fmtS(end):''}" placeholder="end" aria-label="End at (seconds)" onchange="videoTrim('end',this.value)"><span>s</span></div>
+<div class="vrow"><button type="button" onclick="videoTrimHere('start')">⇤ Start here</button><button type="button" onclick="videoTrimHere('end')">End here ⇥</button></div>
+<label>Cover picture</label><div class="vcover">${e.poster?`<img src="${esc(e.poster)}" alt="Current cover picture">`:''}<button type="button" onclick="videoCover()">📸 Use this moment</button></div>
+<label>Fit</label><select onchange="update('fit',this.value)"><option value="contain" ${e.fit!=='cover'?'selected':''}>Fit: show the whole video</option><option value="cover" ${e.fit==='cover'?'selected':''}>Fill: crop to fill the box</option></select>
+<label>Rounded corners</label><input type="range" min="0" max="100" value="${+e.radius||0}" aria-label="Rounded corners" oninput="update('radius',+this.value)">
+<label>Border</label><div class="vpair"><input type="range" min="0" max="40" value="${+e.border||0}" aria-label="Border width" oninput="update('border',+this.value)"><input type="color" value="${/^#[0-9a-f]{6}$/i.test(e.borderColor||'')?e.borderColor:'#ffffff'}" aria-label="Border colour" oninput="update('borderColor',this.value)"></div>
+<label>See-through</label><input type="range" min="10" max="100" value="${Math.round((e.opacity??1)*100)}" aria-label="Opacity" oninput="update('opacity',this.value/100)">
+<label>Size</label><div class="vpair"><input type="number" min="1" value="${Math.round(e.w)}" aria-label="Width" onchange="videoSize('w',this.value)"><span>×</span><input type="number" min="1" value="${Math.round(e.h)}" aria-label="Height" onchange="videoSize('h',this.value)"></div>
+<label class="vcheck"><input type="checkbox" ${e.lock!==false?'checked':''} onchange="update('lock',this.checked)"> Keep its shape when resizing</label>
+<button type="button" class="vwide" onclick="videoFillCanvas()">⤢ Fill the whole canvas</button>
+${inTapShop()?`<button type="button" class="vwide" onclick="videoOpenEditor()">🎬 Open in Video Editor</button>`:''}`}
+function videoToggle(k){let e=selVideo();if(!e)return;
+ if(k==='paused')e.paused=!e.paused;else if(k==='muted')e.muted=e.muted===false;else e.loop=e.loop===false;
+ let v=stageVideo(e);if(v&&k==='loop'&&e.loop!==false&&v.ended)v.currentTime=+e.start||0;
+ if(v&&k==='paused'&&!e.paused&&e.loop===false&&v.currentTime>=trimRange(e,v)[1]-.05)v.currentTime=+e.start||0;
+ syncVideos();save();properties()}
+function videoTrim(k,val){let e=selVideo();if(!e)return;let n=parseFloat(val),d=e.duration||Infinity;
+ if(!Number.isFinite(n)||n<0)n=k==='start'?0:null;if(n!=null)n=Math.round(Math.min(n,d)*10)/10;
+ if(k==='end'&&n!=null&&n<=(+e.start||0)+.1){toast('The end needs to be after the start.');properties();return}
+ if(k==='start'&&e.end&&n>=e.end-.1){toast('The start needs to be before the end.');properties();return}
+ checkpoint();if(n==null||(k==='end'&&n>=d))delete e.end;else e[k]=n;save();
+ let v=stageVideo(e);if(v)v.currentTime=+e.start||0;syncVideos();properties()}
+function videoTrimHere(k){let e=selVideo(),v=stageVideo(e);if(!e||!v)return;videoTrim(k,v.currentTime)}
+async function videoCover(){let e=selVideo();if(!e)return;let v=stageVideo(e),t=v?v.currentTime:0;toast('Taking the cover picture…');
+ try{let info=await videoInfo({id:e.vaultId},t);if(!info.poster)throw Error('That picture could not be taken.');checkpoint();e.poster=info.poster;save();if(selVideo()===e)properties();toast('Cover picture updated ('+fmtS(t)+' s).')}catch(err){toast(err.message)}}
+function videoSize(k,val){let e=selVideo();if(!e)return;let n=Math.max(1,Math.round(+val||1));checkpoint();
+ if(e.lock!==false){let ar=e.ar||(e.ar=e.w/e.h);if(k==='w'){e.w=n;e.h=Math.max(1,Math.round(n/ar))}else{e.h=n;e.w=Math.max(1,Math.round(n*ar))}}else e[k]=n;
+ draw();save();properties()}
+function videoFillCanvas(){let e=selVideo();if(!e)return;checkpoint();Object.assign(e,{x:0,y:0,w:design.w,h:design.h,fit:'cover'});draw();save();properties()}
+function videoOpenEditor(){let e=selVideo();if(!e||!inTapShop())return;save();window.parent.postMessage({type:'tapshop:edit-video',version:1,item:{id:e.vaultId,name:e.name||'Video'}},location.origin)}
 </script></body></html>
