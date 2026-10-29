@@ -27,6 +27,7 @@ const FILES = new Set([
   "text-catalog.js",
   "text-fonts.css",
   "vault-picker.js",
+  "studio-catalog.js",
   "demo.webm",
 ]);
 

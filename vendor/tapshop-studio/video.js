@@ -156,7 +156,7 @@ if(!['none','type'].includes(a))alpha*=Math.max(0,out);ctx.globalAlpha*=alpha;ct
 const preFontExport=exportVideo;exportVideo=async function(){try{await Promise.all(graphicTracks.filter(t=>t.type==='text').map(t=>document.fonts.load(`64px "${t.font||'system-ui'}"`)));await preFontExport()}catch{toast('Could not load a font. Try another font before exporting.')}};
 
 function paintStyledText(t,line,x,y,maxWidth,size,local,path,pc=ctx){const effect=t.textEffect||'plain',accent=t.effectColor||'#b48cff',width=path?maxWidth:Math.min(maxWidth,pc.measureText(line).width),thick=Math.max(1,size*.055);pc.save();pc.fillStyle=t.color;pc.lineJoin='round';pc.shadowBlur=0;
-const fill=path?(dx=0,dy=0)=>{pc.save();pc.translate(dx,dy);if(t.outline){pc.strokeStyle=pc.fillStyle;pc.lineWidth=Math.max(2,thick*1.6);pc.stroke(path)}else pc.fill(path);pc.restore()}:(dx=0,dy=0)=>pc.fillText(line,x+dx,y+dy,maxWidth),stroke=(color,lw)=>{pc.strokeStyle=color;pc.lineWidth=lw;if(path)pc.stroke(path);else pc.strokeText(line,x,y,maxWidth)};
+const fill=path?(dx=0,dy=0)=>{pc.save();pc.translate(dx,dy);if(t.outline){pc.strokeStyle=pc.fillStyle;pc.lineWidth=Math.max(2,thick*1.6);pc.stroke(path)}else pc.fill(path,'evenodd');pc.restore()}:(dx=0,dy=0)=>pc.fillText(line,x+dx,y+dy,maxWidth),stroke=(color,lw)=>{pc.strokeStyle=color;pc.lineWidth=lw;if(path)pc.stroke(path);else pc.strokeText(line,x,y,maxWidth)};
 if(effect==='shadow'){pc.shadowColor='#000c';pc.shadowBlur=size*.12;pc.shadowOffsetX=size*.06;pc.shadowOffsetY=size*.09}
 if(effect==='longShadow'){pc.fillStyle=accent;for(let i=18;i>0;i--)fill(i*size*.012,i*size*.012);pc.fillStyle=t.color}
 if(effect==='outline')stroke(accent,thick*2);
@@ -385,3 +385,116 @@ const vaultDrag={
 };
 {let s=document.createElement('style');s.textContent='.timeline .tracks.vault-drop{outline:2px dashed #a07ae0;outline-offset:-2px;background:#a07ae014}.vault-drop-line{position:absolute;top:0;width:2px;margin-left:-1px;background:#a07ae0;box-shadow:0 0 0 1px #fff8;pointer-events:none;z-index:6}';document.head.appendChild(s)}
 if(!inTapShop()){$('vaultFrom')?.remove();$('vaultVideoPick')?.remove()}
+
+// ---- Design-studio extras for text and shape tracks (shared catalog in studio-catalog.js):
+// catalog shapes, emoji stickers and word stickers; shape borders with line styles,
+// see-through, text inside shapes; text boxes and paragraph formatting; more animations.
+// Every setting is optional, so older projects draw as before.
+const VE_DUP=new Set(['rect','circle','triangle','diamond','hexagon','star','burst','heart','arrow','pill']);
+for(const c of STUDIO_SHAPES)if(!VE_DUP.has(c.id)){SHAPES.splice(SHAPES.length-1,0,['cat:'+c.id,c.label]);SHAPE_ASPECT['cat:'+c.id]=c.ar||1}
+{let sel=$('insertShape');if(sel)sel.innerHTML=SHAPES.map(([k,v])=>`<option value="${k}" ${k==='rounded'?'selected':''}>${esc(v)}</option>`).join('')}
+const veIsEmoji=t=>typeof t.shape==='string'&&t.shape.startsWith('emoji:');
+const shapePathVE=shapePath;shapePath=function(kind,cx,cy,W,H){let c=typeof kind==='string'&&kind.startsWith('cat:')&&STUDIO_SHAPE_BY_ID[kind.slice(4)];if(c){let p=new Path2D();p.addPath(new Path2D(c.d),new DOMMatrix([W/100,0,0,H/100,cx-W/2,cy-H/2]));return p}return shapePathVE(kind,cx,cy,W,H)};
+const shapeSizeVE=shapeSize;shapeSize=function(t,w){if(veIsEmoji(t)){let h=t.size*w/1280*2;return {w:h*(t.sx||1),h:h*(t.sy||1),base:h,aspect:1}}return shapeSizeVE(t,w)};
+const shapeLabelVE=shapeLabel;shapeLabel=function(k){if(typeof k==='string'&&k.startsWith('emoji:'))return (STUDIO_STICKERS.find(x=>x.emoji===k.slice(6))?.label||'Sticker')+' '+k.slice(6);return shapeLabelVE(k)};
+const VE_DASH={solid:null,dashed:[3,2],dotted:[0,2],dashdot:[4,2,0,2],dashdotdot:[4,2,0,2,0,2],long:[9,3],fine:[0,1.4]};
+function veTextBox(t){if(veIsEmoji(t))return null;let k=t.shape||'';if(k.startsWith('cat:'))return STUDIO_TEXT_BOX[k.slice(4)]||[.12,.12,.88,.88];return {bubble:[.08,.08,.92,.7],pill:[.12,.12,.88,.88],star:[.32,.38,.68,.72],burst:[.22,.22,.78,.78],heart:[.2,.14,.8,.62],circle:[.15,.15,.85,.85],ellipse:[.15,.15,.85,.85],triangle:[.3,.5,.7,.88],diamond:[.25,.25,.75,.75],arrow:[.06,.36,.6,.64],hexagon:[.14,.2,.86,.8]}[k]||[.1,.12,.9,.88]}
+function veInk(t){let m=/^#([0-9a-f]{6})$/i.exec(t.color||'');if(!m)return '#ffffff';let n=parseInt(m[1],16),l=(.299*(n>>16)+.587*(n>>8&255)+.114*(n&255))/255;return l<.6?'#ffffff':'#1d1726'}
+// Shapes: emoji stickers are drawn as text with a white sticker edge; others get a border and text inside.
+const drawShapeTrackVE=drawShapeTrack;
+drawShapeTrack=function(t,local,w,h){ctx.globalAlpha*=Math.max(.05,Math.min(1,t.opacity??1));
+ let cx=w*t.x/100,cy=h*t.y/100+(t.animation==='slide'?Math.max(0,1-local/.4)*h*.07:0),s=shapeSize(t,w);
+ if(veIsEmoji(t)){applyTextMotion(t,local,w,h);ctx.translate(cx,cy);ctx.rotate((t.rotation||0)*Math.PI/180);ctx.scale(t.flipH?-1:1,t.flipV?-1:1);ctx.scale(s.w/s.base,s.h/s.base);let alpha=t.animation==='fade'?Math.min(1,local/.35,(t.length-local)/.35):1;ctx.globalAlpha*=Math.max(0,alpha);
+  ctx.font=`${(s.base*.88).toFixed(1)}px ${STUDIO_EMOJI_FONT}`;ctx.textAlign='center';ctx.textBaseline='middle';if(t.stickerEdge!==false&&'filter' in ctx){let r=Math.max(1,s.base*.035);ctx.filter=`drop-shadow(0 0 ${r}px #fff) drop-shadow(0 0 ${r}px #fff) drop-shadow(0 ${r}px ${r*1.5}px #0005)`}ctx.fillText(t.shape.slice(6),0,0);ctx.filter='none';return}
+ drawShapeTrackVE(t,local,w,h);if(!shapeReady(t))return;
+ // the base drew inside the shape's own transform, which is still applied here
+ let bw=+t.borderW||0;if(t.borderOn&&bw>0){ctx.save();ctx.shadowBlur=0;ctx.lineWidth=bw*w/1280;ctx.strokeStyle=t.borderColor||'#ffffff';ctx.lineJoin='round';let d=VE_DASH[t.lineStyle];if(d){ctx.setLineDash(d.map(x=>x*ctx.lineWidth));if(/dotted|dashdot|fine/.test(t.lineStyle))ctx.lineCap='round'}ctx.stroke(shapeOutline(t,cx,cy,s.w,s.h));ctx.restore()}
+ let txt=String(t.inner||'');if(txt.trim()){let tb=veTextBox(t),bx=cx-s.w/2+s.w*tb[0],by=cy-s.h/2+s.h*tb[1],bW=s.w*(tb[2]-tb[0]),bH=s.h*(tb[3]-tb[1]),lines=txt.split('\n').slice(0,12),al=t.innerAlign||'center',lh=1.2,
+   font=t.innerFont||t.font||'system-ui',size=+t.innerSize>0?+t.innerSize*w/1280:Math.max(6,Math.min(bH/(lines.length*lh),bW/(Math.max(...lines.map(l=>l.length),1)*.58)));
+  ctx.save();if(t.flipH||t.flipV){ctx.translate(cx,cy);ctx.scale(t.flipH?-1:1,t.flipV?-1:1);ctx.translate(-cx,-cy)}ctx.shadowBlur=0;ctx.filter='none';ctx.font=`${t.innerItalic?'italic ':''}${t.innerBold!==false?'700':'400'} ${size}px "${font}"`;ctx.fillStyle=t.innerColor||veInk(t);ctx.textBaseline='middle';ctx.textAlign=al==='left'?'left':al==='right'?'right':'center';
+  let x=al==='left'?bx:al==='right'?bx+bW:bx+bW/2,y0=by+bH/2-(lines.length-1)*size*lh/2;lines.forEach((l,j)=>ctx.fillText(l,x,y0+j*size*lh,bW));ctx.restore()}};
+// Text: see-through, a text box (colour, see-through, border style, padding, corners) and
+// paragraph formatting (align/justify, italic, underline, line and letter spacing).
+const drawTextTrackVE=drawTextTrack;drawTextTrack=function(t,local,w,h){ctx.globalAlpha*=Math.max(.05,Math.min(1,t.opacity??1));return drawTextTrackVE(t,local,w,h)};
+const fontForTrackVE=fontForTrack;fontForTrack=function(t,size){return (t.italic?'italic ':'')+fontForTrackVE(t,size)};
+renderTextBlock=function(g,t,text,x,y,w,size,local){g.font=fontForTrack(t,size);g.textAlign='center';g.textBaseline='middle';let ls='letterSpacing' in g;if(ls)g.letterSpacing=((+t.letter||0)*size/100).toFixed(2)+'px';
+ let lines=text.split('\n'),lh=size*(+t.lineH||1.25),maxW=w*.94,ws=lines.map(l=>Math.min(maxW,g.measureText(l).width)),bw=Math.max(1,...ws),al=t.align||'center';
+ let hasBox=!!(t.boxColor||(t.boxBorder&&t.boxBorder!=='none'));if(hasBox){let pad=(t.boxPad??30)*size/100,rad=(+t.boxRadius||0)*size/100,bx=x-bw/2-pad,by=y-lines.length*lh/2-pad,BW=bw+2*pad,BH=lines.length*lh+2*pad,rr=()=>{g.beginPath();g.roundRect?g.roundRect(bx,by,BW,BH,rad):g.rect(bx,by,BW,BH)};
+  g.save();if(t.boxColor){g.globalAlpha*=Math.max(0,Math.min(1,t.boxOpacity??1));g.fillStyle=t.boxColor;rr();g.fill();g.globalAlpha/=Math.max(.001,Math.min(1,t.boxOpacity??1))}
+  let st=t.boxBorder||'none',lw=(+t.boxBorderW||3)*w/1280;if(st!=='none'){g.strokeStyle=t.boxBorderColor||'#ffffff';g.lineJoin='round';
+   const strokeIn=(inset,width)=>{g.lineWidth=width;g.beginPath();g.roundRect?g.roundRect(bx+inset,by+inset,BW-2*inset,BH-2*inset,Math.max(0,rad-inset)):g.rect(bx+inset,by+inset,BW-2*inset,BH-2*inset);g.stroke()};
+   if(st==='double'){strokeIn(lw/6,lw/3);strokeIn(lw*5/6,lw/3)}else if(st==='thickthin'){strokeIn(lw*.35,lw*.7);strokeIn(lw*1.15,Math.max(1,lw*.25))}else{let d=VE_DASH[st];if(d){g.setLineDash(d.map(v=>v*lw));if(/dotted|dashdot|fine/.test(st))g.lineCap='round'}strokeIn(lw/2,lw)}}
+  g.restore()}
+ for(let [i,line] of lines.entries()){let yy=y+(i-(lines.length-1)/2)*lh,tw=ws[i],lx=al==='left'||al==='justify'?x-bw/2+tw/2:al==='right'?x+bw/2-tw/2:x;
+  if(t.background&&!hasBox){g.fillStyle='#000a';g.fillRect(lx-tw/2-size*.3,yy-lh/2,tw+size*.6,lh)}
+  let words=line.split(/(\s+)/).filter(x=>x.trim());
+  if(al==='justify'&&i<lines.length-1&&words.length>1){let wsum=words.reduce((n,wd)=>n+g.measureText(wd).width,0),gap=(bw-wsum)/(words.length-1),cur=x-bw/2;for(const wd of words){let ww=g.measureText(wd).width;paintStyledText(t,wd,cur+ww/2,yy,ww+1,size,local,null,g);cur+=ww+gap}}
+  else paintStyledText(t,line,lx,yy,maxW,size,local,null,g);
+  if(t.underline){g.save();g.fillStyle=t.color;g.fillRect(al==='justify'&&i<lines.length-1?x-bw/2:lx-tw/2,yy+size*.52,al==='justify'&&i<lines.length-1?bw:tw,Math.max(1,size*.06));g.restore()}}
+ if(ls)g.letterSpacing='0px'};
+// More animations (the same names as the design studio).
+TEXT_ANIMATIONS.push(['heartbeat','Heartbeat'],['jello','Jello'],['rubber','Rubber band'],['tada','Tada'],['blink','Blink'],['glowPulse','Glow pulse'],['rainbow','Rainbow']);
+const VE_ANIMS=new Set(['heartbeat','jello','rubber','tada','blink','glowPulse','rainbow']);
+const applyTextMotionVE=applyTextMotion;applyTextMotion=function(t,local,w,h){let a=t.animation;if(!VE_ANIMS.has(a))return applyTextMotionVE(t,local,w,h);
+ let x=w*t.x/100,y=h*t.y/100,ph=(local%1.2)/1.2,sx=1,sy=1,rot=0,kx=0,ky=0,alpha=1,out=Math.min(1,(t.length-local)/.3),f=null;
+ if(a==='heartbeat'){let b=q=>Math.max(0,Math.sin(q*Math.PI));sx=sy=1+.14*(ph<.15?b(ph/.15):ph>.3&&ph<.45?b((ph-.3)/.15):0)}
+ if(a==='jello'){let d=Math.max(0,1-ph*1.6);kx=ky=Math.sin(ph*Math.PI*6)*.22*d}
+ if(a==='rubber'){let d=Math.max(0,1-ph*1.4);sx=1+Math.sin(ph*Math.PI*5)*.25*d;sy=1-Math.sin(ph*Math.PI*5)*.25*d}
+ if(a==='tada'){if(ph<.2){sx=sy=.9;rot=-.05}else if(ph<.8){sx=sy=1.1;rot=Math.sin(ph*Math.PI*10)*.05}}
+ if(a==='blink')alpha=ph<.5?1:.1;
+ if(a==='glowPulse'){let r=(.5-.5*Math.cos(local*Math.PI*2/1.5))*16*w/1280;f=`drop-shadow(0 0 ${r}px ${t.effectColor||'#b48cff'}) drop-shadow(0 0 ${r*2}px ${t.effectColor||'#b48cff'})`}
+ if(a==='rainbow')f=`hue-rotate(${Math.round(local*180)%360}deg)`;
+ if(f&&'filter' in ctx)ctx.filter=f;ctx.globalAlpha*=alpha*Math.max(0,out);ctx.translate(x,y);ctx.rotate(rot);ctx.transform(1,ky,kx,1,0,0);ctx.scale(sx,sy);ctx.translate(-x,-y)};
+// Track settings: extra fields for text and shapes.
+const veOpt=(id,key,v,cur,l)=>`<option value="${v}" ${cur===v?'selected':''}>${l}</option>`;
+function veRange(t,key,label,min,max,step,val,div=1){return `<label>${label}<input type="range" min="${min}" max="${max}" step="${step}" value="${val}" oninput="editGraphic('${t.id}','${key}',+this.value/${div},false)"></label>`}
+const textExtraFieldsVE=textExtraFields;textExtraFields=function(t){let st=t.boxBorder||'none';return textExtraFieldsVE(t)+
+ `<label>Align<select onchange="editGraphic('${t.id}','align',this.value)">${[['left','Left'],['center','Centre'],['justify','Justify'],['right','Right']].map(([v,l])=>veOpt(t.id,'align',v,t.align||'center',l)).join('')}</select></label>
+ <label>Italic<button class="graphic-toggle" aria-pressed="${!!t.italic}" onclick="editGraphic('${t.id}','italic',${!t.italic})"><i>I</i> ${t.italic?'On':'Off'}</button></label>
+ <label>Underline<button class="graphic-toggle" aria-pressed="${!!t.underline}" onclick="editGraphic('${t.id}','underline',${!t.underline})"><u>U</u> ${t.underline?'On':'Off'}</button></label>
+ ${veRange(t,'lineH','Line spacing',0.8,2.5,0.05,+t.lineH||1.25)}${veRange(t,'letter','Letter spacing',0,40,1,+t.letter||0)}${veRange(t,'opacity','See-through',10,100,1,Math.round((t.opacity??1)*100),100)}
+ <label>Text box<select onchange="editGraphic('${t.id}','boxColor',this.value==='on'?(document.getElementById('bx_${t.id}')?.value||'#ffffff'):'')">${veOpt(t.id,'',  'off',t.boxColor?'on':'off','No box')}${veOpt(t.id,'','on',t.boxColor?'on':'off','Coloured box')}</select></label>
+ ${t.boxColor?`<label>Box colour<input id="bx_${t.id}" type="color" value="${t.boxColor}" oninput="editGraphic('${t.id}','boxColor',this.value,false)"></label>${veRange(t,'boxOpacity','Box see-through',0,100,1,Math.round((t.boxOpacity??1)*100),100)}`:''}
+ <label>Box border<select onchange="editGraphic('${t.id}','boxBorder',this.value)">${[['none','No border'],['solid','Solid'],['dashed','Dashed'],['dotted','Dotted'],['dashdot','Dash · dot'],['dashdotdot','Dash · dot · dot'],['long','Long dash'],['fine','Fine dots'],['double','Double'],['thickthin','Thick & thin']].map(([v,l])=>veOpt(t.id,'',v,st,l)).join('')}</select></label>
+ ${st!=='none'?`<label>Border thickness<input type="number" min="1" max="40" value="${+t.boxBorderW||3}" onchange="editGraphic('${t.id}','boxBorderW',+this.value)"></label><label>Border colour<input type="color" value="${t.boxBorderColor||'#ffffff'}" oninput="editGraphic('${t.id}','boxBorderColor',this.value,false)"></label>`:''}
+ ${t.boxColor||st!=='none'?veRange(t,'boxPad','Box padding',0,150,1,t.boxPad??30)+veRange(t,'boxRadius','Box corners',0,150,1,+t.boxRadius||0):''}`};
+const shapeExtraFieldsVE=shapeExtraFields;shapeExtraFields=function(t){if(veIsEmoji(t))return `<label>Sticker<button class="graphic-toggle" onclick="veOpenCatalog('${t.id}')">😀 Change sticker</button></label><label>Width %<input type="number" min="5" max="2000" value="${Math.round((t.sx||1)*100)}" onchange="editGraphic('${t.id}','sx',+this.value/100);editGraphic('${t.id}','sy',+this.value/100)"></label><label>Sticker edge<button class="graphic-toggle" aria-pressed="${t.stickerEdge!==false}" onclick="editGraphic('${t.id}','stickerEdge',${t.stickerEdge===false})">${t.stickerEdge!==false?'On':'Off'}</button></label>${veRange(t,'opacity','See-through',10,100,1,Math.round((t.opacity??1)*100),100)}`;
+ let st=t.lineStyle||'solid';return `<label>Catalog<button class="graphic-toggle" onclick="veOpenCatalog('${t.id}')">◆ Shapes & stickers</button></label>`+shapeExtraFieldsVE(t)+
+ `<label>Border<button class="graphic-toggle" aria-pressed="${!!t.borderOn}" onclick="editGraphic('${t.id}','borderOn',${!t.borderOn})">${t.borderOn?'On':'Off'}</button></label>
+ ${t.borderOn?`<label>Border thickness<input type="number" min="1" max="60" value="${+t.borderW||6}" onchange="editGraphic('${t.id}','borderW',+this.value)"></label><label>Border colour<input type="color" value="${t.borderColor||'#ffffff'}" oninput="editGraphic('${t.id}','borderColor',this.value,false)"></label><label>Border line<select onchange="editGraphic('${t.id}','lineStyle',this.value)">${[['solid','Solid'],['dashed','Dashed'],['dotted','Dotted'],['dashdot','Dash · dot'],['dashdotdot','Dash · dot · dot'],['long','Long dash'],['fine','Fine dots']].map(([v,l])=>veOpt(t.id,'',v,st,l)).join('')}</select></label>`:''}
+ ${veRange(t,'opacity','See-through',10,100,1,Math.round((t.opacity??1)*100),100)}
+ <label class="font-field">Text inside<input type="text" value="${esc(t.inner||'')}" placeholder="Type here" oninput="editGraphic('${t.id}','inner',this.value,false)"></label>
+ ${String(t.inner||'').trim()?`<label>Text colour<input type="color" value="${t.innerColor||veInk(t)}" oninput="editGraphic('${t.id}','innerColor',this.value,false)"></label><label class="font-field">Text font<select onchange="editGraphic('${t.id}','innerFont',this.value)">${TEXT_FONTS.map(f=>`<option value="${f.family}" ${(t.innerFont||t.font||'system-ui')===f.family?'selected':''}>${f.label}</option>`).join('')}</select></label>
+ <label>Text style<button class="graphic-toggle" aria-pressed="${t.innerBold!==false}" onclick="editGraphic('${t.id}','innerBold',${t.innerBold===false})"><b>B</b></button></label><label>Italic<button class="graphic-toggle" aria-pressed="${!!t.innerItalic}" onclick="editGraphic('${t.id}','innerItalic',${!t.innerItalic})"><i>I</i></button></label>
+ <label>Text align<select onchange="editGraphic('${t.id}','innerAlign',this.value)">${[['left','Left'],['center','Centre'],['right','Right']].map(([v,l])=>veOpt(t.id,'',v,t.innerAlign||'center',l)).join('')}</select></label><label>Text size<input type="number" min="0" max="240" value="${+t.innerSize||0}" title="0 = fit the shape" onchange="editGraphic('${t.id}','innerSize',+this.value)"></label>`:''}`};
+// Catalog picker for shape tracks (and the "Add shape track" pop-up).
+let veCatTarget=null;
+function veOpenCatalog(id){veCatTarget=id;let d=$('veCatalog');if(!d){d=document.createElement('dialog');d.id='veCatalog';d.className='ve-cat';
+  const icon=sh=>`<svg viewBox="-4 -4 108 108" aria-hidden="true"><path d="${sh.d}" fill="currentColor" fill-rule="evenodd" transform="${sh.ar&&sh.ar!==1?(sh.ar>1?`translate(0 ${50-50/sh.ar}) scale(1 ${1/sh.ar})`:`translate(${50-50*sh.ar} 0) scale(${sh.ar} 1)`):''}"/></svg>`;
+  let groups=[...new Set(STUDIO_SHAPES.map(x=>x.group))];
+  d.innerHTML=`<div class="ve-cat-top"><h2>Shapes & stickers</h2><button type="button" class="ve-cat-x" aria-label="Close">×</button></div><input type="search" class="ve-cat-search" placeholder="🔍 Search shapes & stickers" aria-label="Search">`+
+   groups.map(g=>`<h3>${esc(g)}</h3><div class="ve-cat-grid">${STUDIO_SHAPES.filter(x=>x.group===g).map(x=>`<button type="button" data-kind="${VE_DUP.has(x.id)?x.id:'cat:'+x.id}" data-label="${esc(x.label.toLowerCase())}" title="${esc(x.label)}">${icon(x)}<span>${esc(x.label)}</span></button>`).join('')}</div>`).join('')+
+   `<h3>Word stickers</h3><div class="ve-cat-grid words">${STUDIO_WORD_STICKERS.map(([sh,txt,fill,ink],j)=>`<button type="button" data-word="${j}" data-label="${esc(txt.toLowerCase())} word" title="${esc(txt)}"><span class="ve-word" style="background:${fill};color:${ink}">${esc(txt)}</span></button>`).join('')}</div>`+
+   Object.keys(STUDIO_STICKER_SETS).map(g=>`<h3>Stickers · ${esc(g)}</h3><div class="ve-cat-grid emo">${STUDIO_STICKERS.filter(x=>x.group===g).map(x=>`<button type="button" data-kind="emoji:${esc(x.emoji)}" data-label="${esc(x.label)} sticker" title="${esc(x.label)}"><span class="ve-emo">${x.emoji}</span><span>${esc(x.label)}</span></button>`).join('')}</div>`).join('');
+  d.querySelector('.ve-cat-x').onclick=()=>d.close();
+  d.addEventListener('click',e=>{let b=e.target.closest('[data-kind],[data-word]');if(b){d.close();vePick(b.dataset.kind||null,b.dataset.word!=null?+b.dataset.word:null);return}if(e.target===d){let r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)d.close()}});
+  let q=d.querySelector('.ve-cat-search');q.oninput=()=>{let v=q.value.trim().toLowerCase();d.querySelectorAll('.ve-cat-grid').forEach(g=>{let any=false;g.querySelectorAll('button').forEach(b=>{let ok=!v||b.dataset.label.includes(v);b.hidden=!ok;if(ok)any=true});g.hidden=!any;g.previousElementSibling.hidden=!any})};
+  document.body.appendChild(d)}
+ d.showModal()}
+let vePendingPreset=null;
+function vePreset(kind,word){if(word!=null){let [sh,txt,fill,ink,font]=STUDIO_WORD_STICKERS[word],k=VE_DUP.has(sh)?sh:'cat:'+sh,c=STUDIO_SHAPE_BY_ID[sh];return {shape:k,color:fill,inner:txt,innerColor:ink,innerBold:true,outline:false,textEffect:'shadow',sx:1,sy:1,points:null}}
+ return {shape:kind,points:null,sx:1,sy:1,...(kind.startsWith('emoji:')?{stickerEdge:true}:{})}}
+function vePick(kind,word){let p=vePreset(kind,word);if(veCatTarget==='insert'){vePendingPreset=p;let sel=$('insertShape');if(sel&&![...sel.options].some(o=>o.value===p.shape))sel.insertAdjacentHTML('beforeend',`<option value="${esc(p.shape)}">${esc(shapeLabel(p.shape))}</option>`);if(sel)sel.value=p.shape;let n=$('vePicked');if(n)n.textContent='Picked: '+(word!=null?STUDIO_WORD_STICKERS[word][1]:shapeLabel(p.shape));return}
+ let t=graphicTracks.find(t=>t.id===veCatTarget);if(!t||exporting)return;Object.assign(t,p);if(word==null&&!kind.startsWith('emoji:'))delete t.inner;renderGraphicTracks();toast(word!=null?'Word sticker applied.':'Shape changed.')}
+{let sel=$('insertShape');if(sel){sel.insertAdjacentHTML('afterend',`<button type="button" class="graphic-toggle ve-browse" onclick="veOpenCatalog('insert')">◆ Browse shapes & stickers</button><small id="vePicked" class="ve-picked"></small>`);sel.addEventListener('change',()=>{vePendingPreset=null;let n=$('vePicked');if(n)n.textContent=''})}}
+const insertGraphicTrackVE=insertGraphicTrack;insertGraphicTrack=function(event){let preset=pendingGraphicType==='shape'?vePendingPreset:null,n=graphicTracks.length;insertGraphicTrackVE(event);if(preset&&graphicTracks.length>n){Object.assign(graphicTracks.at(-1),preset);renderGraphicTracks()}vePendingPreset=null;let p=$('vePicked');if(p)p.textContent=''};
+{let st=document.createElement('style');st.textContent=`.ve-cat{width:min(620px,94vw);max-height:min(86vh,86dvh);overflow:auto;border:1px solid #8a7aa855;border-radius:18px;padding:0 16px 16px;background:#1d1a26;color:#eee9f7}.ve-cat::backdrop{background:#0008}body.light .ve-cat{background:#fff;color:#221d2c}
+.ve-cat-top{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;padding:12px 0 6px;background:inherit;z-index:1}.ve-cat-top h2{margin:0;font-size:18px}.ve-cat-x{width:36px;height:36px;border-radius:50%;padding:0;font-size:20px}
+.ve-cat-search{position:sticky;top:54px;z-index:1;width:100%;box-sizing:border-box;padding:9px 12px;border-radius:10px;border:1px solid #8a7aa877;background:inherit;color:inherit}.ve-cat h3{margin:14px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:.7}
+.ve-cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:8px}.ve-cat-grid.emo{grid-template-columns:repeat(auto-fill,minmax(66px,1fr))}.ve-cat-grid.words{grid-template-columns:repeat(auto-fill,minmax(118px,1fr))}
+.ve-cat-grid button{display:flex;flex-direction:column;align-items:center;gap:5px;padding:8px 4px;font-size:11px;min-width:0}.ve-cat-grid svg{width:36px;height:36px;color:#b48cff}.ve-cat-grid span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ve-emo{font-size:30px;line-height:1.1;font-family:${STUDIO_EMOJI_FONT.replace(/"/g,"'")}}.ve-word{padding:6px 10px;border-radius:999px;font-weight:800;font-size:12px}.ve-cat [hidden]{display:none}.ve-browse{margin-top:6px;width:100%}.ve-picked{display:block;margin-top:4px;opacity:.8}`;document.head.appendChild(st)}
+// Editing points of a catalog shape starts from its real outline, traced along the SVG path.
+const presetPointsVE=presetPoints;presetPoints=function(kind){let c=typeof kind==='string'&&kind.startsWith('cat:')&&STUDIO_SHAPE_BY_ID[kind.slice(4)];if(!c)return presetPointsVE(kind);
+ let a=SHAPE_ASPECT[kind]||1,el=document.createElementNS('http://www.w3.org/2000/svg','path');el.setAttribute('d',c.d.split(/(?=M)/)[0]);let L=el.getTotalLength(),n=40,pts=[];
+ for(let i=0;i<n;i++){let q=el.getPointAtLength(L*i/n);pts.push([(q.x/100-.5)*a,q.y/100-.5,1])}return pts};
