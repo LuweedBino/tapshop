@@ -185,7 +185,9 @@ new ResizeObserver(()=>fitStage()).observe(document.getElementById('stage'));
 // the panel floats over the canvas). Shrunk or not is kept while you edit.
 let propsMin=false;
 function togglePropsMin(){propsMin=!propsMin;properties()}
-const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();let p=document.getElementById('props'),h=p.querySelector('h3');p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('min',propsMin);
+// The panel title says what is selected (anything markup() draws as a rectangle is one).
+const SETTINGS_TITLE={text:'T  Text settings',circle:'○  Circle settings',image:'🖼  Image settings',video:'▶  Video settings'};
+const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();let p=document.getElementById('props'),h=p.querySelector('h3'),el=design?.els?.[selected];if(h&&el)h.textContent=SETTINGS_TITLE[el.type]||'▢  Rectangle settings';p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('min',propsMin);
  if(h){let head=document.createElement('div');head.className='props-head';h.replaceWith(head);head.append(h);let b=document.createElement('button');b.type='button';b.className='props-min';b.textContent=propsMin?'+':'−';b.title=propsMin?'Show settings':'Shrink settings';b.setAttribute('aria-label',b.title);b.setAttribute('aria-expanded',String(!propsMin));b.onclick=togglePropsMin;head.append(b);head.addEventListener('pointerdown',propsDragStart)}placeProps()};
 // On tablets and phones the panel opens centred over the canvas and can be dragged by its
 // title bar; where you leave it is kept until the page reloads. It always stays on screen.
