@@ -154,8 +154,12 @@ importVaultItem=async function(item,target){
 .stage{min-width:0;min-height:0;overflow:hidden;padding:16px}
 .stage svg{max-width:none;max-height:none}
 .tools-toggle{display:grid;place-items:center;width:38px;height:38px;padding:7px;flex:none}.tools-toggle svg{width:20px;height:20px}
-html[data-tools="collapsed"] .ebody{--tools-w:0px}
-html[data-tools="collapsed"] .tools{padding:0;border:0;visibility:hidden}
+.tools-head{display:flex;justify-content:flex-end;margin:-6px -6px 2px 0}
+.tools .tools-toggle{width:38px;margin:0}
+html[data-tools="collapsed"] .ebody{--tools-w:56px}
+html[data-tools="collapsed"] .tools{padding:10px 8px;overflow:hidden}
+html[data-tools="collapsed"] .tools>:not(.tools-head){display:none}
+html[data-tools="collapsed"] .tools-head{justify-content:center;margin:0}
 .props-head{display:flex;align-items:center;justify-content:space-between;gap:8px}.props-head h3{margin:0}.props-min{display:none}
 @media(max-width:1000px){.ebody{--tools-w:170px;grid-template-columns:var(--tools-w) minmax(0,1fr)}.props.empty{display:none}
  body .props{position:absolute;top:50%;left:calc(var(--tools-w) + (100% - var(--tools-w)) / 2);right:auto;bottom:auto;transform:translate(-50%,-50%);width:min(260px,calc(100% - 20px));max-height:calc(100% - 20px);overflow:auto;overscroll-behavior:contain;padding:12px 14px 14px;border:1px solid var(--rim,#0002);border-radius:14px;box-shadow:0 10px 30px #0006;z-index:3;box-sizing:border-box}
@@ -164,14 +168,14 @@ html[data-tools="collapsed"] .tools{padding:0;border:0;visibility:hidden}
  .props.min{overflow:hidden;padding-bottom:4px}.props.min>:not(.props-head){display:none}
  body .props.moved{transform:none}.props-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}.props-head.dragging{cursor:grabbing}
  .props-head h3::before{content:'⠿ ';opacity:.6}}
-@media(max-width:650px){.ebody{--tools-w:118px}.etop{gap:5px;padding:6px 8px}.etop button{padding:8px 10px}.stage{padding:10px}}
+@media(max-width:650px){.ebody{--tools-w:118px}html[data-tools="collapsed"] .ebody{--tools-w:54px}.etop{gap:5px;padding:6px 8px}.etop button{padding:8px 10px}.stage{padding:10px}}
 </style>
 <script>
 const TOOLS_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>';
 function syncTools(){let c=document.documentElement.dataset.tools==='collapsed',b=document.getElementById('toolsToggle');if(!b)return;b.setAttribute('aria-expanded',String(!c));b.title=c?'Show tools panel':'Hide tools panel';b.setAttribute('aria-label',b.title)}
 function toggleTools(){let v=document.documentElement.dataset.tools==='collapsed'?'expanded':'collapsed';document.documentElement.dataset.tools=v;try{localStorage.setItem('forma-tools',v)}catch{}syncTools()}
 {let b=document.createElement('button');b.id='toolsToggle';b.type='button';b.className='tools-toggle';b.setAttribute('aria-controls','editorTools');b.innerHTML=TOOLS_ICON;b.onclick=toggleTools;
- let top=document.querySelector('#editor .etop');top.insertBefore(b,top.children[1]);document.querySelector('#editor .tools').id='editorTools';
+ let tools=document.querySelector('#editor .tools'),head=document.createElement('div');head.className='tools-head';head.append(b);tools.prepend(head);tools.id='editorTools';
  try{if(localStorage.getItem('forma-tools')==='collapsed')document.documentElement.dataset.tools='collapsed'}catch{}syncTools()}
 function fitStage(){let stage=document.getElementById('stage'),svg=stage?.querySelector('svg');if(!svg||!design)return;let cs=getComputedStyle(stage),w=stage.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),h=stage.clientHeight-parseFloat(cs.paddingTop)-parseFloat(cs.paddingBottom);if(w<=0||h<=0)return;
  let k=Math.min(w/design.w,h/design.h);svg.style.width=Math.floor(design.w*k)+'px';svg.style.height=Math.floor(design.h*k)+'px'}
