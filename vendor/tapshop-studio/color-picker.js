@@ -12,6 +12,7 @@ const ALPHA_RULES=[
  [i=>/update\('fill'/.test(i.getAttribute('oninput')||''),()=>document.querySelector('#props input[aria-label="Transparency"]')],
  [i=>/update\('boxFill'/.test(i.getAttribute('oninput')||''),i=>i.parentElement?.querySelector('input[aria-label="Background see-through"]')],
  [i=>/editGraphic\('[^']+','boxColor'/.test(i.getAttribute('oninput')||''),i=>trackRange(i,'boxOpacity')],
+ [i=>/editGraphic\('[^']+','gradTo'/.test(i.getAttribute('oninput')||''),i=>trackRange(i,'opacity')],
  [i=>/editGraphic\('[^']+','color'/.test(i.getAttribute('oninput')||''),i=>trackRange(i,'opacity')],
 ];
 function trackRange(i,key){let id=/editGraphic\('([^']+)'/.exec(i.getAttribute('oninput'))[1];return document.querySelector(`input[type=range][oninput*="editGraphic('${id}','${key}'"]`)}

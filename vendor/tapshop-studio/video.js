@@ -524,3 +524,22 @@ function vePositionFields(t){let b=(w,l,tt)=>`<button type="button" class="graph
 const textExtraFieldsPos=textExtraFields;textExtraFields=t=>vePositionFields(t)+textExtraFieldsPos(t);
 const shapeExtraFieldsPos=shapeExtraFields;shapeExtraFields=t=>vePositionFields(t)+shapeExtraFieldsPos(t);
 {let st=document.createElement('style');st.textContent='.ve-posrow{flex-basis:260px!important}.ve-posrow>span{display:flex;gap:4px;flex-wrap:wrap}.ve-pos{min-width:38px;padding:6px 8px}';document.head.appendChild(st)}
+
+// ---- Gradient fills for text and shape tracks: gradTo (#hex) fades from color; gradAngle in degrees (180 = top → bottom).
+const VE_GRADS=[['Sunset','#ff7e5f','#feb47b',135],['Candy','#ff3ea5','#9b6cf0',135],['Ocean','#2193b0','#6dd5ed',180],['Mint','#43e97b','#38f9d7',135],['Peach','#ffecd2','#fcb69f',180],['Night','#0f0c29','#5b4bb7',180],['Gold','#f7971e','#ffd200',135],['Fire','#f12711','#f5af19',90]];
+const VE_GRAD_DIRS=[[180,'↓','Top to bottom'],[0,'↑','Bottom to top'],[90,'→','Left to right'],[270,'←','Right to left'],[135,'↘','Diagonal down'],[45,'↗','Diagonal up']];
+const veHex=v=>/^#[0-9a-f]{6}$/i.test(v||'');
+const paintStyledTextNoGrad=paintStyledText;paintStyledText=function(t,line,x,y,maxWidth,size,local,path,pc=ctx){if(!t||!veHex(t.gradTo)||!veHex(t.color))return paintStyledTextNoGrad(t,line,x,y,maxWidth,size,local,path,pc);
+ let W=path?maxWidth:Math.min(maxWidth,pc.measureText(line).width),H=size,al=pc.textAlign,x0=path?x-W/2:(al==='left'||al==='start'?x:al==='right'||al==='end'?x-W:x-W/2),y0=y-H/2,a=(t.gradAngle??180)*Math.PI/180,sx=Math.sin(a),cy=Math.cos(a);
+ let g=pc.createLinearGradient(x0+W*(.5-.5*sx),y0+H*(.5+.5*cy),x0+W*(.5+.5*sx),y0+H*(.5-.5*cy));g.addColorStop(0,t.color);g.addColorStop(1,t.gradTo);
+ return paintStyledTextNoGrad(Object.assign(Object.create(Object.getPrototypeOf(t)),t,{color:g}),line,x,y,maxWidth,size,local,path,pc)};
+function veGradPreset(id,a,b,ang){editGraphic(id,'color',a,false);editGraphic(id,'gradAngle',ang,false);editGraphic(id,'gradTo',b,true)}
+function veGradFields(t){if(veIsEmoji(t))return '';let on=veHex(t.gradTo),id=t.id,ang=t.gradAngle??180;
+ return `<label>Colour fill<span class="ve-gbtns"><button type="button" class="ve-gb${on?'':' on'}" onclick="editGraphic('${id}','gradTo','',true)">Solid</button><button type="button" class="ve-gb${on?' on':''}" onclick="editGraphic('${id}','gradTo','${on?t.gradTo:'#9b6cf0'}',true)">Gradient</button></span></label>`+
+ (on?`<label>Fades to<input type="color" value="${t.gradTo}" oninput="editGraphic('${id}','gradTo',this.value,false)"></label>
+ <label>Direction<span class="ve-gbtns">${VE_GRAD_DIRS.map(([a,l,tt])=>`<button type="button" class="ve-gb${a===ang?' on':''}" title="${tt}" aria-label="${tt}" onclick="editGraphic('${id}','gradAngle',${a},true)">${l}</button>`).join('')}</span></label>
+ <label>Ready-made<span class="ve-gbtns">${VE_GRADS.map(([n,a,b,g])=>`<button type="button" class="ve-gp" title="${n}" aria-label="${n} gradient" style="background:linear-gradient(${g}deg,${a},${b})" onclick="veGradPreset('${id}','${a}','${b}',${g})"></button>`).join('')}</span></label>`:'')}
+const textExtraFieldsGrad=textExtraFields;textExtraFields=t=>textExtraFieldsGrad(t)+veGradFields(t);
+const shapeExtraFieldsGrad=shapeExtraFields;shapeExtraFields=t=>shapeExtraFieldsGrad(t)+veGradFields(t);
+{let st=document.createElement('style');st.textContent=`.ve-gbtns{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.ve-gb{flex:1 1 auto;min-width:30px;padding:5px 6px;border-radius:8px;border:1px solid #fff3;background:transparent;color:inherit;font:600 12px system-ui,sans-serif;cursor:pointer}.ve-gb.on{background:#9b6cf0;border-color:#9b6cf0;color:#fff}
+.ve-gp{width:30px;height:22px;border-radius:7px;border:1px solid #fff4;cursor:pointer;padding:0}body.light .ve-gb{border-color:#0002}`;document.head.appendChild(st)}
