@@ -543,3 +543,53 @@ const textExtraFieldsGrad=textExtraFields;textExtraFields=t=>textExtraFieldsGrad
 const shapeExtraFieldsGrad=shapeExtraFields;shapeExtraFields=t=>shapeExtraFieldsGrad(t)+veGradFields(t);
 {let st=document.createElement('style');st.textContent=`.ve-gbtns{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}.ve-gb{flex:1 1 auto;min-width:30px;padding:5px 6px;border-radius:8px;border:1px solid #fff3;background:transparent;color:inherit;font:600 12px system-ui,sans-serif;cursor:pointer}.ve-gb.on{background:#9b6cf0;border-color:#9b6cf0;color:#fff}
 .ve-gp{width:30px;height:22px;border-radius:7px;border:1px solid #fff4;cursor:pointer;padding:0}body.light .ve-gb{border-color:#0002}`;document.head.appendChild(st)}
+
+// ---- Brand kit in the Video Editor: the logo and fonts saved in the design studio's Brand kit,
+// one tap away (★ Brand). A logo is a shape track with shape 'brand:logo' that keeps its own copy
+// of the picture (logoSrc, logoAR), so saved videos still show it if the brand kit changes.
+const VE_BASIC_FONTS=['Georgia','Arial','Verdana','Courier New','Trebuchet MS','Times New Roman','Impact'];
+const veBk=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||'null')??d}catch{return d}};
+const veBrandFonts=()=>({heading:'Impact',body:'Arial',...veBk('tapshop-brand-fonts',{})}),veBrandColors=()=>veBk('tapshop-brand-colors',[]).filter(veHex),veBrandLogo=()=>veBk('tapshop-brand-logo',null);
+const veIsLogo=t=>t?.shape==='brand:logo'&&typeof t.logoSrc==='string';
+const veLogoImgs=new Map();function veLogoImg(src){let im=veLogoImgs.get(src);if(!im){im=new Image();im.onload=()=>{try{draw()}catch{}};im.src=src;veLogoImgs.set(src,im)}return im}
+const shapeSizeLogo=shapeSize;shapeSize=function(t,w){if(veIsLogo(t)){let h=t.size*w/1280*2,ar=+t.logoAR||1;return {w:h*ar*(t.sx||1),h:h*(t.sy||1),base:h,aspect:ar}}return shapeSizeLogo(t,w)};
+const shapeReadyLogo=shapeReady;shapeReady=function(t){if(veIsLogo(t)){let im=veLogoImg(t.logoSrc);return im.complete&&im.naturalWidth>0}return shapeReadyLogo(t)};
+const shapePathLogo=shapePath;shapePath=function(kind,cx,cy,W,H){if(kind==='brand:logo'){let p=new Path2D();p.rect(cx-W/2,cy-H/2,W,H);return p}return shapePathLogo(kind,cx,cy,W,H)};
+const shapeLabelLogo=shapeLabel;shapeLabel=function(k){return k==='brand:logo'?'★ Logo':shapeLabelLogo(k)};
+const drawShapeTrackLogo=drawShapeTrack;drawShapeTrack=function(t,local,w,h){if(!veIsLogo(t))return drawShapeTrackLogo(t,local,w,h);if(!shapeReady(t))return;
+ ctx.globalAlpha*=Math.max(.05,Math.min(1,t.opacity??1));applyTextMotion(t,local,w,h);let cx=w*t.x/100,cy=h*t.y/100+(t.animation==='slide'?Math.max(0,1-local/.4)*h*.07:0),s=shapeSize(t,w);
+ ctx.translate(cx,cy);ctx.rotate((t.rotation||0)*Math.PI/180);ctx.scale(t.flipH?-1:1,t.flipV?-1:1);let alpha=t.animation==='fade'?Math.min(1,local/.35,(t.length-local)/.35):1;ctx.globalAlpha*=Math.max(0,alpha);
+ ctx.drawImage(veLogoImg(t.logoSrc),-s.w/2,-s.h/2,s.w,s.h)};
+const shapeExtraFieldsLogo=shapeExtraFields;shapeExtraFields=function(t){if(!veIsLogo(t))return shapeExtraFieldsLogo(t);
+ return vePositionFields(t)+veRange(t,'opacity','See-through',10,100,1,Math.round((t.opacity??1)*100),100)+(veBrandLogo()?.src&&veBrandLogo().src!==t.logoSrc?`<label>Logo<button type="button" class="graphic-toggle" onclick="veRefreshLogo('${t.id}')">↻ Use my current brand logo</button></label>`:'')};
+function veRefreshLogo(id){let t=graphicTracks.find(x=>x.id===id),l=veBrandLogo();if(!t||!l?.src)return;editGraphic(id,'logoAR',l.w/l.h,false);editGraphic(id,'logoSrc',l.src,true)}
+function veAddLogo(){let l=veBrandLogo();if(!l?.src){toast('Add a logo in the Design studio’s ★ Brand kit first.');return}createGraphicTrack('shape');let t=graphicTracks.at(-1);
+ Object.assign(t,{name:'Logo',shape:'brand:logo',logoSrc:l.src,logoAR:l.w/l.h,size:50,x:86,y:12,animation:'fade',background:false,outline:false});renderGraphicTracks();draw();veCloseBrand();toast('Logo added. Drag it where you like.')}
+function veAddBrandText(kind){let f=veBrandFonts(),c=veBrandColors(),heading=kind==='heading';createGraphicTrack('text');let t=graphicTracks.at(-1);
+ Object.assign(t,{name:heading?'Heading':'Body text',text:heading?'Your headline':'Your words here',font:f[kind],size:heading?96:44,bold:heading,background:false,y:heading?40:60});if(c[0])t.color=c[0];
+ document.fonts?.load(`64px "${t.font}"`).then(()=>draw()).catch(()=>{});renderGraphicTracks();draw();veCloseBrand()}
+function veApplyBrandFonts(){let ts=graphicTracks.filter(t=>t.type==='text');if(!ts.length){toast('Add a text track first.');return}let f=veBrandFonts(),big=Math.max(...ts.map(t=>+t.size||0));
+ ts.forEach(t=>editGraphic(t.id,'font',(+t.size||0)>=big*.6?f.heading:f.body,false));Promise.all([f.heading,f.body].map(x=>document.fonts?.load(`64px "${x}"`).catch(()=>{}))).then(()=>draw());renderGraphicTracks();draw();veCloseBrand();toast('Brand fonts applied.')}
+function veFontLabel(v){return (typeof TEXT_FONTS!=='undefined'&&TEXT_FONTS.find(f=>f.family===v)?.label)||v}
+function veCloseBrand(){document.querySelector('.ve-brand')?.remove()}
+function veOpenBrand(btn){if(document.querySelector('.ve-brand')){veCloseBrand();return}let l=veBrandLogo(),f=veBrandFonts(),cs=veBrandColors(),m=document.createElement('div');m.className='ve-brand';m.setAttribute('role','dialog');m.setAttribute('aria-label','Brand kit');
+ m.innerHTML=`<div class="ve-brand-head"><b>★ Brand kit</b><button type="button" aria-label="Close" onclick="veCloseBrand()">×</button></div>
+ <div class="ve-brand-logo">${l?.src?`<img src="${l.src}" alt="Your logo">`:'<span>No logo yet</span>'}</div>
+ <button type="button" onclick="veAddLogo()" ${l?.src?'':'disabled'}>＋ Add logo</button>
+ <div class="ve-brand-fonts"><span style="font-family:'${f.heading}'">${veFontLabel(f.heading)}</span> · <span style="font-family:'${f.body}'">${veFontLabel(f.body)}</span></div>
+ <div class="ve-brand-row"><button type="button" onclick="veAddBrandText('heading')">＋ Heading</button><button type="button" onclick="veAddBrandText('body')">＋ Body text</button></div>
+ <button type="button" onclick="veApplyBrandFonts()">Use brand fonts on all text</button>
+ ${cs.length?`<div class="ve-brand-sw">${cs.map(c=>`<i style="background:${c}" title="${c}"></i>`).join('')}</div><small>Your brand colours are in every colour picker.</small>`:''}
+ <small>Change your logo, fonts and colours in the Design studio’s ★ Brand kit.</small>`;
+ document.body.appendChild(m);let r=btn.getBoundingClientRect(),W=m.offsetWidth,H=m.offsetHeight;m.style.left=Math.max(8,Math.min(r.left,innerWidth-W-8))+'px';m.style.top=(r.top-H-8>8?r.top-H-8:Math.min(r.bottom+8,innerHeight-H-8))+'px';
+ setTimeout(()=>document.addEventListener('pointerdown',function off(e){if(!m.isConnected){document.removeEventListener('pointerdown',off,true);return}if(!m.contains(e.target)&&e.target!==btn){veCloseBrand();document.removeEventListener('pointerdown',off,true)}},true),0)}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelector('.ve-brand'))veCloseBrand()});
+{let fx=document.querySelector(`button[onclick="addGraphicTrack('effect')"]`),b=document.createElement('button');b.type='button';b.id='veBrandBtn';b.textContent='★ Brand';b.onclick=()=>veOpenBrand(b);fx?.after(b)}
+// The basic fonts (and the brand fonts) show up in every text track's font list.
+const renderGraphicTracksFonts=renderGraphicTracks;renderGraphicTracks=function(){renderGraphicTracksFonts();document.querySelectorAll('select[onchange^="changeTrackFont"]').forEach(sel=>{if(sel.dataset.basic)return;sel.dataset.basic='1';let id=/changeTrackFont\('([^']+)'/.exec(sel.getAttribute('onchange'))?.[1],t=graphicTracks.find(x=>x.id===id);
+ sel.insertAdjacentHTML('beforeend',`<optgroup label="Basic fonts">${VE_BASIC_FONTS.map(f=>`<option value="${f}">${f}</option>`).join('')}</optgroup>`);if(t?.font&&[...sel.options].some(o=>o.value===t.font))sel.value=t.font})};
+{let st=document.createElement('style');st.textContent=`.ve-brand{position:fixed;z-index:9000;width:260px;display:grid;gap:8px;padding:12px;border-radius:14px;background:#211d2b;color:#f2eff8;box-shadow:0 14px 40px #0007;font:13px system-ui,sans-serif}body.light .ve-brand{background:#fff;color:#292135}
+.ve-brand button{padding:8px 10px;border-radius:10px;border:1px solid #fff3;background:#2d2739;color:inherit;font:600 13px system-ui,sans-serif;cursor:pointer}body.light .ve-brand button{background:#f1eff6;border-color:#0002}.ve-brand button:disabled{opacity:.5;cursor:default}
+.ve-brand-head{display:flex;justify-content:space-between;align-items:center}.ve-brand-head button{width:30px;height:30px;padding:0;border-radius:50%}.ve-brand-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.ve-brand-logo{min-height:70px;display:grid;place-items:center;border-radius:10px;background:#fff1}.ve-brand-logo img{max-width:70%;max-height:90px}.ve-brand-fonts{font-size:15px;text-align:center}.ve-brand small{opacity:.7}
+.ve-brand-sw{display:flex;flex-wrap:wrap;gap:5px}.ve-brand-sw i{width:22px;height:22px;border-radius:6px;border:1px solid #fff4}`;document.head.appendChild(st)}
