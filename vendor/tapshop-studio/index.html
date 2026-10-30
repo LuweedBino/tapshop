@@ -805,6 +805,31 @@ const ANIMATED_TEMPLATES=[
  {name:'5-star review',w:1080,h:1920,bg:'#1c1c1e',els:({T,SH,ST})=>[...[0,1,2,3,4].map(i=>ST('⭐',{x:115+i*175,y:520,s:150,anim:'pop',animDelay:i*.2,effect:'glow',fxColor:'#ffd60a',fxStr:4})),
   T('“Best purchase\nI made this year!”',{cx:540,y:860,size:84,font:'Georgia',italic:true,fill:'#ffffff',lineH:1.3,anim:'fade',animDelay:1.2}),T('— Happy customer',{cx:540,y:1130,size:46,fill:'#ffd60a',anim:'up',animDelay:1.6}),
   SH('pill',{x:290,y:1400,w:500,h:170,fill:'#ffd60a',text:'SHOP NOW',textColor:'#1c1c1e',anim:'pulse',animDur:1.2})]}];
+ANIMATED_TEMPLATES.push(
+ {name:'Reel cover: Day in my life',w:1080,h:1920,bg:'#ffd8be',els:({T,SH,ST})=>[ST('☀️',{x:760,y:180,s:220,anim:'spin',animDur:8}),T('A DAY',{cx:540,y:640,size:200,font:'Impact',fill:'#3d1f12',anim:'fromleft',animDur:.8}),
+  T('in my life',{cx:540,y:830,size:150,font:'Georgia',italic:true,fill:'#e8590c',anim:'fromright',animDur:.8,animDelay:.3}),ST('☕',{x:170,y:980,s:230,anim:'float',animDur:2.4}),ST('💻',{x:430,y:1020,s:230,anim:'float',animDur:2.4,animDelay:.4}),ST('🧘',{x:690,y:980,s:230,anim:'float',animDur:2.4,animDelay:.8}),
+  SH('pill',{x:290,y:1500,w:500,h:150,fill:'#3d1f12',text:'▶ WATCH',textColor:'#ffd8be',anim:'pulse',animDur:1.3})]},
+ {name:'Reel cover: 3 tips',w:1080,h:1920,bg:'#111827',els:({T,SH,ST})=>[T('3',{cx:540,y:640,size:520,font:'Impact',fill:'#facc15',effect:'extrude',fxColor:'#a16207',fxStr:8,anim:'pop',animDur:.8}),
+  T('TIPS TO GROW\nYOUR PAGE',{cx:540,y:960,size:110,font:'Impact',fill:'#ffffff',lineH:1.1,anim:'up',animDelay:.4}),ST('📈',{x:120,y:1180,s:220,anim:'bounce',animDur:1.5}),ST('💡',{x:740,y:1180,s:220,anim:'glowpulse',animDur:1.8,effect:'glow',fxColor:'#facc15',fxStr:5}),
+  T('save this for later ↓',{cx:540,y:1640,size:52,fill:'#9ca3af',anim:'fade',animDelay:1})]},
+ {name:'Reel cover: Get ready with me',w:1080,h:1920,bg:'#fce7f3',els:({T,SH,ST})=>[SH('speech',{x:140,y:300,w:800,h:460,fill:'#ec4899',text:'GET READY\nWITH ME',textColor:'#ffffff',font:'Impact',anim:'zoom',animDur:.8}),
+  ST('💄',{x:160,y:900,s:240,anim:'swing'}),ST('👗',{x:420,y:880,s:260,anim:'float',animDur:2.2}),ST('💅',{x:700,y:900,s:240,anim:'swing',animDelay:.5}),T('✨ glam edition ✨',{cx:540,y:1360,size:70,font:'Georgia',italic:true,fill:'#9d174d',anim:'blurin',animDelay:.6})]},
+ {name:'Product launch',w:1080,h:1080,bg:'#0b1020',els:({T,SH,ST})=>[T('INTRODUCING',{cx:540,y:200,size:54,fill:'#7dd3fc',letter:24,anim:'fade'}),T('The Creator Kit',{cx:540,y:350,size:120,font:'Georgia',weight:'bold',fill:'#ffffff',effect:'glow',fxColor:'#38bdf8',fxStr:4,anim:'zoom',animDur:1,animDelay:.3}),
+  ST('📦',{x:390,y:430,s:300,anim:'float',animDur:2.5}),ST('🚀',{x:780,y:640,s:180,tilt:-20,anim:'fromleft',animDelay:.8}),SH('pill',{x:320,y:830,w:440,h:140,fill:'#38bdf8',text:'AVAILABLE NOW',textColor:'#0b1020',anim:'pulse',animDur:1.2,animDelay:1})]},
+ {name:'Launch countdown',w:1080,h:1920,bg:'#1e1b4b',els:({T,SH,ST})=>[T('LAUNCHING IN',{cx:540,y:480,size:80,fill:'#c7d2fe',letter:14,anim:'down'}),SH('circle',{x:290,y:600,w:500,h:500,fill:'#6366f1',text:'3',textColor:'#ffffff',font:'Impact',anim:'heartbeat',animDur:1.2,effect:'glow',fxColor:'#a5b4fc',fxStr:5}),
+  T('DAYS',{cx:540,y:1240,size:140,font:'Impact',fill:'#ffffff',anim:'up',animDelay:.4}),ST('⏳',{x:430,y:1340,s:220,anim:'wobble',animDur:2}),T('Turn on notifications 🔔',{cx:540,y:1700,size:54,fill:'#c7d2fe',anim:'blink',animDur:2})]},
+ {name:'Black Friday',w:1080,h:1080,bg:'#000000',els:({T,SH,ST})=>[T('BLACK',{cx:540,y:290,size:210,font:'Impact',fill:'#ffffff',anim:'fromleft'}),T('FRIDAY',{cx:540,y:500,size:210,font:'Impact',fill:'#facc15',effect:'neon',fxColor:'#facc15',anim:'fromright',animDelay:.2}),
+  SH('tag',{x:300,y:570,w:480,h:230,fill:'#ef4444',text:'70% OFF',textColor:'#ffffff',font:'Impact',anim:'tada',animDur:1.4,animDelay:.6}),ST('🛒',{x:90,y:820,s:170,anim:'fromleft',animDelay:.9}),ST('💸',{x:820,y:820,s:170,anim:'float',animDur:2}),T('Ends Sunday',{cx:540,y:960,size:46,fill:'#a3a3a3',anim:'fade',animDelay:1.2})]},
+ {name:'Holiday sale',w:1080,h:1080,bg:'#14532d',els:({T,SH,ST})=>[ST('🎄',{x:60,y:620,s:300,anim:'swing',animDur:2}),ST('❄️',{x:120,y:90,s:120,anim:'spin',animDur:6}),ST('❄️',{x:860,y:140,s:100,anim:'spin',animDur:5}),
+  T('Holiday',{cx:540,y:320,size:150,font:'Georgia',italic:true,fill:'#fef3c7',anim:'drop'}),T('SALE',{cx:540,y:520,size:220,font:'Impact',fill:'#ef4444',effect:'extrude',fxColor:'#fef3c7',fxStr:5,anim:'pop',animDelay:.3}),
+  SH('pill',{x:430,y:700,w:440,h:130,fill:'#fef3c7',text:'25% OFF',textColor:'#14532d',anim:'pulse',animDur:1.3}),ST('🎁',{x:780,y:840,s:190,anim:'bounce',animDur:1.5})]},
+ {name:'Halloween sale',w:1080,h:1920,bg:'#1a0b2e',els:({T,SH,ST})=>[ST('🌕',{x:620,y:160,s:320,effect:'glow',fxColor:'#fde68a',fxStr:6,anim:'glowpulse',animDur:3}),ST('🦇',{x:120,y:260,s:180,anim:'float',animDur:1.6}),
+  T('SPOOKY',{cx:540,y:760,size:200,font:'Impact',fill:'#f97316',effect:'glitch',anim:'shake',animDur:1.2}),T('SALE',{cx:540,y:980,size:240,font:'Impact',fill:'#ffffff',anim:'zoom',animDelay:.4}),ST('🎃',{x:380,y:1080,s:320,anim:'wobble',animDur:2}),
+  SH('pill',{x:290,y:1540,w:500,h:150,fill:'#f97316',text:'TREAT YOURSELF',textColor:'#1a0b2e',anim:'pulse',animDur:1.2})]},
+ {name:"Valentine's sale",w:1080,h:1080,bg:'#ffe4e6',els:({T,SH,ST})=>[SH('heart',{x:290,y:150,w:500,h:450,fill:'#e11d48',text:'LOVE\nSALE',textColor:'#ffffff',font:'Impact',anim:'heartbeat',animDur:1.2,effect:'shadow',fxColor:'#9f1239',fxStr:3}),
+  T('Gifts they will adore',{cx:540,y:700,size:70,font:'Georgia',italic:true,fill:'#9f1239',anim:'up',animDelay:.4}),ST('💌',{x:110,y:780,s:180,anim:'float',animDur:2}),ST('🌹',{x:790,y:780,s:180,anim:'swing'}),SH('pill',{x:340,y:850,w:400,h:130,fill:'#9f1239',text:'SHOP GIFTS',textColor:'#ffffff',anim:'pulse',animDur:1.3})]},
+ {name:'New Year sale',w:1080,h:1920,bg:'#0c0a09',els:({T,SH,ST})=>[ST('🎆',{x:100,y:180,s:280,anim:'pop',animDur:1}),ST('🎇',{x:700,y:260,s:260,anim:'pop',animDelay:.5,animDur:1}),T('NEW YEAR',{cx:540,y:760,size:170,font:'Impact',fill:'#fbbf24',effect:'glow',fxColor:'#f59e0b',fxStr:5,anim:'glowpulse',animDur:2}),
+  T('NEW DEALS',{cx:540,y:960,size:170,font:'Impact',fill:'#ffffff',anim:'up',animDelay:.4}),ST('🥂',{x:400,y:1060,s:280,anim:'tada',animDur:1.6}),SH('pill',{x:290,y:1540,w:500,h:150,fill:'#fbbf24',text:'SHOP THE SALE',textColor:'#0c0a09',anim:'bounce',animDur:1.5})]});
 ANIMATED_TEMPLATES.forEach(t=>{t.category='Animated';t.animated=true;templates.push(t)});
 const makeNoAnimated=make;make=function(t){if(!t?.animated)return makeNoAnimated(t);let els=t.els(TPL).map(e=>structuredClone(e));
  for(const e of els)if(e.type==='text'&&e._cx!=null){let L=txLayout(e);e.x=Math.round(e._cx-L.inner/2);delete e._cx;delete e.cx}
@@ -910,4 +935,60 @@ const propertiesNoElGrad=properties;properties=function(){propertiesNoElGrad();l
  <div class="bgpresets">${BG_GRADS.map(([n,a,b,ang])=>`<button type="button" title="${n}" aria-label="${n} gradient" style="background:linear-gradient(${ang}deg,${a},${b})" onclick="elGradPreset('${a}','${b}',${ang})"></button>`).join('')}</div></div>`;
  inp.after(w);refreshElGrad()};
 {let st=document.createElement('style');st.textContent=`.elgrad{display:grid;gap:6px;margin:6px 0 10px}.elgrad .vrow{display:flex;gap:6px}.elgrad .vrow button{flex:1;margin:0!important;padding:6px!important;font-size:12px!important}.elgrad .vrow button.active{background:#9b6cf0!important;color:#fff!important;border-color:#9b6cf0!important}.elgrad-opts{display:none;gap:6px}.elgrad.on .elgrad-opts{display:grid}.elgrad-opts .hint{margin:0}`;document.head.appendChild(st)}
+
+// ---- Animated cards play: on computers while the pointer is over them, on phones while they're on screen.
+function hasAnim(d){return (d?.els||[]).some(e=>e.anim&&e.anim!=='none'&&TX_ANIMS[e.anim])}
+function liveSvg(d){liveVideo=true;try{return svgString(d)}finally{liveVideo=false}}
+let cardObs=null;
+const renderNoPlay=render;render=function(){renderNoPlay();cardObs?.disconnect();cardObs=null;let touch=matchMedia('(hover: none)').matches;
+ document.querySelectorAll('#grid .card').forEach(c=>{let m=/(openDesign|loadProject)\((\d+)\)/.exec(c.getAttribute('onclick')||'');if(!m)return;let i=+m[2],proj=m[1]==='loadProject',src=proj?projects[i]:templates[i];if(!src)return;
+  let d=proj?src:make(src);if(!hasAnim(d))return;let th=c.querySelector('.thumb');if(!th)return;let still=th.querySelector('svg')?.outerHTML;if(!still)return;
+  const play=()=>{if(c.dataset.playing)return;c.dataset.playing='1';let badge=th.querySelector('.anim-badge');th.querySelector('svg')?.remove();th.insertAdjacentHTML('afterbegin',liveSvg(d));if(badge)th.appendChild(badge)},
+   stop=()=>{if(!c.dataset.playing)return;delete c.dataset.playing;th.querySelector('svg')?.remove();th.insertAdjacentHTML('afterbegin',still)};
+  if(touch){cardObs??=new IntersectionObserver(es=>es.forEach(en=>en.target._play?.[en.isIntersecting?0:1]()),{threshold:.6});c._play=[play,stop];cardObs.observe(c)}
+  else{c.addEventListener('pointerenter',play);c.addEventListener('pointerleave',stop);c.addEventListener('focus',play);c.addEventListener('blur',stop)}})};
+
+// ---- Brand kit: brand colours (shared with the colour picker), heading/body fonts and a logo.
+// Kept in this browser per creator (tapshop-* keys are scoped by the Studio asset route).
+const BK_FONTS=[...new Set(['Georgia','Arial','Verdana','Courier New','Trebuchet MS','Times New Roman','Impact',...SHAPE_FONTS])];
+const bkGet=(k,d)=>{try{let v=JSON.parse(localStorage.getItem(k)||'null');return v??d}catch{return d}},bkSet=(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,JSON.stringify(v));return true}catch{toast('Could not save. Your browser storage is full.');return false}};
+const bkColors=()=>bkGet('tapshop-brand-colors',[]).filter(c=>/^#[0-9a-f]{6}$/i.test(c)),bkFonts=()=>({heading:'Impact',body:'Arial',...bkGet('tapshop-brand-fonts',{})}),bkLogo=()=>bkGet('tapshop-brand-logo',null);
+let bkEdit=false;
+{let t=document.getElementById('multiBtn'),b=document.createElement('button');b.id='brandBtn';b.type='button';b.innerHTML='★ &nbsp;Brand kit';b.onclick=()=>openBrandKit();(t||document.getElementById('layersBtn'))?.after(b)}
+function openBrandKit(){closeBrandKit();let ov=document.createElement('div');ov.className='bk-ov';ov.onclick=e=>{if(e.target===ov)closeBrandKit()};ov.innerHTML='<div class="bk" role="dialog" aria-modal="true" aria-label="Brand kit"></div>';document.body.appendChild(ov);renderBrandKit()}
+function closeBrandKit(){document.querySelector('.bk-ov')?.remove();bkEdit=false}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelector('.bk-ov')&&!document.querySelector('.cpk'))closeBrandKit()});
+function renderBrandKit(){let box=document.querySelector('.bk-ov .bk');if(!box)return;let cs=bkColors(),f=bkFonts(),logo=bkLogo(),sel=design?.els?.[selected],opt=v=>BK_FONTS.map(x=>`<option ${x===v?'selected':''}>${x}</option>`).join('');
+ box.innerHTML=`<div class="bk-head"><h3>★ Brand kit</h3><button type="button" class="bk-x" aria-label="Close" onclick="closeBrandKit()">×</button></div>
+ <section><div class="bk-row"><h4>Colours</h4>${cs.length?`<button type="button" class="bk-small" onclick="bkEdit=!bkEdit;renderBrandKit()">${bkEdit?'Done':'Edit'}</button>`:''}</div>
+  <p class="hint">${bkEdit?'Tap a colour to remove it.':sel&&/^(text|rect|circle|shape)$/.test(sel.type)?'Tap a colour to use it on the selected item.':'Tap a colour to use it as the background.'}</p>
+  <div class="bk-sw">${cs.map(c=>`<button type="button" style="background:${c}" title="${c}" aria-label="${bkEdit?'Remove '+c:'Use '+c}" onclick="bkColorTap('${c}')">${bkEdit?'<i>×</i>':''}</button>`).join('')}${bkEdit?'':`<label class="bk-add" title="Add a colour" aria-label="Add a colour">＋<input type="color" id="bkNew" value="#9b6cf0" onchange="bkAddColor(this.value)"></label>`}</div></section>
+ <section><h4>Fonts</h4><div class="bk-fonts"><label>Headings<select onchange="bkSetFont('heading',this.value)">${opt(f.heading)}</select></label><label>Body text<select onchange="bkSetFont('body',this.value)">${opt(f.body)}</select></label></div>
+  <div class="bk-prev"><b style="font-family:'${f.heading}'">Big headline</b><span style="font-family:'${f.body}'">Smaller body text looks like this.</span></div>
+  <div class="bk-btns"><button type="button" onclick="bkAddText('heading')">＋ Heading</button><button type="button" onclick="bkAddText('body')">＋ Body text</button><button type="button" onclick="bkApplyFonts()">Use on this design</button></div></section>
+ <section><h4>Logo</h4><div class="bk-logo">${logo?`<img src="${logo.src}" alt="Your logo">`:'<span class="hint">No logo yet</span>'}</div>
+  <div class="bk-btns"><label class="bk-btnlike">⬆ Upload logo<input type="file" accept="image/*" hidden onchange="bkUploadLogo(event)"></label>${sel?.type==='image'?'<button type="button" onclick="bkLogoFromSelected()">Use selected picture</button>':''}${logo?'<button type="button" onclick="bkAddLogo()">＋ Add logo to design</button><button type="button" onclick="bkSet(\'tapshop-brand-logo\',null);renderBrandKit()">Remove</button>':''}</div>
+  <p class="hint">Tip: add a picture from your Vault to the canvas, select it, then tap “Use selected picture”.</p></section>`}
+function bkColorTap(c){if(bkEdit){bkSet('tapshop-brand-colors',bkColors().filter(x=>x!==c));if(!bkColors().length)bkEdit=false;renderBrandKit();return}
+ let e=design.els[selected];checkpoint();if(e&&/^(text|rect|circle|shape)$/.test(e.type)){e.fill=c;e.noFill=false}else design.bg=c;draw();save();properties();toast('Brand colour applied.')}
+function bkAddColor(c){if(!/^#[0-9a-f]{6}$/i.test(c))return;bkSet('tapshop-brand-colors',[...bkColors().filter(x=>x!==c),c].slice(0,20));renderBrandKit()}
+function bkSetFont(k,v){if(!BK_FONTS.includes(v))return;bkSet('tapshop-brand-fonts',{...bkFonts(),[k]:v});renderBrandKit()}
+function bkAddText(k){let f=bkFonts(),c=bkColors(),heading=k==='heading';addText();let e=design.els[selected];Object.assign(e,{text:heading?'Your headline':'Your words here',font:f[k],size:Math.round(design.w*(heading?.1:.045)),bold:heading});if(c[0])e.fill=c[0];
+ if(typeof txLayout==='function'){let L=txLayout(e);e.x=Math.round((design.w-L.inner)/2)}draw();save();properties();closeBrandKit()}
+function bkApplyFonts(){let ts=design.els.filter(e=>e.type==='text');if(!ts.length){toast('Add some text first.');return}let f=bkFonts(),big=Math.max(...ts.map(e=>+e.size||0));checkpoint();ts.forEach(e=>e.font=(+e.size||0)>=big*.6?f.heading:f.body);design.els.filter(e=>e.type==='shape'&&e.text).forEach(e=>e.font=f.body);draw();save();properties();toast('Brand fonts applied.')}
+function bkStoreLogo(src){let img=new Image();img.onload=()=>{let k=Math.min(1,600/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(img.width*k));c.height=Math.max(1,Math.round(img.height*k));c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  let out;try{out=c.toDataURL('image/png')}catch{toast('This picture can’t be used as a logo.');return}if(bkSet('tapshop-brand-logo',{src:out,w:c.width,h:c.height}))toast('Logo saved to your brand kit.');renderBrandKit()};img.onerror=()=>toast('This image format could not be opened.');img.src=src}
+function bkUploadLogo(ev){let f=ev.target.files[0];ev.target.value='';if(!f)return;if(f.size>10*1024*1024){toast('Please choose an image under 10 MB.');return}let r=new FileReader();r.onload=()=>bkStoreLogo(r.result);r.readAsDataURL(f)}
+function bkLogoFromSelected(){let e=design.els[selected];if(e?.type==='image'&&e.src)bkStoreLogo(e.src)}
+function bkAddLogo(){let l=bkLogo();if(!l)return;let w=Math.round(design.w*.2),h=Math.round(w*l.h/l.w),m=Math.round(design.w*.05);add({type:'image',src:l.src,x:design.w-w-m,y:m,w,h,lock:true,ar:l.w/l.h});closeBrandKit()}
+{let st=document.createElement('style');st.textContent=`.bk-ov{position:fixed;inset:0;z-index:9000;background:#1d172666;display:grid;place-items:center;padding:12px}
+.bk{width:min(440px,100%);max-height:calc(100dvh - 24px);overflow:auto;box-sizing:border-box;background:#fff;color:#292135;border-radius:18px;padding:16px 18px;box-shadow:0 20px 60px #0005;display:grid;gap:14px}
+html[data-theme="dark"] .bk{background:#211d2b;color:#f2eff8}.bk h3{margin:0}.bk h4{margin:0 0 6px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;opacity:.7}.bk section{display:grid;gap:6px}.bk .hint{margin:0}
+.bk-head,.bk-row{display:flex;justify-content:space-between;align-items:center}.bk-x{width:36px;height:36px;margin:0!important;padding:0!important;border-radius:50%!important;font-size:20px!important}.bk .bk-small{margin:0!important;padding:4px 10px!important;font-size:12px!important}
+.bk-sw{display:flex;flex-wrap:wrap;gap:8px}.bk-sw button,.bk-add{position:relative;width:40px;height:40px;margin:0!important;padding:0!important;border-radius:10px!important;border:1px solid #0003;box-sizing:border-box}.bk-sw i{position:absolute;inset:0;display:grid;place-items:center;font-style:normal;font-weight:700;color:#fff;background:#0007;border-radius:9px}
+.bk-add{display:grid;place-items:center;border:1.5px dashed currentColor!important;opacity:.75;cursor:pointer;font-size:18px}.bk-add input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.bk-fonts{display:grid;grid-template-columns:1fr 1fr;gap:8px}.bk-fonts label{display:grid;gap:4px;font-size:12px}.bk-fonts select{width:100%}
+.bk-prev{display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:#9b6cf014}.bk-prev b{font-size:26px;line-height:1.1}.bk-prev span{font-size:14px}
+.bk-btns{display:flex;flex-wrap:wrap;gap:6px}.bk-btns>*{margin:0!important;flex:1 1 auto;padding:8px 10px!important;font-size:13px!important}.bk-btnlike{display:inline-flex;align-items:center;justify-content:center;border:1px solid #0002;border-radius:10px;cursor:pointer;background:#f1eff6}html[data-theme="dark"] .bk-btnlike{background:#2d2739}
+.bk-logo{min-height:90px;display:grid;place-items:center;border-radius:12px;background-color:#fff;background-image:linear-gradient(45deg,#e4e4ea 25%,transparent 25%,transparent 75%,#e4e4ea 75%),linear-gradient(45deg,#e4e4ea 25%,transparent 25%,transparent 75%,#e4e4ea 75%);background-size:16px 16px;background-position:0 0,8px 8px}.bk-logo img{max-width:70%;max-height:120px}`;document.head.appendChild(st)}
 </script></body></html>
