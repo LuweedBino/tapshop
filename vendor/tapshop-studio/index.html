@@ -888,4 +888,26 @@ const checkpointNoCpk=checkpoint;checkpoint=function(){let s=window.cpkSession;i
   if(!hits.length){multiSel=[];selected=-1}else if(hits.length===1){multiSel=[];selected=design.els.indexOf(hits[0])}else{multiSel=hits;selected=design.els.indexOf(hits.at(-1));if(!multiMode)toggleMulti(true),multiSel=hits;toast(`Picked ${hits.length} items. Drag any of them to move them all.`)}
   properties();highlight()};
  addEventListener('pointerup',end,true);addEventListener('pointercancel',e=>{if(sw&&e.pointerId===sw.id){sw.rect?.remove();sw=null}},true)}
+
+// ---- Gradient fills for shapes and text: el.fillGrad = {to:'#hex', angle} (fades from el.fill).
+// The gradient is sized to the item itself, so it follows it when moved or resized.
+let elGradSeq=0;const GRAD_TYPES=/^(text|rect|circle|shape)$/;
+const markupNoGrad=markup;markup=function(e,i){let m=markupNoGrad(e,i),g=e?.fillGrad;if(!g||!/^#[0-9a-f]{6}$/i.test(g.to||'')||!GRAD_TYPES.test(e.type)||e.noFill)return m;
+ let key=`fill="${e.fill}"`,at=e.type==='text'?m.lastIndexOf(key):m.indexOf(key);if(at<0)return m;
+ let id='elg'+(++elGradSeq),d=bgGradEnds(g.angle),f=n=>+n.toFixed(2),defs=`<defs><linearGradient id="${id}" x1="${f(d.x1)}%" y1="${f(d.y1)}%" x2="${f(d.x2)}%" y2="${f(d.y2)}%"><stop offset="0" stop-color="${e.fill}"/><stop offset="1" stop-color="${g.to}"/></linearGradient></defs>`;
+ m=m.slice(0,at)+`fill="url(#${id})"`+m.slice(at+key.length);let k=m.indexOf('>')+1;return m.slice(0,k)+defs+m.slice(k)};
+function setElGrad(p){let e=design.els[selected];if(!e)return;checkpoint();if(p===null)delete e.fillGrad;else e.fillGrad={...(e.fillGrad||{to:'#9b6cf0',angle:180}),...p};draw();save();refreshElGrad()}
+function elGradPreset(a,b,ang){let e=design.els[selected];if(!e)return;checkpoint();e.fill=a;e.fillGrad={to:b,angle:ang};draw();save();properties()}
+function refreshElGrad(){let w=document.querySelector('#props .elgrad'),g=design.els[selected]?.fillGrad;if(!w)return;w.classList.toggle('on',!!g);
+ w.querySelectorAll('.vrow button').forEach(b=>b.classList.toggle('active',(b.dataset.m==='grad')===!!g));
+ if(g){let i=w.querySelector('#elg2');if(i&&i.value!==g.to)i.value=g.to;w.querySelectorAll('.bgdirs button').forEach(b=>b.classList.toggle('active',+b.dataset.a===(g.angle??180)))}}
+const propertiesNoElGrad=properties;properties=function(){propertiesNoElGrad();let e=design?.els?.[selected],p=document.getElementById('props');if(!e||!p||!GRAD_TYPES.test(e.type)||p.querySelector('.elgrad'))return;
+ let inp=p.querySelector(`input[type=color][oninput*="update('fill'"]`);if(!inp)return;
+ let w=document.createElement('div');w.className='elgrad';
+ w.innerHTML=`<div class="vrow"><button type="button" data-m="solid" onclick="setElGrad(null)">Solid</button><button type="button" data-m="grad" onclick="setElGrad({})">Gradient</button></div>
+ <div class="elgrad-opts"><label class="hint">Fades to <input type="color" id="elg2" value="${e.fillGrad?.to||'#9b6cf0'}" oninput="setElGrad({to:this.value})"></label>
+ <div class="bgdirs">${BG_DIRS.map(([a,l,t])=>`<button type="button" data-a="${a}" title="${t}" aria-label="${t}" onclick="setElGrad({angle:${a}})">${l}</button>`).join('')}</div>
+ <div class="bgpresets">${BG_GRADS.map(([n,a,b,ang])=>`<button type="button" title="${n}" aria-label="${n} gradient" style="background:linear-gradient(${ang}deg,${a},${b})" onclick="elGradPreset('${a}','${b}',${ang})"></button>`).join('')}</div></div>`;
+ inp.after(w);refreshElGrad()};
+{let st=document.createElement('style');st.textContent=`.elgrad{display:grid;gap:6px;margin:6px 0 10px}.elgrad .vrow{display:flex;gap:6px}.elgrad .vrow button{flex:1;margin:0!important;padding:6px!important;font-size:12px!important}.elgrad .vrow button.active{background:#9b6cf0!important;color:#fff!important;border-color:#9b6cf0!important}.elgrad-opts{display:none;gap:6px}.elgrad.on .elgrad-opts{display:grid}.elgrad-opts .hint{margin:0}`;document.head.appendChild(st)}
 </script></body></html>
