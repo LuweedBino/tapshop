@@ -33,7 +33,7 @@ function remember(hex){try{localStorage.setItem(RECENT_KEY,JSON.stringify([hex,.
 
 let box=null,cur=null;
 function css(){if(document.getElementById('cpk-css'))return;let st=document.createElement('style');st.id='cpk-css';st.textContent=`
-.cpk{position:fixed;z-index:10000;width:176px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;box-sizing:border-box;padding:6px;border-radius:10px;background:#fff;color:#292135;box-shadow:0 12px 40px #0004;font:10px system-ui,sans-serif;display:grid;grid-template-columns:minmax(0,1fr);gap:4px;touch-action:none;user-select:none;-webkit-user-select:none}
+.cpk{position:fixed;z-index:10000;width:176px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;box-sizing:border-box;padding:6px;border-radius:10px;border:2px solid #fff;background:#fff;color:#292135;box-shadow:0 0 0 1px #0004,0 12px 40px #0004;font:10px system-ui,sans-serif;display:grid;grid-template-columns:minmax(0,1fr);gap:4px;touch-action:none;user-select:none;-webkit-user-select:none}
 .cpk.dark{background:#211d2b;color:#f2eff8}
 .cpk.sheet{left:8px!important;right:8px;bottom:8px;top:auto!important;width:auto;max-width:none;max-height:55vh;overflow:auto}
 .cpk-sv{position:relative;height:54px;border-radius:8px;cursor:crosshair;background:linear-gradient(transparent,#000),linear-gradient(90deg,#fff,transparent)}
