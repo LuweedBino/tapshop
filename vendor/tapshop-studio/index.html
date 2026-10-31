@@ -210,7 +210,7 @@ const SETTINGS_TITLE={text:'T  Text settings',circle:'○  Circle settings',imag
 const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();let p=document.getElementById('props'),el=design?.els?.[selected];if(el?.type==='video')p.innerHTML=videoPanel(el);
  else if(el&&el.type!=='text'){p.querySelectorAll('input[type=number]').forEach(i=>{let k=/'([wh])'/.exec(i.getAttribute('onchange')||'')?.[1];if(k)i.setAttribute('onchange',`videoSize('${k}',this.value)`)});
   let l=document.createElement('label');l.className='vcheck';l.innerHTML=`<input type="checkbox" ${lockOf(el)?'checked':''}> Keep its shape when resizing`;l.querySelector('input').onchange=ev=>{checkpoint();el.lock=ev.target.checked;if(el.lock)el.ar=el.w/el.h;save()};
-  let size=[...p.querySelectorAll('input[type=number]')].at(-1);(size||p.lastChild)?.after(l)}let h=p.querySelector('h3');if(h&&el)h.textContent=el.type==='shape'?(SHAPE_BY_ID[el.shape]?.icon||'◆')+'  '+(SHAPE_BY_ID[el.shape]?.label||'Shape')+' settings':SETTINGS_TITLE[el.type]||'▢  Rectangle settings';p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('min',propsMin);
+  let size=[...p.querySelectorAll('input[type=number]')].at(-1);(size||p.lastChild)?.after(l)}let h=p.querySelector('h3');if(h&&el)h.textContent=el.type==='shape'?(SHAPE_BY_ID[el.shape]?.icon||'◆')+'  '+(SHAPE_BY_ID[el.shape]?.label||'Shape')+' settings':SETTINGS_TITLE[el.type]||'▢  Rectangle settings';p.classList.toggle('empty',!design?.els?.[selected]);p.classList.toggle('vprops',el?.type==='video');p.classList.toggle('min',propsMin);
  if(h){let head=document.createElement('div');head.className='props-head';h.replaceWith(head);head.append(h);let b=document.createElement('button');b.type='button';b.className='props-min';b.textContent=propsMin?'+':'−';b.title=propsMin?'Show settings':'Shrink settings';b.setAttribute('aria-label',b.title);b.setAttribute('aria-expanded',String(!propsMin));b.onclick=togglePropsMin;head.append(b);head.addEventListener('pointerdown',propsDragStart)}placeProps()};
 // On tablets and phones the panel opens centred over the canvas and can be dragged by its
 // title bar; where you leave it is kept until the page reloads. It always stays on screen.
@@ -248,6 +248,7 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&editorOpen()&&selected>=0&&!
 .vpair{display:flex;gap:6px;align-items:center}.vpair input{min-width:0}.vpair span{opacity:.7;font-size:12px;flex:none}.props .vpair input[type=color]{width:44px;flex:none;padding:2px}
 .vcover{display:flex;gap:8px;align-items:center}.vcover img{width:64px;height:40px;object-fit:cover;border-radius:6px;flex:none}.vcover button{flex:1;font-size:12px;padding:7px 6px}
 .props input[type=range]{padding:0;border:0;background:none;box-shadow:none;accent-color:#9b6cf0}.props .vcheck{display:flex;gap:8px;align-items:center;cursor:pointer}.props .vcheck input{width:auto}.vwide{width:100%;margin-top:10px}
+.props.vprops{border:2px solid #9b6cf0!important}
 </style>
 <script>
 // Video settings: playback (play/pause, sound, loop, speed), trim, cover picture, and look
