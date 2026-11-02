@@ -89,3 +89,6 @@ let resumeTimer=null,resumeWanted=false,inSeek=0;
 const seekKeepPlaying=seekTimeline;seekTimeline=async function(t){if(playing&&!exporting)resumeWanted=true;inSeek++;try{await seekKeepPlaying(t)}finally{inSeek--}if(resumeWanted&&!exporting){clearTimeout(resumeTimer);resumeTimer=setTimeout(()=>{resumeWanted=false;if(!playing&&!exporting&&playhead<total()-.1)togglePlay()},250)}};
 // Any other pause (Pause button, tapping a strip to edit, splitting) cancels the resume.
 const pauseCancelsResume=pause;pause=function(){if(!inSeek){resumeWanted=false;clearTimeout(resumeTimer)}pauseCancelsResume()};
+// Delete removes whichever strip was tapped last (text, shape, effect, audio or video), not only main clips.
+let pickedStrip=null;const pickStripBase=selectStrip;selectStrip=function(kind,id){pickedStrip={kind,id};pickStripBase(kind,id)};
+const removeMainClip=removeClip;removeClip=function(){let p=pickedStrip,m=p&&stripModel(p.kind,p.id);if(!m||p.kind==='main'){pickedStrip=null;removeMainClip();return}if(exporting)return;pickedStrip=null;expandedStrip=null;hideSplit();if(p.kind==='extra')deleteTrack(p.id);else removeGraphic(p.id);toast('Deleted '+(m.name||'strip'))};
