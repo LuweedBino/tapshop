@@ -108,7 +108,7 @@ const load=async(T,model,device)=>T.pipeline('automatic-speech-recognition',mode
 self.onmessage=async e=>{let m=e.data;try{
   const T=await import('${LIB}');T.env.allowLocalModels=false;
   if(!tr||key!==m.key){tr=null;let err;for(let model of m.models){for(let device of (m.gpu?['webgpu','wasm']:['wasm'])){try{tr=await load(T,model,device);key=m.key;self.postMessage({type:'ready',model,device});break}catch(x){err=x}}if(tr)break}if(!tr)throw err}
-  const opts={chunk_length_s:30,stride_length_s:5,task:'transcribe'};if(m.language)opts.language=m.language;
+  const opts={task:'transcribe'};if(m.language)opts.language=m.language;
   let out,mode='word';try{out=await tr(m.audio,{...opts,return_timestamps:'word'})}catch(x){mode='segment';out=await tr(m.audio,{...opts,return_timestamps:true})}
   self.postMessage({type:'done',mode,chunks:(out.chunks||[]).map(c=>({text:c.text,ts:c.timestamp})),text:out.text||''});
 }catch(x){self.postMessage({type:'error',message:String(x&&x.message||x)})}};`;
@@ -121,8 +121,17 @@ function ask(msg,onProgress){return new Promise((res,rej)=>{if(!worker){let url=
 const decoded=new Map();
 async function clipAudio(c){let a=asset(c);if(!a?.file)throw Error('Can’t find the file for '+(a?.name||'a clip'));
   if(!decoded.has(a.id)){let buf;try{buf=await new OfflineAudioContext(1,1,16000).decodeAudioData(await a.file.arrayBuffer())}catch{throw Error((a.name||'A clip')+' has no sound we can read.')}
+    // Some browsers hand back the file's own sample rate; resample so 16000 samples really is one second.
+    if(buf.sampleRate!==16000){let oc=new OfflineAudioContext(buf.numberOfChannels,Math.ceil(buf.duration*16000),16000),src=oc.createBufferSource();src.buffer=buf;src.connect(oc.destination);src.start();buf=await oc.startRendering()}
     let n=buf.length,mono=new Float32Array(n);for(let ch=0;ch<buf.numberOfChannels;ch++){let d=buf.getChannelData(ch);for(let i=0;i<n;i++)mono[i]+=d[i]/buf.numberOfChannels}decoded.set(a.id,mono)}
   let all=decoded.get(a.id);return all.slice(Math.floor(c.in*16000),Math.ceil(c.out*16000))}
+// The speech library's own splitting of audio over 30 s gets word times wrong (they drift later and
+// later; transformers.js issue 1358), so send pieces of at most 28 s, cut at the quietest 0.1 s
+// between 18 and 28 s so a word is rarely split, and add each piece's start time ourselves.
+function pieces(audio){const SR=16000,MAX=28*SR,MIN=18*SR,F=SR/10,out=[];let pos=0;
+  while(audio.length-pos>MAX){let best=pos+MAX,low=Infinity;for(let f=pos+MIN;f+F<=pos+MAX;f+=F/2){let e=0;for(let i=f;i<f+F;i+=4)e+=audio[i]*audio[i];if(e<low){low=e;best=f+F/2}}
+    best=Math.round(best);out.push({at:pos/SR,audio:audio.slice(pos,best)});pos=best}
+  out.push({at:pos/SR,audio:audio.slice(pos)});return out}
 // Turn engine output into words with times inside a clip of length dur.
 function toWords(r,dur){let words=[];
   if(r.mode==='word')for(let c of r.chunks){let w=String(c.text).trim();if(!w)continue;let [s,e]=c.ts||[];s=Number.isFinite(s)?s:null;e=Number.isFinite(e)?e:null;words.push({w,s,e})}
@@ -166,10 +175,11 @@ async function run(){let d=dialog(),status=d.querySelector('#capStatus'),prog=d.
   say('Starting the speech engine…');let all=[],list=clips.map((c,i)=>({c,i,start:startOf(i)}));
   try{for(let k=0;k<list.length;k++){let {c,i,start}=list[k];if(cancelled)return;
       say(`Getting the sound from clip ${k+1} of ${list.length}…`);let audio;try{audio=await clipAudio(c)}catch(x){toast(x.message);continue}
-      if(audio.length<1600)continue;let dur=audio.length/16000;
-      let r=await ask({key:q,models:MODELS[q],gpu:'gpu' in navigator,language:lang,audio},m=>{if(m.type==='dl'){files[m.file]=[m.loaded,m.total];let l=0,t=0;for(let [a,b] of Object.values(files)){l+=a;t+=b}say(`Downloading the speech engine (first time only)… ${Math.round(l/t*100)}%`,l/t)}else say(`Listening to clip ${k+1} of ${list.length}… (this can take a minute)`)});
-      if(cancelled)return;say(`Listening to clip ${k+1} of ${list.length}… (this can take a minute)`);
-      for(let w of toWords(r,dur)){let s=start+w.s/c.speed,e=start+w.e/c.speed;if(s<start+duration(c)-.02)all.push({w:w.w,s:Math.round(s*100)/100,e:Math.round(Math.min(e,start+duration(c))*100)/100})}}
+      if(audio.length<1600)continue;let parts=pieces(audio);
+      for(let pi=0;pi<parts.length;pi++){let part=parts[pi],dur=part.audio.length/16000,where=`clip ${k+1} of ${list.length}`+(parts.length>1?`, part ${pi+1} of ${parts.length}`:'');if(dur<.1)continue;
+      let r=await ask({key:q,models:MODELS[q],gpu:'gpu' in navigator,language:lang,audio:part.audio},m=>{if(m.type==='dl'){files[m.file]=[m.loaded,m.total];let l=0,t=0;for(let [a,b] of Object.values(files)){l+=a;t+=b}say(`Downloading the speech engine (first time only)… ${Math.round(l/t*100)}%`,l/t)}else say(`Listening to ${where}… (this can take a minute)`)});
+      if(cancelled)return;say(`Listening to ${where}… (this can take a minute)`);
+      for(let w of toWords(r,dur)){let s=start+(part.at+Math.min(w.s,dur))/c.speed,e=start+(part.at+Math.min(w.e,dur))/c.speed;if(s<start+duration(c)-.02)all.push({w:w.w,s:Math.round(s*100)/100,e:Math.round(Math.min(e,start+duration(c))*100)/100})}}}
     if(cancelled)return;
     if(!all.length){err.textContent='We couldn’t hear any words. Check the video has speech and the right language is picked.';return}
     all.sort((a,b)=>a.s-b.s);snapshot();let old=graphicTracks.find(isCap),keepStyle=old&&old.style?.preset===chosen?old.style:null;graphicTracks=graphicTracks.filter(t=>!isCap(t));
