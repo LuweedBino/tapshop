@@ -25,3 +25,10 @@
     follow();setInterval(follow,800);
   }
 })();
+// Design editor tools panel: split buttons like "◆   Shapes" into an icon and a label so the folded
+// panel can still show them as icons. Re-split if a button's text is changed later.
+(()=>{const tools=document.querySelector('.tools');if(!tools)return;
+  const split=b=>{if(b.querySelector('.ts-ti'))return;let m=/^(\S{1,2})[\s ]{2,}(.+)$/.exec(b.textContent.trim())||/^([^\p{L}\p{N}\s]{1,2})[\s ]+(.+)$/u.exec(b.textContent.trim());if(!m||b.children.length)return;
+    b.textContent='';let i=document.createElement('span');i.className='ts-ti';i.textContent=m[1];let l=document.createElement('span');l.className='ts-tl';l.textContent='  '+m[2];b.append(i,l);b.classList.add('ts-ic');if(!b.title)b.title=m[2];if(!b.getAttribute('aria-label'))b.setAttribute('aria-label',m[2])};
+  const all=()=>tools.querySelectorAll(':scope>button').forEach(split);all();
+  new MutationObserver(all).observe(tools,{childList:true,subtree:true,characterData:true})})();
