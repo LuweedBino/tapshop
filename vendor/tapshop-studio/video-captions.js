@@ -23,7 +23,8 @@ const PRESETS={
 // Your own styles live in tapshop-caption-styles as [{id, name, style}] and use preset keys 'my:<id>'.
 const mine=()=>{try{let a=JSON.parse(localStorage.getItem('tapshop-caption-styles')||'[]');return Array.isArray(a)?a.filter(x=>x&&x.id&&x.style):[]}catch{return []}};
 const saveMine=a=>{try{localStorage.setItem('tapshop-caption-styles',JSON.stringify(a.slice(0,12)))}catch{toast('Couldn’t save that style on this device.')}};
-const allPresets=()=>[...Object.entries(PRESETS),...mine().map(m=>['my:'+m.id,{label:'★ '+m.name}])];
+const myPresets=()=>mine().map(m=>['my:'+m.id,{label:m.name}]);
+const allPresets=()=>[...Object.entries(PRESETS),...myPresets()];
 const presetStyle=k=>{if(String(k).startsWith('my:')){let m=mine().find(x=>'my:'+x.id===k);return {...BASE,...(m?.style||{}),preset:m?k:'custom'}}let p={...BASE,...PRESETS[k]};delete p.label;p.preset=k;return p};
 const hasPreset=k=>!!(PRESETS[k]||mine().some(x=>'my:'+x.id===k));
 // Auto emoji: a word that matches one of these gets its emoji, shown above the caption or after the word.
@@ -93,7 +94,8 @@ const select=(id,key,v,label,opts,num)=>`<label>${label}<select onchange="capSet
 const toggle=(id,key,v,label)=>`<label>${label}<button type="button" class="graphic-toggle" aria-pressed="${!!v}" onclick="capSet('${id}','${key}',${!v})">${v?'On':'Off'}</button></label>`;
 function panel(t){let st=style(t),id=t.id;
   return `<div class="cap-panel"><div class="cap-head"><b>Captions</b><span class="sub">${t.words.length} words · tap a style, then fine-tune</span><button type="button" onclick="editGraphic('${id}','hidden',${!t.hidden})">${t.hidden?'Show':'Hide'}</button><button type="button" onclick="capSaveStyle('${id}')">★ Save my style</button><button type="button" onclick="openCaptions()">Redo captions</button><button type="button" onclick="removeGraphic('${id}')">Delete captions</button></div>
-  <div class="cap-presets">${allPresets().map(([k,p])=>`<span class="cap-pwrap"><button type="button" class="cap-preset ${st.preset===k?'on':''}" onclick="capPreset('${id}','${k}')"><img alt="" src="${previewCanvas(k)}"><span>${esc(p.label)}</span></button>${k.startsWith('my:')?`<button type="button" class="cap-pdel" aria-label="Delete ${esc(p.label)}" title="Delete this style" onclick="capDeleteStyle('${k}',event)">×</button>`:''}</span>`).join('')}</div>
+  <p class="cap-group">Styles</p><div class="cap-presets">${(list=>list.map(([k,p])=>`<span class="cap-pwrap"><button type="button" class="cap-preset ${st.preset===k?'on':''}" onclick="capPreset('${id}','${k}')"><img alt="" src="${previewCanvas(k)}"><span>${esc(p.label)}</span></button>${k.startsWith('my:')?`<button type="button" class="cap-pdel" aria-label="Delete ${esc(p.label)}" title="Delete this style" onclick="capDeleteStyle('${k}',event)">×</button>`:''}</span>`).join(''))(Object.entries(PRESETS))}</div>
+  ${myPresets().length?`<p class="cap-group">★ My saved styles</p><div class="cap-presets">${(list=>list.map(([k,p])=>`<span class="cap-pwrap"><button type="button" class="cap-preset ${st.preset===k?'on':''}" onclick="capPreset('${id}','${k}')"><img alt="" src="${previewCanvas(k)}"><span>${esc(p.label)}</span></button>${k.startsWith('my:')?`<button type="button" class="cap-pdel" aria-label="Delete ${esc(p.label)}" title="Delete this style" onclick="capDeleteStyle('${k}',event)">×</button>`:''}</span>`).join(''))(myPresets())}</div>`:`<p class="sub cap-mytip">Tip: style your captions the way you like, then tap ★ Save my style to keep it here.</p>`}
   <div class="extra-track-fields cap-fields">
   ${select(id,'font',st.font,'Font',FONTS.map(f=>[f.family,f.label]))}
   ${range(id,'size',st.size,.025,.14,.005,'Size',v=>Math.round(v*1000)/10+'%')}
@@ -166,7 +168,7 @@ function toWords(r,dur){let words=[];
 let chosen='pop';
 function dialog(){let d=document.getElementById('capDialog');if(d)return d;d=document.createElement('dialog');d.id='capDialog';d.className='closable';
   d.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>✨ Auto captions</h2><p class="sub">We listen to your video and write the words, timed to when they’re said. It all happens on this device — nothing is uploaded.</p>
-  <div class="cap-step"><b>Caption style</b><div class="cap-presets" id="capStyles"></div></div>
+  <div class="cap-step" id="capStyleBox"><b>Caption style</b><div class="cap-presets" id="capStyles"></div><div id="capMyWrap" hidden><b>★ My saved styles</b><div class="cap-presets" id="capMyStyles"></div></div></div>
   <div class="row"><label>Language<select id="capLang">${LANGS.map(([k,l])=>`<option value="${k}">${l}</option>`).join('')}</select></label>
   <label>Speed<select id="capModel"><option value="better">Better accuracy</option><option value="fast">Faster</option></select></label></div>
   <p class="sub" id="capNote">The first time, your browser downloads the speech engine (a one-time download). After that it’s saved. Phones are slower than computers.</p>
@@ -177,12 +179,13 @@ function dialog(){let d=document.getElementById('capDialog');if(d)return d;d=doc
   d.querySelector('.dialog-x').onclick=()=>cancel(true);d.querySelector('#capCancel').onclick=()=>cancel(true);
   d.addEventListener('cancel',e=>{e.preventDefault();cancel(true)});
 
-  d.querySelector('#capStyles').onclick=e=>{let b=e.target.closest('.cap-preset');if(!b)return;chosen=b.dataset.k;syncStyles()};
+  d.querySelector('#capStyleBox').onclick=e=>{let b=e.target.closest('.cap-preset');if(!b)return;chosen=b.dataset.k;syncStyles()};
   d.querySelector('#capGo').onclick=run;
   try{let s=JSON.parse(localStorage.getItem('tapshop-captions')||'{}');if(hasPreset(s.style))chosen=s.style;if(s.lang!=null)d.querySelector('#capLang').value=s.lang;if(MODELS[s.model])d.querySelector('#capModel').value=s.model}catch{}
   return d}
-function fillStyles(){let box=document.getElementById('capStyles');if(!box)return;if(!hasPreset(chosen))chosen='pop';box.innerHTML=allPresets().map(([k,p])=>`<button type="button" class="cap-preset" data-k="${esc(k)}"><img alt="" src="${previewCanvas(k)}"><span>${esc(p.label)}</span></button>`).join('');syncStyles()}
-function syncStyles(){document.querySelectorAll('#capStyles .cap-preset').forEach(b=>b.classList.toggle('on',b.dataset.k===chosen))}
+function fillStyles(){let box=document.getElementById('capStyles');if(!box)return;if(!hasPreset(chosen))chosen='pop';let chips=list=>list.map(([k,p])=>`<button type="button" class="cap-preset" data-k="${esc(k)}"><img alt="" src="${previewCanvas(k)}"><span>${esc(p.label)}</span></button>`).join('');
+  box.innerHTML=chips(Object.entries(PRESETS));let my=myPresets();document.getElementById('capMyStyles').innerHTML=chips(my);document.getElementById('capMyWrap').hidden=!my.length;syncStyles()}
+function syncStyles(){document.querySelectorAll('#capStyleBox .cap-preset').forEach(b=>b.classList.toggle('on',b.dataset.k===chosen))}
 let busy=false,cancelled=false;
 function cancel(close){if(busy){cancelled=true;worker?.terminate();worker=null;busy=false;toast('Captions cancelled.')}if(close)document.getElementById('capDialog')?.close();setBusy(false)}
 function setBusy(on){let d=document.getElementById('capDialog');if(!d)return;d.querySelector('#capWork').hidden=!on;d.querySelector('#capGo').disabled=on;d.querySelector('#capNote').hidden=on;d.querySelectorAll('select,.cap-preset').forEach(x=>x.disabled=on)}
@@ -225,7 +228,8 @@ let css=document.createElement('style');css.textContent=`.duration-strip[data-ki
 .cap-words{display:flex;flex-wrap:wrap;gap:6px;max-height:220px;overflow:auto;padding:2px}
 .cap-words input{width:auto!important;min-width:0;padding:5px 7px!important;font-size:13px;border-radius:8px!important}
 #capDialog{width:min(560px,94vw)}#capDialog .row{display:flex;gap:10px;flex-wrap:wrap}#capDialog .row label{flex:1;min-width:150px;display:flex;flex-direction:column;gap:4px}
-#capDialog .row:last-child{justify-content:flex-end;margin-top:6px}#capDialog .cap-step{margin:12px 0}`;document.head.appendChild(css);
+#capDialog .row:last-child{justify-content:flex-end;margin-top:6px}#capDialog .cap-step{margin:12px 0}#capDialog .cap-step>b,#capMyWrap>b{display:block;margin:0 0 6px}#capMyWrap{margin-top:12px}
+.cap-group{margin:4px 0 0;font-size:13px;font-weight:700}.cap-mytip{margin:0}`;document.head.appendChild(css);
 let btn=document.createElement('button');btn.type='button';btn.textContent='✨ Captions';btn.title='Auto captions';btn.onclick=()=>openCaptions();
 let smart=[...document.querySelectorAll('.timebar button')].find(b=>/Smart tools/.test(b.textContent));(smart||document.querySelector('.timebar button'))?.after(btn);
 })();
