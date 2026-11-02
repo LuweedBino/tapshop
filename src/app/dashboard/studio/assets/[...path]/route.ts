@@ -29,6 +29,8 @@ const FILES = new Set([
   "vault-picker.js",
   "studio-catalog.js",
   "color-picker.js",
+  "tapshop-theme.css",
+  "tapshop-theme.js",
   "demo.webm",
 ]);
 
