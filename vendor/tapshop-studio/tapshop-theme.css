@@ -68,3 +68,11 @@ html.ts body #time{color:var(--ts-text)!important}
    (the ＋ character doesn't). White circle + black plus on the black button; flips in dark mode. */
 html.ts[data-sidebar="collapsed"] body #mainSidebar>.primary .nav-icon{display:block;width:32px;height:32px;padding:0;border:0!important;border-radius:50%;box-shadow:none!important;font-size:0!important;color:transparent!important;
   background:linear-gradient(var(--ts-primary),var(--ts-primary)) center/14px 2.5px no-repeat,linear-gradient(var(--ts-primary),var(--ts-primary)) center/2.5px 14px no-repeat,var(--ts-on-primary)!important}
+
+/* Design editor: when the left tools panel is folded, keep its main buttons as icon squares
+   (tapshop-theme.js splits "◆  Shapes" into an icon and a label) instead of hiding everything. */
+html.ts[data-tools="collapsed"] body .tools>button.ts-ic{display:flex!important;align-items:center;justify-content:center;width:40px;height:40px;min-height:0;padding:0!important;margin:0 auto 8px!important;font-size:17px}
+html.ts[data-tools="collapsed"] body .tools>button.ts-ic .ts-tl{display:none}
+html.ts[data-tools="collapsed"] body .tools>:not(.tools-head):not(button.ts-ic){display:none!important}
+html.ts[data-tools="collapsed"] body .tools .tools-head{margin-bottom:10px}
+html.ts body .tools>button.ts-ic .ts-ti{display:inline-block;min-width:1.2em;text-align:center}
