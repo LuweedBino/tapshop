@@ -35,6 +35,7 @@ const FILES = new Set([
   "video-captions.js",
   "video-autosave.js",
   "studio-social.js",
+  "studio-projects.js",
   "demo.webm",
 ]);
 
