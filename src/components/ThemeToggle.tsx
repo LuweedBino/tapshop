@@ -25,7 +25,7 @@ export function ThemeToggle({ initialDark }: { initialDark: boolean }) {
     >
       <span aria-hidden="true">{dark ? "☀" : "☾"}</span>
       <span>{dark ? "Dark mode" : "Light mode"}</span>
-      <span aria-hidden="true" className={`flex h-[18px] w-[30px] items-center rounded-full p-[2px] transition-colors ${dark ? "bg-violet-400" : "bg-neutral-300"}`}>
+      <span aria-hidden="true" className={`flex h-[18px] w-[30px] items-center rounded-full p-[2px] transition-colors ${dark ? "bg-neutral-950" : "bg-neutral-300"}`}>
         <span className={`h-[14px] w-[14px] rounded-full bg-white shadow transition-transform ${dark ? "translate-x-[12px]" : ""}`} />
       </span>
     </button>
