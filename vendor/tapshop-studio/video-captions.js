@@ -10,7 +10,7 @@ const LIB='https://cdn.jsdelivr.net/npm/@huggingface/transformers@3';
 // which is spread over the words by length.
 const MODELS={fast:['onnx-community/whisper-tiny_timestamped','Xenova/whisper-tiny'],better:['onnx-community/whisper-base_timestamped','Xenova/whisper-base']};
 const LANGS=[['english','English'],['','Detect automatically'],['spanish','Spanish'],['french','French'],['portuguese','Portuguese'],['german','German'],['italian','Italian'],['tagalog','Tagalog'],['hindi','Hindi'],['japanese','Japanese'],['korean','Korean'],['chinese','Chinese'],['arabic','Arabic']];
-const BASE={font:'system-ui',bold:true,italic:false,caps:false,size:.06,maxWords:3,color:'#ffffff',hl:'none',hlColor:'#ffe14d',stroke:'#000000',strokeW:0,box:'#000000',boxOpacity:0,shadow:'soft',anim:'none',emph:false,y:70};
+const BASE={font:'system-ui',bold:true,italic:false,caps:false,size:.06,maxWords:3,color:'#ffffff',hl:'none',hlColor:'#ffe14d',stroke:'#000000',strokeW:0,box:'#000000',boxOpacity:0,shadow:'soft',anim:'none',emph:false,emoji:'off',y:70};
 const PRESETS={
   pop:{label:'Word pop',maxWords:2,size:.075,caps:true,hl:'color',hlColor:'#ffe14d',strokeW:.16,anim:'pop',emph:true,y:62},
   karaoke:{label:'Karaoke',maxWords:5,size:.05,hl:'color',hlColor:'#22d3ee',strokeW:.14,y:72},
@@ -20,7 +20,21 @@ const PRESETS={
   reveal:{label:'Type on',maxWords:4,size:.055,hl:'reveal',strokeW:.14,y:70},
   neon:{label:'Neon',maxWords:3,size:.065,caps:true,hl:'color',hlColor:'#ff4fd8',shadow:'glow',anim:'fade',y:60},
   highlight:{label:'Highlight',maxWords:4,size:.055,hl:'box',hlColor:'#7c3aed',strokeW:.1,y:70}};
-const presetStyle=k=>{let p={...BASE,...PRESETS[k]};delete p.label;p.preset=k;return p};
+// Your own styles live in tapshop-caption-styles as [{id, name, style}] and use preset keys 'my:<id>'.
+const mine=()=>{try{let a=JSON.parse(localStorage.getItem('tapshop-caption-styles')||'[]');return Array.isArray(a)?a.filter(x=>x&&x.id&&x.style):[]}catch{return []}};
+const saveMine=a=>{try{localStorage.setItem('tapshop-caption-styles',JSON.stringify(a.slice(0,12)))}catch{toast('Couldn’t save that style on this device.')}};
+const allPresets=()=>[...Object.entries(PRESETS),...mine().map(m=>['my:'+m.id,{label:'★ '+m.name}])];
+const presetStyle=k=>{if(String(k).startsWith('my:')){let m=mine().find(x=>'my:'+x.id===k);return {...BASE,...(m?.style||{}),preset:m?k:'custom'}}let p={...BASE,...PRESETS[k]};delete p.label;p.preset=k;return p};
+const hasPreset=k=>!!(PRESETS[k]||mine().some(x=>'my:'+x.id===k));
+// Auto emoji: a word that matches one of these gets its emoji, shown above the caption or after the word.
+const EMOJI=[[/^(love|loved|loving|heart|adore)/,'❤️'],[/^(obsess|gorgeous|beautiful|pretty|stunning)/,'😍'],[/^(money|cash|cheap|price|dollar|pay|paid|save|saving|budget)/,'💰'],[/^(fire|hot|lit|spicy)/,'🔥'],[/^(wow|amazing|insane|crazy|unbelievable|mind)/,'🤯'],[/^(laugh|funny|lol|hilarious|joke)/,'😂'],
+  [/^(eat|food|delicious|tasty|yum|recipe|cook)/,'😋'],[/^(sleep|tired|bed|night)/,'😴'],[/^(skin|glow|shine|sparkle|magic|clean)/,'✨'],[/^(sale|deal|discount|off$|code)/,'🏷️'],[/^(buy|bought|shop|shopping|order|cart)/,'🛍️'],[/^(time|minute|hour|fast|quick|today)/,'⏰'],
+  [/^(phone|app|online|link)/,'📱'],[/^(music|song|sing|dance)/,'🎵'],[/^(idea|tip|hack|trick|learn)/,'💡'],[/^(happy|smile|glad|fun)/,'😊'],[/^(sad|cry|sorry|miss)/,'😢'],[/^(think|wonder|maybe|question|why|how)/,'🤔'],
+  [/^(look|see|watch|eyes|check)/,'👀'],[/^(yes|works|worked|right|correct|true)/,'✅'],[/^(no|never|wrong|fake|bad|worst|stop)/,'❌'],[/^(best|win|winner|top|number)/,'🏆'],[/^(new|launch|drop|introduc)/,'🆕'],[/^(gift|present|birthday|giveaway)/,'🎁'],
+  [/^(coffee|morning|breakfast)/,'☕'],[/^(sun|summer|beach|vacation|holiday)/,'☀️'],[/^(home|house|room)/,'🏠'],[/^(work|job|business|office)/,'💼'],[/^(travel|trip|flight|fly)/,'✈️'],[/^(gym|workout|strong|muscle|fit)/,'💪'],
+  [/^(party|celebrat|congrat)/,'🎉'],[/^(perfect|exactly|ok|okay)/,'👌'],[/^(hair)/,'💇'],[/^(makeup|lipstick|lip)/,'💄'],[/^(water|drink|hydrat)/,'💧'],[/^(secret|quiet)/,'🤫'],[/^(wait|soon|later)/,'⏳'],[/^(hello|hi|hey)$/,'👋'],[/^(thank|grateful|please)/,'🙏'],
+  [/^(dog|puppy)/,'🐶'],[/^(cat|kitten)/,'🐱'],[/^(baby|kid|kids)/,'👶'],[/^(car|drive)/,'🚗'],[/^(free)$/,'🆓'],[/^(rich|million)/,'🤑']];
+const emojiFor=w=>{let k=String(w.w).toLowerCase().replace(/[^a-z$']/g,'').replace(/'s$/,'');if(k.length<2)return null;for(let [re,e] of EMOJI)if(re.test(k))return e;return null};
 const style=t=>({...BASE,...(t.style||{})});
 const fontCss=(st,px)=>`${st.italic?'italic ':''}${st.bold?800:500} ${px}px ${/^(system-ui|sans-serif|serif|monospace)$/.test(st.font)?st.font:`"${st.font}"`}`;
 const isCap=t=>t?.type==='captions'&&Array.isArray(t.words);
@@ -34,8 +48,8 @@ const backOut=p=>1+2.70158*Math.pow(p-1,3)+1.70158*Math.pow(p-1,2);
 const bounceOut=p=>p<1/2.75?7.5625*p*p:p<2/2.75?7.5625*(p-=1.5/2.75)*p+.75:p<2.5/2.75?7.5625*(p-=2.25/2.75)*p+.9375:7.5625*(p-=2.625/2.75)*p+.984375;
 function rr(g,x,y,w,h,r){g.beginPath();if(g.roundRect)g.roundRect(x,y,w,h,r);else g.rect(x,y,w,h)}
 function drawOn(g,t,L,W,H){let st=style(t),grp=groups(t).find(x=>L>=x.s&&L<x.e);if(!grp)return;
-  let px=Math.max(4,st.size*H),txt=w=>st.caps?String(w.w).toUpperCase():String(w.w);g.save();g.font=fontCss(st,px);g.textBaseline='middle';g.textAlign='left';
-  let space=g.measureText(' ').width,maxW=W*.86,lines=[[]],lw=[0];
+  let px=Math.max(4,st.size*H),txt0=w=>st.caps?String(w.w).toUpperCase():String(w.w),txt=w=>{let e=st.emoji==='after'&&emojiFor(w);return e?txt0(w)+' '+e:txt0(w)};g.save();g.font=fontCss(st,px);g.textBaseline='middle';g.textAlign='left';
+  let space=g.measureText(' ').width*(st.emph?1.6:1),maxW=W*.86,lines=[[]],lw=[0];
   for(let w of grp.words){let ww=g.measureText(txt(w)).width,cur=lines.at(-1);if(cur.length&&lw.at(-1)+space+ww>maxW){lines.push([]);lw.push(0)}let ln=lines.at(-1);lw[lw.length-1]+=(ln.length?space:0)+ww;ln.push({w,ww})}
   let widest=Math.max(...lw),k=widest>maxW?maxW/widest:1,lh=px*1.22,blockH=lines.length*lh;
   let p=Math.min(1,Math.max(0,(L-grp.s)/.22)),sc=1,dy=0,al=1;
@@ -50,6 +64,7 @@ function drawOn(g,t,L,W,H){let st=style(t),grp=groups(t).find(x=>L>=x.s&&L<x.e);
     if(st.shadow==='soft'){g.shadowColor='rgba(0,0,0,.55)';g.shadowBlur=px*.18;g.shadowOffsetY=px*.05}else if(st.shadow==='glow'){g.shadowColor=st.hlColor;g.shadowBlur=px*.5}
     if(st.strokeW>0){g.lineJoin='round';g.miterLimit=2;g.lineWidth=st.strokeW*px;g.strokeStyle=st.stroke;g.strokeText(txt(w),x,y);if(st.shadow!=='glow')g.shadowColor='transparent'}
     g.fillStyle=isCur&&st.hl==='color'?st.hlColor:(isCur&&st.hl==='box'&&st.color===st.hlColor?st.box:st.color);g.fillText(txt(w),x,y);g.restore();x+=ww+space}});
+  if(st.emoji==='above'){let hit=null;for(let w of grp.words)if(w.s<=L&&emojiFor(w))hit=w;if(hit){let q=Math.min(1,Math.max(0,(L-hit.s)/.25)),es=px*1.25*(.4+.6*backOut(q));g.save();g.shadowColor='transparent';g.font=`${es}px system-ui`;g.textAlign='center';g.fillText(emojiFor(hit),0,-blockH/2-px*.8);g.restore()}}
   g.restore()}
 const drawNoCaptions=draw;draw=function(){drawNoCaptions();let W=canvas.width,H=canvas.height;for(let t of graphicTracks){if(!isCap(t)||t.hidden)continue;let L=playhead-t.offset;if(L<0||L>=t.length)continue;drawOn(ctx,t,L,W,H)}};
 const exportNoCaptions=exportVideo;exportVideo=async function(...a){try{await Promise.all(graphicTracks.filter(isCap).map(t=>document.fonts.load(fontCss(style(t),64))))}catch{}return exportNoCaptions.apply(this,a)};
@@ -64,7 +79,10 @@ let live=false;
 const capTrack=id=>graphicTracks.find(t=>t.id===id&&isCap(t));
 window.capSet=function(id,key,value,isLive){let t=capTrack(id);if(!t||exporting)return;if(!live)snapshot();live=!!isLive;t.style={...style(t),[key]:value};if(key!=='preset')t.style.preset='custom';
   if(key==='font')document.fonts?.load(fontCss(t.style,48)).then(draw,()=>{});draw();if(!isLive)renderGraphicTracks()};
-window.capPreset=function(id,key){let t=capTrack(id);if(!t||!PRESETS[key])return;snapshot();live=false;t.style={...presetStyle(key),font:style(t).font};draw();renderGraphicTracks()};
+window.capPreset=function(id,key){let t=capTrack(id);if(!t||!hasPreset(key))return;snapshot();live=false;t.style=String(key).startsWith('my:')?presetStyle(key):{...presetStyle(key),font:style(t).font};document.fonts?.load(fontCss(t.style,48)).then(draw,()=>{});draw();renderGraphicTracks()};
+window.capSaveStyle=function(id){let t=capTrack(id);if(!t)return;let list=mine(),name=prompt('Name this caption style',`My style ${list.length+1}`);if(name==null)return;name=String(name).trim().slice(0,24)||`My style ${list.length+1}`;
+  if(list.length>=12){toast('You can keep up to 12 styles. Delete one first.');return}let sid=uid(),st={...style(t)};delete st.preset;list.push({id:sid,name,style:st});saveMine(list);t.style={...style(t),preset:'my:'+sid};renderGraphicTracks();toast('Saved “'+name+'”. It’s in your styles now.')};
+window.capDeleteStyle=function(key,ev){ev?.stopPropagation();let list=mine(),m=list.find(x=>'my:'+x.id===key);if(!m||!confirm('Delete your style “'+m.name+'”?'))return;saveMine(list.filter(x=>x!==m));for(let t of graphicTracks)if(isCap(t)&&t.style?.preset===key)t.style={...t.style,preset:'custom'};renderGraphicTracks();if(document.getElementById('capStyles'))fillStyles()};
 window.capWord=function(id,i,value){let t=capTrack(id);if(!t)return;snapshot();value=String(value).trim();if(value)t.words[i].w=value;else t.words.splice(i,1);draw();renderGraphicTracks()};
 window.capShift=function(id,d){let t=capTrack(id);if(!t)return;snapshot();t.words=t.words.map(w=>({...w,s:Math.max(0,Math.round((w.s+d)*100)/100),e:Math.max(.05,Math.round((w.e+d)*100)/100)}));draw();toast('Captions moved '+(d>0?'later':'earlier'))};
 window.capSeek=function(id,i){let t=capTrack(id),w=t?.words[i];if(w&&!playing)seekTimeline(t.offset+w.s+.01)};
@@ -74,8 +92,8 @@ const color=(id,key,v,label)=>`<label>${label}<input type="color" value="${v}" o
 const select=(id,key,v,label,opts,num)=>`<label>${label}<select onchange="capSet('${id}','${key}',${num?'+':''}this.value)">${opts.map(([k,l])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`;
 const toggle=(id,key,v,label)=>`<label>${label}<button type="button" class="graphic-toggle" aria-pressed="${!!v}" onclick="capSet('${id}','${key}',${!v})">${v?'On':'Off'}</button></label>`;
 function panel(t){let st=style(t),id=t.id;
-  return `<div class="cap-panel"><div class="cap-head"><b>Captions</b><span class="sub">${t.words.length} words · tap a style, then fine-tune</span><button type="button" onclick="editGraphic('${id}','hidden',${!t.hidden})">${t.hidden?'Show':'Hide'}</button><button type="button" onclick="openCaptions()">Redo captions</button><button type="button" onclick="removeGraphic('${id}')">Delete captions</button></div>
-  <div class="cap-presets">${Object.entries(PRESETS).map(([k,p])=>`<button type="button" class="cap-preset ${st.preset===k?'on':''}" onclick="capPreset('${id}','${k}')"><img alt="" src="${previewCanvas(k)}"><span>${p.label}</span></button>`).join('')}</div>
+  return `<div class="cap-panel"><div class="cap-head"><b>Captions</b><span class="sub">${t.words.length} words · tap a style, then fine-tune</span><button type="button" onclick="editGraphic('${id}','hidden',${!t.hidden})">${t.hidden?'Show':'Hide'}</button><button type="button" onclick="capSaveStyle('${id}')">★ Save my style</button><button type="button" onclick="openCaptions()">Redo captions</button><button type="button" onclick="removeGraphic('${id}')">Delete captions</button></div>
+  <div class="cap-presets">${allPresets().map(([k,p])=>`<span class="cap-pwrap"><button type="button" class="cap-preset ${st.preset===k?'on':''}" onclick="capPreset('${id}','${k}')"><img alt="" src="${previewCanvas(k)}"><span>${esc(p.label)}</span></button>${k.startsWith('my:')?`<button type="button" class="cap-pdel" aria-label="Delete ${esc(p.label)}" title="Delete this style" onclick="capDeleteStyle('${k}',event)">×</button>`:''}</span>`).join('')}</div>
   <div class="extra-track-fields cap-fields">
   ${select(id,'font',st.font,'Font',FONTS.map(f=>[f.family,f.label]))}
   ${range(id,'size',st.size,.025,.14,.005,'Size',v=>Math.round(v*1000)/10+'%')}
@@ -89,6 +107,7 @@ function panel(t){let st=style(t),id=t.id;
   ${color(id,'stroke',st.stroke,'Outline colour')}
   ${range(id,'boxOpacity',st.boxOpacity,0,1,.05,'Background box',v=>v?Math.round(v*100)+'%':'Off')}
   ${color(id,'box',st.box,'Box colour')}
+  ${select(id,'emoji',st.emoji,'Auto emoji',[['off','Off'],['above','Above the words'],['after','After the word']])}
   ${select(id,'shadow',st.shadow,'Shadow',[['none','None'],['soft','Soft'],['glow','Glow (highlight colour)']])}
   ${toggle(id,'caps',st.caps,'ALL CAPS')}${toggle(id,'bold',st.bold,'Bold')}${toggle(id,'italic',st.italic,'Italic')}${toggle(id,'emph',st.emph,'Grow spoken word')}
   </div>
@@ -157,16 +176,17 @@ function dialog(){let d=document.getElementById('capDialog');if(d)return d;d=doc
   document.body.appendChild(d);
   d.querySelector('.dialog-x').onclick=()=>cancel(true);d.querySelector('#capCancel').onclick=()=>cancel(true);
   d.addEventListener('cancel',e=>{e.preventDefault();cancel(true)});
-  d.querySelector('#capStyles').innerHTML=Object.entries(PRESETS).map(([k,p])=>`<button type="button" class="cap-preset" data-k="${k}"><img alt="" src="${previewCanvas(k)}"><span>${p.label}</span></button>`).join('');
+
   d.querySelector('#capStyles').onclick=e=>{let b=e.target.closest('.cap-preset');if(!b)return;chosen=b.dataset.k;syncStyles()};
   d.querySelector('#capGo').onclick=run;
-  try{let s=JSON.parse(localStorage.getItem('tapshop-captions')||'{}');if(PRESETS[s.style])chosen=s.style;if(s.lang!=null)d.querySelector('#capLang').value=s.lang;if(MODELS[s.model])d.querySelector('#capModel').value=s.model}catch{}
+  try{let s=JSON.parse(localStorage.getItem('tapshop-captions')||'{}');if(hasPreset(s.style))chosen=s.style;if(s.lang!=null)d.querySelector('#capLang').value=s.lang;if(MODELS[s.model])d.querySelector('#capModel').value=s.model}catch{}
   return d}
+function fillStyles(){let box=document.getElementById('capStyles');if(!box)return;if(!hasPreset(chosen))chosen='pop';box.innerHTML=allPresets().map(([k,p])=>`<button type="button" class="cap-preset" data-k="${esc(k)}"><img alt="" src="${previewCanvas(k)}"><span>${esc(p.label)}</span></button>`).join('');syncStyles()}
 function syncStyles(){document.querySelectorAll('#capStyles .cap-preset').forEach(b=>b.classList.toggle('on',b.dataset.k===chosen))}
 let busy=false,cancelled=false;
 function cancel(close){if(busy){cancelled=true;worker?.terminate();worker=null;busy=false;toast('Captions cancelled.')}if(close)document.getElementById('capDialog')?.close();setBusy(false)}
 function setBusy(on){let d=document.getElementById('capDialog');if(!d)return;d.querySelector('#capWork').hidden=!on;d.querySelector('#capGo').disabled=on;d.querySelector('#capNote').hidden=on;d.querySelectorAll('select,.cap-preset').forEach(x=>x.disabled=on)}
-window.openCaptions=function(){if(exporting)return;pause();if(!clips.length){toast('Add a video first, then make captions.');return}let d=dialog();syncStyles();d.querySelector('#capErr').textContent='';setBusy(false);
+window.openCaptions=function(){if(exporting)return;pause();if(!clips.length){toast('Add a video first, then make captions.');return}let d=dialog();fillStyles();d.querySelector('#capErr').textContent='';setBusy(false);
   let old=graphicTracks.find(isCap);d.querySelector('#capGo').textContent=old?'Replace captions':'Create captions';d.showModal()};
 
 async function run(){let d=dialog(),status=d.querySelector('#capStatus'),prog=d.querySelector('#capProg'),err=d.querySelector('#capErr');err.textContent='';
@@ -196,6 +216,7 @@ let css=document.createElement('style');css.textContent=`.duration-strip[data-ki
 .cap-presets{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px}
 .cap-preset{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;padding:5px!important;border-radius:12px;width:112px}
 .cap-preset img{width:100px;height:56px;border-radius:8px;display:block}.cap-preset span{font-size:12px}
+.cap-pwrap{position:relative;flex:none}.cap-pdel{position:absolute;top:-6px;right:-6px;width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:14px;line-height:1;display:grid;place-items:center}
 .cap-preset.on{outline:2px solid var(--ts-primary,#171717);outline-offset:1px}
 .cap-fields{display:grid!important;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px 12px}
 .cap-fields label{display:flex;flex-direction:column;gap:4px;font-size:12px}.cap-val{opacity:.7;font-size:11px}
