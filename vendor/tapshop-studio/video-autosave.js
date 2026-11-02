@@ -1,0 +1,80 @@
+// Auto-save for the Video Editor. Every few seconds, if anything changed, the project (clips, text and
+// caption tracks, layer settings, frame shape, name) and the media files it uses are written to this
+// browser's IndexedDB, so they can be reopened from "Recent videos" on the start screen. Nothing is
+// uploaded. The database name carries the creator scope the asset route gives localStorage keys
+// (studio:<creatorId>:…), so creators sharing a browser don't see each other's videos.
+(()=>{
+const KEEP=12,EVERY=3000;
+function scope(){try{localStorage.setItem('tapshop-scope-probe','1');let k=Object.keys(localStorage).find(k=>/^studio:.+:tapshop-scope-probe$/.test(k));return k?k.slice(7,-':tapshop-scope-probe'.length):'local'}catch{return 'local'}}
+let dbp=null;
+function db(){return dbp||(dbp=new Promise((res,rej)=>{let r=indexedDB.open('tapshop-video-'+scope(),1);r.onupgradeneeded=()=>{let d=r.result;d.createObjectStore('projects',{keyPath:'id'});d.createObjectStore('media',{keyPath:'key'}).createIndex('project','project')};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}))}
+const req=r=>new Promise((res,rej)=>{r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)});
+async function store(name,mode='readonly'){return (await db()).transaction(name,mode).objectStore(name)}
+
+let projId=null,lastSig='',saving=false,warned=false;
+const plain=t=>{let o={};for(let [k,v] of Object.entries(t))if(!['media','node','gain','url','file'].includes(k)&&(v==null||typeof v!=='object'||Array.isArray(v)))o[k]=v;o.hasFile=!!t.file;return o};
+const capture=()=>({clips,selected,graphic:graphicTracks,extra:extraTracks.map(plain),aspect:$('aspect').value,name:$('projectName').value});
+const empty=()=>!clips.length&&!graphicTracks.length&&!extraTracks.length;
+function thumb(){try{let h=180,w=Math.round(h*canvas.width/canvas.height),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(canvas,0,0,w,h);return c.toDataURL('image/jpeg',.6)}catch{return null}}
+
+async function save(force){if(saving||exporting||empty())return;let state=capture(),sig=JSON.stringify(state);if(!force&&sig===lastSig)return;saving=true;
+  try{projId=projId||uid();let id=projId,keys=[],media=await store('media','readwrite');
+    let used=new Set(clips.map(c=>c.assetId));
+    for(let a of assets)if(used.has(a.id)&&a.file){let key=id+':a:'+a.id;keys.push(key);if(!(await req(media.getKey(key)))){media=await store('media','readwrite');await req(media.put({key,project:id,blob:a.file,name:a.name,type:a.file.type}))}media=await store('media','readwrite')}
+    for(let t of extraTracks)if(t.file){let key=id+':x:'+t.id+':'+t.file.size;keys.push(key);if(!(await req(media.getKey(key)))){media=await store('media','readwrite');await req(media.put({key,project:id,blob:t.file,name:t.file.name,type:t.file.type}))}media=await store('media','readwrite')}
+    let rec={id,name:state.name||'Untitled video',aspect:state.aspect,updated:Date.now(),thumb:thumb(),state:JSON.parse(sig),keys};
+    await req((await store('projects','readwrite')).put(rec));
+    // Drop media this project no longer uses, and projects beyond the most recent KEEP.
+    let mine=await req((await store('media')).index('project').getAllKeys(IDBKeyRange.only(id)));media=await store('media','readwrite');for(let k of mine)if(!keys.includes(k))media.delete(k);
+    let all=(await req((await store('projects')).getAll())).sort((a,b)=>b.updated-a.updated);for(let p of all.slice(KEEP))await remove(p.id);
+    lastSig=sig;
+  }catch(e){if(!warned){warned=true;toast(/quota/i.test(e?.name+e?.message)?'Your device is out of space, so this video isn’t auto-saving.':'Auto-save isn’t available in this browser.')}}
+  finally{saving=false}}
+async function remove(id){await req((await store('projects','readwrite')).delete(id));let ks=await req((await store('media')).index('project').getAllKeys(IDBKeyRange.only(id))),m=await store('media','readwrite');for(let k of ks)m.delete(k)}
+
+// Empty the editor for a new video (the current one is already saved).
+window.veNewProject=async function(){if(!empty())await save(true);pause();clips=[];selected=-1;graphicTracks=[];
+  for(let t of extraTracks){try{t.media?.pause();t.node?.disconnect();t.gain?.disconnect()}catch{}}extraTracks=[];assets.length=0;history.length=0;try{redoStack.length=0;syncUndoButtons()}catch{}
+  try{expandedStrip=null;pickedStrip=null}catch{}activeId=null;$('projectName').value='Untitled video';projId=null;lastSig='';playhead=0;render();renderTracks();renderGraphicTracks();await seekTimeline(0)};
+
+async function open(id){let rec=await req((await store('projects')).get(id));if(!rec){toast('That video isn’t on this device any more.');refresh();return}
+  await veNewProject();toast('Opening '+rec.name+'…');let st=rec.state,files={};
+  for(let m of await req((await store('media')).index('project').getAll(IDBKeyRange.only(id))))files[m.key]=new File([m.blob],m.name||'media',{type:m.type||m.blob.type});
+  $('aspect').value=st.aspect||'16:9';setAspect();$('projectName').value=st.name||rec.name;
+  // Re-load each video under its saved id so the saved clips point at it unchanged.
+  for(let aid of new Set(st.clips.map(c=>c.assetId))){let f=files[id+':a:'+aid];if(!f)continue;try{let a=await loadAsset(f);a.id=aid}catch(e){toast(e.message)}}
+  clips=st.clips.filter(c=>assets.some(a=>a.id===c.assetId));selected=Math.min(st.selected??0,clips.length-1);graphicTracks=st.graphic||[];
+  for(let s of st.extra||[]){addTrack(s.type);let t=extraTracks.at(-1),f=s.hasFile&&Object.entries(files).find(([k])=>k.startsWith(id+':x:'+s.id+':'))?.[1];
+    if(f){targetTrack=t.id;await loadTrackMedia(f)}let {hasFile,...keep}=s;Object.assign(t,keep)}
+  projId=id;history.length=0;try{redoStack.length=0;syncUndoButtons()}catch{}render();renderTracks();renderGraphicTracks();await seekTimeline(0);lastSig=JSON.stringify(capture());toast('Opened '+rec.name+'.')}
+
+// ---------- Recent videos on the start screen ----------
+const ago=t=>{let s=(Date.now()-t)/1000;return s<60?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':Math.round(s/86400)+' d ago'};
+async function refresh(){let box=document.getElementById('vsRecent');if(!box)return;let list=[];try{list=(await req((await store('projects')).getAll())).sort((a,b)=>b.updated-a.updated)}catch{}
+  let sec=document.getElementById('vsRecentSec');if(sec)sec.hidden=!list.length;box.innerHTML=list.length?list.map(p=>`<div class="vs-rec" role="button" tabindex="0" data-id="${esc(p.id)}"><div class="th">${p.thumb?`<img src="${p.thumb}" alt="">`:''}</div><b>${esc(p.name)}</b><small>${esc(p.aspect||'')} · ${ago(p.updated)}</small><button type="button" class="x" data-del="${esc(p.id)}" aria-label="Delete ${esc(p.name)}">×</button></div>`).join(''):'<p class="vs-help" style="margin:0">Videos you make show up here automatically.</p>'}
+function mount(){let start=document.getElementById('veStart');if(!start||document.getElementById('vsRecent'))return;
+  let head=[...start.querySelectorAll('h2')].find(h=>/where you left off/i.test(h.textContent));if(!head)return;
+  head.textContent='Open a saved project file';
+  // Recent videos go at the top, above step 1, and stay hidden until there is one.
+  let sec=document.createElement('section');sec.id='vsRecentSec';sec.hidden=true;sec.innerHTML='<h2>Recent videos</h2><p class="vs-help">Saved automatically on this device as you edit.</p>';
+  let box=document.createElement('div');box.id='vsRecent';box.className='vs-recent';sec.appendChild(box);start.querySelector('.vs-lead').after(sec);
+  box.onclick=async e=>{let del=e.target.closest('[data-del]');if(del){e.stopPropagation();if(confirm('Delete this video from this device?')){await remove(del.dataset.del);if(projId===del.dataset.del){projId=null;lastSig=''}refresh()}return}
+    let card=e.target.closest('.vs-rec');if(!card)return;document.getElementById('veStart').hidden=true;try{await open(card.dataset.id)}catch(x){toast('Couldn’t open that video: '+(x.message||x))}};
+  box.onkeydown=e=>{if(e.key==='Enter')e.target.closest('.vs-rec')?.click()};
+  let css=document.createElement('style');css.textContent=`#veStart .vs-recent{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:4px}
+@media(max-width:520px){#veStart .vs-recent{display:flex;overflow-x:auto;padding-bottom:4px}#veStart .vs-rec{flex:none;width:140px}}
+#veStart .vs-rec{position:relative;cursor:pointer;border:1px solid var(--ts-border,#e5e5e5);border-radius:16px;background:var(--ts-surface,#fff);padding:8px}
+#veStart .vs-rec:hover{border-color:var(--ts-border-strong,#d4d4d4)}
+#veStart .vs-rec .th{height:150px;border-radius:10px;background:var(--ts-soft,#f5f5f5);display:grid;place-items:center;overflow:hidden}
+#veStart .vs-rec .th img{max-width:100%;max-height:100%;display:block}
+#veStart .vs-rec b{display:block;font-size:13px;margin:8px 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#veStart .vs-rec small{display:block;font-size:11px;margin:2px 2px 2px;color:var(--ts-muted,#737373)}
+#veStart .vs-rec .x{position:absolute;top:4px;right:4px;width:28px;height:28px;padding:0;border-radius:50%;display:grid;place-items:center;font-size:16px}`;document.head.appendChild(css);refresh()}
+
+mount();
+// Refresh the list whenever the start screen is shown again (⌂ Start).
+let startEl=document.getElementById('veStart');if(startEl)new MutationObserver(()=>{if(!startEl.hidden)refresh()}).observe(startEl,{attributes:true,attributeFilter:['hidden']});
+setInterval(()=>save(),EVERY);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save()});
+window.addEventListener('pagehide',()=>save());
+})();
