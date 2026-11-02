@@ -832,6 +832,8 @@ ANIMATED_TEMPLATES.push(
  {name:'New Year sale',w:1080,h:1920,bg:'#0c0a09',els:({T,SH,ST})=>[ST('🎆',{x:100,y:180,s:280,anim:'pop',animDur:1}),ST('🎇',{x:700,y:260,s:260,anim:'pop',animDelay:.5,animDur:1}),T('NEW YEAR',{cx:540,y:760,size:170,font:'Impact',fill:'#fbbf24',effect:'glow',fxColor:'#f59e0b',fxStr:5,anim:'glowpulse',animDur:2}),
   T('NEW DEALS',{cx:540,y:960,size:170,font:'Impact',fill:'#ffffff',anim:'up',animDelay:.4}),ST('🥂',{x:400,y:1060,s:280,anim:'tada',animDur:1.6}),SH('pill',{x:290,y:1540,w:500,h:150,fill:'#fbbf24',text:'SHOP THE SALE',textColor:'#0c0a09',anim:'bounce',animDur:1.5})]});
 ANIMATED_TEMPLATES.forEach(t=>{t.category='Animated';t.animated=true;templates.push(t)});
+// The gallery was first drawn before these were added; redraw so 'All templates' shows them straight away.
+render();
 const makeNoAnimated=make;make=function(t){if(!t?.animated)return makeNoAnimated(t);let els=t.els(TPL).map(e=>structuredClone(e));
  for(const e of els)if(e.type==='text'&&e._cx!=null){let L=txLayout(e);e.x=Math.round(e._cx-L.inner/2);delete e._cx;delete e.cx}
  return {id:'d'+Date.now().toString(36)+Math.random().toString(36).slice(2),name:t.name,w:t.w,h:t.h,bg:t.bg,els}};
