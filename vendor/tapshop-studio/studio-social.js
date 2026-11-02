@@ -141,3 +141,37 @@ const renderNoPlatforms=render;render=function(){renderNoPlatforms();if(mode==='
 // Each card says its size so it's clear which platform format it is.
 const renderSizes=render;render=function(){renderSizes();if(mode==='projects')return;document.querySelectorAll('#grid .card').forEach(c=>{let i=+(/openDesign\((\d+)\)/.exec(c.getAttribute('onclick')||'')||[])[1],t=templates[i];if(t?.social){let s=c.querySelector('small');if(s)s.textContent=`${t.category} · ${t.w}×${t.h}`}})};
 })();
+// Smarter template search: looks at the name, platform, the words on the template, its shape and its
+// colours, forgives small typos ("ticktok"), knows nicknames ("ig", "yt", "twitter"), and searches
+// every category. The gallery's own search only matched the exact name inside the chosen chip.
+(()=>{
+const NICK={Instagram:'instagram insta ig reels reel feed post story stories carousel',TikTok:'tiktok tik tok ticktok tic toc cover',YouTube:'youtube yt thumbnail thumbnails shorts video',
+  Facebook:'facebook fb meta post',Pinterest:'pinterest pin pins board',LinkedIn:'linkedin linked in professional business',X:'x twitter tweet thread',Creator:'creator ugc rates rate card media kit brand collab portfolio',
+  Animated:'animated animation moving motion',Simple:'simple basic minimal',Presentations:'presentation slides deck pitch',Posters:'poster flyer print',Stories:'story stories vertical'};
+const hexOf=bg=>{let m=/#([0-9a-f]{6}|[0-9a-f]{3})\b/i.exec(String(bg||''));if(!m)return null;let h=m[1].length===3?m[1].replace(/./g,c=>c+c):m[1];return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16))};
+function colourWords(bg){let c=hexOf(bg);if(!c)return '';let [r,g,b]=c.map(v=>v/255),mx=Math.max(r,g,b),mn=Math.min(r,g,b),l=(mx+mn)/2,s=mx===mn?0:(mx-mn)/(1-Math.abs(2*l-1)),h=0;
+  if(mx!==mn){h=mx===r?((g-b)/(mx-mn))%6:mx===g?(b-r)/(mx-mn)+2:(r-g)/(mx-mn)+4;h=(h*60+360)%360}
+  let w=[l<.25?'dark black night':l>.85?'light white clean minimal':'',s>.45&&l>.25&&l<.85?'colorful colourful bright bold vibrant':'muted soft'];
+  if(s>.2&&l>.15&&l<.92)w.push(h<15||h>=340?'red warm':h<45?'orange warm':h<70?'yellow warm sunny':h<165?'green fresh':h<200?'teal cool':h<255?'blue cool':h<290?'purple violet cool':'pink');
+  return w.join(' ')}
+const shapeWords=(w,h)=>!w||!h?'':w===h?'square':Math.abs(w/h-9/16)<.02?'vertical story tall':Math.abs(w/h-16/9)<.02?'wide landscape horizontal thumbnail':w/h<1?'portrait tall vertical':'wide landscape horizontal';
+const cache=new WeakMap();
+function words(t){if(cache.has(t))return cache.get(t);let txt=[t.name,t.category,t.sub,t.title,t.tag,NICK[t.category]||''];
+  if(typeof t.els==='function')try{for(let e of t.els(TPL))txt.push(e.text||'',e.name||'')}catch{}
+  let s=(txt.join(' ')+' '+colourWords(t.bg)+' '+shapeWords(t.w||t.width,t.h||t.height)).toLowerCase().replace(/[^a-z0-9%$]+/g,' ');cache.set(t,s);return s}
+const near=(a,b)=>{if(Math.abs(a.length-b.length)>1)return false;let i=0,j=0,d=0;while(i<a.length&&j<b.length){if(a[i]===b[j]){i++;j++;continue}if(++d>1)return false;if(a.length>b.length)i++;else if(b.length>a.length)j++;else{i++;j++}}return d+(a.length-i)+(b.length-j)<=1};
+function matches(t,q){let hay=words(t),flat=hay.replace(/ /g,''),hw=hay.split(' ');
+  return q.split(/\s+/).filter(Boolean).every(w=>{w=w.replace(/[^a-z0-9%$]/g,'');if(!w)return true;// Short words must be whole words ("ig" shouldn't match "big"); run-together matching only for longer ones ("tiktok" in "tik tok").
+    if(w.length<=3)return hw.includes(w)||hw.some(x=>x.startsWith(w)&&w.length===3);return hw.some(x=>x.startsWith(w))||(w.length>=5&&flat.includes(w))||(w.length>=5&&hw.some(x=>x.length>=4&&near(w,x)))})}
+const renderNoSearch=render;render=function(){let box=document.getElementById('search'),q=(box?.value||'').trim().toLowerCase();
+  if(mode==='projects'||!q){renderNoSearch();return}
+  let keep=filter;box.value='';filter='All templates';try{renderNoSearch()}finally{box.value=q;filter=keep}
+  let shown=0;document.querySelectorAll('#grid .card').forEach(c=>{let i=+(/openDesign\((\d+)\)/.exec(c.getAttribute('onclick')||'')||[])[1],ok=!!templates[i]&&matches(templates[i],q);c.hidden=!ok;c.style.display=ok?'':'none';if(ok)shown++});
+  document.querySelectorAll('#chips button').forEach(b=>b.classList.toggle('active',b.textContent==='All templates'));
+  let count=document.getElementById('count');if(count)count.textContent=shown+(shown===1?' design':' designs')+' for “'+q+'”';
+  let grid=document.getElementById('grid'),tip=document.getElementById('searchEmpty');tip?.remove();
+  if(!shown&&grid){tip=document.createElement('div');tip.id='searchEmpty';tip.className='muted';tip.style.cssText='grid-column:1/-1;padding:18px 4px';
+    tip.innerHTML='No templates match “'+q.replace(/[<>&"]/g,'')+'”. Try: '+['TikTok','YouTube thumbnail','story','sale','quote','giveaway','blue'].map(s=>`<button type="button" style="margin:4px 6px 0 0;padding:6px 12px;border-radius:999px" onclick="document.getElementById('search').value='${s}';render()">${s}</button>`).join('');grid.appendChild(tip)}};
+// Search as you type (the box already calls render); Enter also works.
+document.getElementById('search')?.addEventListener('keydown',e=>{if(e.key==='Enter')render()});
+})();
