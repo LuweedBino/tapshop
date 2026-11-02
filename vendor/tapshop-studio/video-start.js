@@ -299,7 +299,7 @@ function build(){
   $$('vsVault').onclick=()=>{if(typeof VaultPicker==='undefined'){toast('Media Vault is only available inside TapShop.');return}VaultPicker.open({title:'Add from your Media Vault',kinds:['video','image'],onPick:async it=>{try{toast('Loading '+it.name+'…');addFiles([await VaultPicker.file(it)])}catch(e){toast(e.message)}}})};
   $$('vsFiles').onclick=e=>{let b=e.target.closest('.x');if(!b)return;let i=+b.dataset.i,[gone]=pending.splice(i,1);if(gone?.url)URL.revokeObjectURL(gone.url);sync()};
   $$('vsBlank').onclick=()=>{applyAspect();close()};
-  $$('vsDemo').onclick=()=>{applyAspect();close();loadDemo()};
+  $$('vsDemo').onclick=async()=>{if(hasWork()&&window.veNewProject)await veNewProject();applyAspect();close();loadDemo()};
   $$('vsVaultProject').onclick=async()=>{await importPending();openVaultPicker(['project'])};
   $$('vsFileProject').onclick=async()=>{await importPending();$('restore').click()};
   $$('vsGo').onclick=start;
@@ -352,9 +352,11 @@ function addTemplate(tp){
   renderGraphicTracks();
 }
 
+const hasWork=()=>clips.length||graphicTracks.length||extraTracks.length;
 async function start(){
   let go=document.getElementById('vsGo');go.disabled=true;
-  try{applyAspect();await importPending();let tp=TEMPLATES.find(t=>t.id===template);if(tp)addTemplate(tp);
+  // A new video from the start screen begins on an empty timeline; the last one is auto-saved.
+  try{if(hasWork()&&window.veNewProject)await veNewProject();applyAspect();await importPending();let tp=TEMPLATES.find(t=>t.id===template);if(tp)addTemplate(tp);
     if($('projectName')&&tp)$('projectName').value=PLATFORMS.find(p=>p.id===platform).name+' · '+tp.name;
     template=null;close();await seekTimeline(0);
     toast(clips.length||graphicTracks.length?'Your video is ready to edit.':'Add a video with “＋ Video track” to get going.')}
