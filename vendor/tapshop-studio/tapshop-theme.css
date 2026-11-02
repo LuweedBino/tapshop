@@ -45,7 +45,8 @@ html.ts body .badge{background:var(--ts-soft)!important;color:var(--ts-muted)!im
 /* Light/dark switch: TapShop's pill with a violet track when on */
 html.ts body .theme-toggle{background:var(--ts-surface)!important;color:var(--ts-text)!important;border:1px solid var(--ts-border-strong)!important;box-shadow:none!important;border-radius:999px}
 html.ts body .theme-track{background:var(--ts-border-strong)!important;border:0!important;box-shadow:none!important}
-html.ts body .theme-toggle[aria-checked="true"] .theme-track{background:#a78bfa!important}
+html.ts body .theme-toggle[aria-checked="true"] .theme-track{background:#f8f8fa!important}
+html.ts body .theme-toggle[aria-checked="true"] .theme-track span{background:#17171c!important}
 html.ts body .theme-track span{background:#fff!important}
 
 /* Toasts */
