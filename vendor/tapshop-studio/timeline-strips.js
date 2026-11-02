@@ -120,3 +120,14 @@ b.addEventListener('contextmenu',e=>e.preventDefault());
 b.addEventListener('pointerdown',e=>{if(e.button>0||exporting)return;let p=pickedStrip;if(!p||p.kind==='main'||!stripModel(p.kind,p.id))return;stopNudgeHold();let n=0,h=nudgeHold={btn:b,repeated:false,snapped:false};const tick=()=>{if(nudgeHold!==h)return;h.repeated=true;b.dataset.skipClick='1';moveClip(dir,++n>12?.5:.1);h.timer=setTimeout(tick,n>12?120:90)};h.timer=setTimeout(tick,400)});
 ['pointerup','pointercancel','pointerleave','blur'].forEach(ev=>b.addEventListener(ev,stopNudgeHold));
 b.addEventListener('click',e=>{if(b.dataset.skipClick){b.dataset.skipClick='';e.stopImmediatePropagation();e.preventDefault()}},true)});
+// The right-hand Clip inspector is gone; its Framing, Color look and caption settings now live in each
+// video clip's strip options (Trim, Speed and Volume were already there), and the preview takes the space.
+(()=>{let st=document.createElement('style');st.textContent='.layout>.panel.right,.layout>.right-divider{display:none!important}@media(min-width:751px){body .layout{grid-template-columns:0 0 minmax(240px,1fr) 0 0!important}}.top button,.top .brand{white-space:nowrap}.top .badge{display:none}.top #projectName{min-width:0;flex:1 1 140px}.main-strip-options .clip-caption{flex-basis:100%;display:flex;gap:8px;align-items:flex-end}.main-strip-options .clip-caption label{flex:1}';document.head.appendChild(st)})();
+function editMainLook(id,key,value){let m=stripModel('main',id);if(!m||exporting)return;selected=m.i;change(key,value);decorateStrips()}
+const renderTimelineNoLook=renderTimeline;renderTimeline=function(){renderTimelineNoLook();let fit=$('fit'),look=$('filter');
+  document.querySelectorAll('#clips .strip-row').forEach(row=>{let c=clips.find(c=>c.id===row.dataset.trackid),box=row.querySelector('.main-strip-options');if(!c||!box)return;row.querySelector('.strip-options>p.sub')?.remove();
+    let opts=(sel,v)=>[...sel.options].map(o=>`<option value="${o.value.replace(/"/g,'&quot;')}" ${o.value===v?'selected':''}>${o.textContent}</option>`).join(''),dup=box.querySelector('button');
+    let wrap=document.createElement('div');wrap.style.display='contents';
+    wrap.innerHTML=`<label>Framing<select onchange="editMainLook('${c.id}','fit',this.value)">${opts(fit,c.fit||'contain')}</select></label><label>Color look<select onchange="editMainLook('${c.id}','filter',this.value)">${opts(look,c.filter||'none')}</select></label>`+(c.text?`<div class="clip-caption"><label>Caption on this clip<input type="text" value="${String(c.text).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" onchange="editMainLook('${c.id}','text',this.value)"></label><button type="button" onclick="editMainLook('${c.id}','text','')">Remove caption</button></div>`:'');
+    box.insertBefore(wrap,dup)})};
+render();
