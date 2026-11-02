@@ -116,7 +116,73 @@ const TEMPLATES=[
   {id:'faq',cat:'howto',name:'You asked',tag:'Answer a common question',dur:12,bg:'linear-gradient(160deg,#4568dc,#b06ab3)',tracks:[
     {text:'You asked 🙋',y:42,h:.07,color:K,box:W,anim:'pop',at:D=>[0,Math.min(2.5,D)]},
     {text:'Q: Does it really work?',y:14,h:.045,color:K,box:W,anim:'down',at:D=>[Math.min(2.5,D/3),D-Math.min(2.5,D/3)]},
-    {text:'Here’s my honest answer',y:82,h:.04,color:W,plate:true,anim:'fade',at:D=>[Math.min(3.5,D/2),D-Math.min(3.5,D/2)]}]}];
+    {text:'Here’s my honest answer',y:82,h:.04,color:W,plate:true,anim:'fade',at:D=>[Math.min(3.5,D/2),D-Math.min(3.5,D/2)]}]},
+  // ---- More UGC templates ----
+  {id:'dontbuy',cat:'hooks',name:'Don’t buy until…',tag:'Save them money',dur:10,bg:'linear-gradient(160deg,#200122,#6f0000)',tracks:[
+    {text:'Don’t buy ___\nuntil you watch this',y:40,h:.055,color:W,box:'#ff3b5c',anim:'shake',at:D=>[0,Math.min(3,D)]},
+    {text:'Here’s what I found 👇',y:82,h:.04,color:W,plate:true,anim:'fade',at:D=>[Math.min(3,D/3),D-Math.min(3,D/3)]}]},
+  {id:'mistakes',cat:'hooks',name:'3 mistakes',tag:'Everyone makes these',dur:12,bg:'linear-gradient(160deg,#ee0979,#ff6a00)',tracks:[
+    {text:'3 mistakes you’re\nmaking with ___',y:40,h:.055,color:K,box:W,anim:'pop',at:D=>[0,Math.min(2.5,D)]},
+    ...[1,2,3].map(n=>({text:'❌ Mistake '+n,y:82,h:.045,color:W,box:K,anim:'left',at:D=>{let s=Math.min(2.5,D/4),l=(D-s)/3;return [s+(n-1)*l,l]}}))]},
+  {id:'hottake',cat:'hooks',name:'Hot take',tag:'Spark the comments',dur:8,bg:'linear-gradient(160deg,#f12711,#f5af19)',tracks:[
+    {text:'HOT TAKE 🔥',y:16,h:.065,color:W,box:K,anim:'pop',at:D=>[0,D]},
+    {text:'Agree or disagree? 👇',y:82,h:.045,color:K,box:W,anim:'bounce',at:D=>[Math.max(0,D-3),Math.min(3,D)]}]},
+  {id:'wishknew',cat:'hooks',name:'Wish I knew sooner',tag:'Advice people save',dur:12,bg:'linear-gradient(160deg,#355c7d,#c06c84)',tracks:[
+    {text:'Things I wish I knew\nbefore ___',y:16,h:.05,color:K,box:W,anim:'down',at:D=>[0,Math.max(.5,D-3)]},
+    {text:'Save this 📌',y:45,h:.065,color:W,box:K,anim:'pop',at:D=>[Math.max(0,D-3),Math.min(3,D)]}]},
+  {id:'pricereveal',cat:'product',name:'Guess the price',tag:'Big reveal at the end',dur:10,bg:'linear-gradient(160deg,#bdc3c7,#2c3e50)',tracks:[
+    {text:'Guess the price 🤔',y:14,h:.055,color:K,box:W,anim:'down',at:D=>[0,Math.max(.5,D-3)]},
+    {text:'Only $__!',y:45,h:.1,color:K,box:'#7cf0a8',anim:'elastic',at:D=>[Math.max(0,D-3),Math.min(3,D)]}]},
+  {id:'giftidea',cat:'product',name:'Gift idea',tag:'Perfect present',dur:10,bg:'linear-gradient(160deg,#cb356b,#bd3f32)',tracks:[
+    {text:'Gift idea for ___ 🎁',y:14,h:.05,color:K,box:W,anim:'down',at:D=>[0,Math.max(.5,D-3)]},
+    {text:'They’ll love it — link in bio',y:80,h:.04,color:W,box:K,anim:'bounce',at:D=>[Math.max(0,D-3),Math.min(3,D)]}]},
+  {id:'inmybag',cat:'lifestyle',name:'What’s in my bag',tag:'Everyday carry',dur:15,bg:'linear-gradient(160deg,#d3cce3,#e9e4f0)',tracks:[
+    {text:'What’s in my bag 👜',y:12,h:.055,color:W,box:K,anim:'down',at:D=>[0,Math.min(3,D)]},
+    ...[1,2,3,4].map(n=>({text:'Item '+n,y:82,h:.045,color:K,box:W,anim:'pop',at:D=>{let s=Math.min(3,D/5),l=(D-s)/4;return [s+(n-1)*l,l]}}))]},
+  {id:'worthit',cat:'reviews',name:'Worth it or not?',tag:'Yes or no verdict',dur:12,bg:'linear-gradient(160deg,#134e5e,#71b280)',tracks:[
+    {text:'Is ___ worth it?',y:14,h:.055,color:K,box:'#ffd84d',anim:'down',at:D=>[0,Math.max(.5,D-3)]},
+    {text:'✅ WORTH IT',y:45,h:.08,color:W,box:'#16a34a',anim:'elastic',at:D=>[Math.max(0,D-3),Math.min(3,D)]}]},
+  {id:'proscons',cat:'reviews',name:'Pros & Cons',tag:'Fair and honest',dur:12,bg:'linear-gradient(90deg,#bbf7d0 50%,#fecaca 50%)',tracks:[
+    {text:'PROS 👍',x:25,y:12,h:.055,color:W,box:'#16a34a',anim:'left',at:D=>[0,D/2]},
+    {text:'CONS 👎',x:75,y:12,h:.055,color:W,box:'#dc2626',anim:'right',at:D=>[D/2,D/2]},
+    {text:'Your point here',y:82,h:.045,color:K,box:W,anim:'fade',at:D=>[.5,Math.max(.5,D-.5)]}]},
+  {id:'weeklater',cat:'reviews',name:'1 week later',tag:'Long-term update',dur:10,bg:'linear-gradient(160deg,#5f2c82,#49a09d)',tracks:[
+    {text:'Using ___ for 1 week',y:14,h:.05,color:K,box:W,anim:'down',at:D=>[0,D/2]},
+    {text:'Here’s the truth 👀',y:14,h:.055,color:W,box:K,anim:'pop',at:D=>[D/2,D/2]}]},
+  {id:'reply',cat:'reviews',name:'Reply to a comment',tag:'Answer your audience',dur:10,bg:'linear-gradient(160deg,#3a3a44,#1a1a20)',tracks:[
+    {text:'Replying to @___\n“Does it actually work?”',y:16,h:.04,color:K,box:W,anim:'pop',at:D=>[0,D]}]},
+  {id:'recipe',cat:'howto',name:'Recipe',tag:'Ingredients to finished dish',dur:15,bg:'linear-gradient(160deg,#f7971e,#ffd200)',tracks:[
+    {text:'Easy ___ recipe 🍳',y:12,h:.055,color:W,box:K,anim:'down',at:D=>[0,Math.min(3,D)]},
+    ...[1,2,3].map(n=>({text:'Step '+n,y:82,h:.045,color:K,box:W,anim:'pop',at:D=>{let s=Math.min(3,D/5),l=(D-s-3)/3;return [s+(n-1)*l,Math.max(.5,l)]}})),
+    {text:'Enjoy! 😋',y:45,h:.075,color:K,box:W,anim:'bounce',at:D=>[Math.max(0,D-3),Math.min(3,D)]}]},
+  {id:'hack',cat:'howto',name:'Life hack',tag:'Quick win',dur:8,bg:'linear-gradient(160deg,#00b09b,#96c93d)',tracks:[
+    {text:'You’ve been doing\nthis wrong 😳',y:40,h:.06,color:K,box:W,anim:'pop',at:D=>[0,Math.min(2.5,D)]},
+    {text:'Try this instead ✅',y:82,h:.045,color:W,box:K,anim:'slide',at:D=>[Math.min(2.5,D/3),D-Math.min(2.5,D/3)]}]},
+  {id:'routine',cat:'lifestyle',name:'AM / PM routine',tag:'Skincare or daily routine',dur:15,bg:'linear-gradient(90deg,#fde68a 50%,#1e1b4b 50%)',tracks:[
+    {text:'☀️ AM routine',y:12,h:.055,color:K,box:W,anim:'left',at:D=>[0,D/2]},
+    {text:'🌙 PM routine',y:12,h:.055,color:W,box:K,anim:'right',at:D=>[D/2,D/2]}]},
+  {id:'ootd',cat:'lifestyle',name:'Outfit of the day',tag:'OOTD with links',dur:10,bg:'linear-gradient(160deg,#ffafbd,#ffc3a0)',tracks:[
+    {text:'OOTD ✨',y:12,h:.08,color:K,box:W,anim:'pop',at:D=>[0,Math.max(.5,D-3)]},
+    {text:'Top · ___\nShoes · ___',x:28,y:80,h:.035,color:W,box:K,anim:'left',at:D=>[1,Math.max(.5,D-4)]},
+    {text:'Links in bio 🔗',y:80,h:.045,color:W,box:K,anim:'bounce',at:D=>[Math.max(0,D-3),Math.min(3,D)]}]},
+  {id:'travel',cat:'lifestyle',name:'Travel diary',tag:'Places and moments',dur:15,bg:'linear-gradient(160deg,#2193b0,#6dd5ed)',tracks:[
+    {text:'📍 ___',x:28,y:10,h:.045,color:K,box:W,anim:'left',at:D=>[0,D]},
+    {text:'Day 1',y:82,h:.05,color:W,box:K,anim:'pop',at:D=>[.5,Math.max(.5,D-.5)]}]},
+  {id:'lastchance',cat:'promo',name:'Last chance',tag:'Urgency that converts',dur:8,bg:'linear-gradient(160deg,#000000,#434343)',tracks:[
+    {text:'LAST CHANCE ⏰',y:18,h:.065,color:K,box:'#ffd84d',anim:'shake',at:D=>[0,D]},
+    {text:'Ends tonight',y:45,h:.08,color:W,box:'#ff3b5c',anim:'pulse',at:D=>[.6,Math.max(.5,D-.6)]},
+    {text:'Link in bio ↓',y:82,h:.045,color:K,box:W,anim:'bounce',at:D=>[1.5,Math.max(.5,D-1.5)]}]},
+  {id:'launch',cat:'promo',name:'New launch',tag:'Announce something new',dur:10,bg:'linear-gradient(160deg,#8e2de2,#4a00e0)',tracks:[
+    {text:'IT’S HERE 🚀',y:40,h:.08,color:K,box:W,anim:'elastic',at:D=>[0,Math.min(3,D)]},
+    {text:'Introducing ___',y:14,h:.05,color:W,box:K,anim:'down',at:D=>[Math.min(3,D/3),Math.max(.5,D-Math.min(3,D/3)-3)]},
+    {text:'Shop now · link in bio',y:82,h:.045,color:K,box:W,anim:'bounce',at:D=>[Math.max(0,D-3),Math.min(3,D)]}]},
+  {id:'freeship',cat:'promo',name:'Free shipping',tag:'Remove the last excuse',dur:8,bg:'linear-gradient(160deg,#56ab2f,#a8e063)',tracks:[
+    {text:'FREE SHIPPING 📦',y:30,h:.065,color:W,box:K,anim:'pop',at:D=>[0,D]},
+    {text:'Today only',y:45,h:.05,color:K,box:W,anim:'fade',at:D=>[.6,Math.max(.5,D-.6)]}]},
+  {id:'bundle',cat:'promo',name:'Bundle deal',tag:'Buy more, save more',dur:8,bg:'linear-gradient(160deg,#ff9966,#ff5e62)',tracks:[
+    {text:'BUY 2 GET 1 FREE',y:30,h:.06,color:K,box:'#ffd84d',anim:'pop',at:D=>[0,D]},
+    {text:'Mix and match ✨',y:45,h:.045,color:W,box:K,anim:'fade',at:D=>[.8,Math.max(.5,D-.8)]},
+    {text:'Link in bio',y:82,h:.045,color:K,box:W,anim:'bounce',at:D=>[1.5,Math.max(.5,D-1.5)]}]}];
 const CATS=[['all','All'],['hooks','Hooks'],['product','Product'],['reviews','Reviews'],['howto','How-to'],['lifestyle','Lifestyle'],['promo','Promo']];
 let tplCat='all';
 const TIPS=[['⚡','Hook them fast','Put your best moment or a bold line in the first 2–3 seconds.'],
