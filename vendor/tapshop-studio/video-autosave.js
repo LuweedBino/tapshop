@@ -51,14 +51,31 @@ async function open(id){let rec=await req((await store('projects')).get(id));if(
 // ---------- Recent videos on the start screen ----------
 const ago=t=>{let s=(Date.now()-t)/1000;return s<60?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':Math.round(s/86400)+' d ago'};
 async function refresh(){let box=document.getElementById('vsRecent');if(!box)return;let list=[];try{list=(await req((await store('projects')).getAll())).sort((a,b)=>b.updated-a.updated)}catch{}
-  let sec=document.getElementById('vsRecentSec');if(sec)sec.hidden=!list.length;box.innerHTML=list.length?list.map(p=>`<div class="vs-rec" role="button" tabindex="0" data-id="${esc(p.id)}"><div class="th">${p.thumb?`<img src="${p.thumb}" alt="">`:''}</div><b>${esc(p.name)}</b><small>${esc(p.aspect||'')} · ${ago(p.updated)}</small><button type="button" class="x" data-del="${esc(p.id)}" aria-label="Delete ${esc(p.name)}">×</button></div>`).join(''):'<p class="vs-help" style="margin:0">Videos you make show up here automatically.</p>'}
+  let sec=document.getElementById('vsRecentSec');if(sec)sec.hidden=!list.length;box.innerHTML=list.length?list.map(p=>`<div class="vs-rec" role="button" tabindex="0" data-id="${esc(p.id)}"><div class="th">${p.thumb?`<img src="${p.thumb}" alt="">`:''}</div><b>${esc(p.name)}</b><small>${esc(p.aspect||'')} · ${ago(p.updated)}</small><button type="button" class="x" data-more="${esc(p.id)}" aria-haspopup="menu" title="Rename, duplicate or delete" aria-label="More for ${esc(p.name)}">⋯</button></div>`).join(''):'<p class="vs-help" style="margin:0">Videos you make show up here automatically.</p>'}
+// ⋯ menu on Recent videos: Open, Rename, Duplicate, Delete.
+let menu=null;const closeMenu=()=>{menu?.remove();menu=null};
+function openMenu(btn,id){closeMenu();menu=document.createElement('div');menu.className='vs-menu';menu.setAttribute('role','menu');
+  menu.innerHTML=[['open','Open'],['rename','Rename'],['dup','Duplicate'],['del','Delete']].map(([k,l])=>`<button type="button" role="menuitem" data-a="${k}" class="${k==='del'?'vs-danger':''}">${l}</button>`).join('');
+  document.getElementById('veStart').appendChild(menu);let r=btn.getBoundingClientRect(),host=document.getElementById('veStart'),w=menu.offsetWidth;
+  menu.style.top=(r.bottom+host.scrollTop+6)+'px';menu.style.left=Math.max(8,Math.min(host.clientWidth-w-8,r.right-w))+'px';
+  menu.onclick=async e=>{let a=e.target.closest('[data-a]')?.dataset.a;if(!a)return;closeMenu();try{await act(a,id)}catch(x){toast('That didn’t work: '+(x.message||x))}};menu.querySelector('button')?.focus()}
+async function act(a,id){let rec=await req((await store('projects')).get(id));if(!rec){refresh();return}
+  if(a==='open'){document.getElementById('veStart').hidden=true;return open(id)}
+  if(a==='rename'){let n=prompt('Rename video',rec.name);if(n==null)return;n=n.trim().slice(0,80)||'Untitled video';rec.name=n;rec.state={...rec.state,name:n};await req((await store('projects','readwrite')).put(rec));
+    if(projId===id){$('projectName').value=n;lastSig=JSON.stringify(capture())}toast('Renamed to “'+n+'”.');return refresh()}
+  if(a==='dup'){let nid=uid(),media=await req((await store('media')).index('project').getAll(IDBKeyRange.only(id))),keys=[];
+    for(let m of media){let key=nid+m.key.slice(id.length);keys.push(key);await req((await store('media','readwrite')).put({...m,key,project:nid}))}
+    await req((await store('projects','readwrite')).put({...rec,id:nid,name:rec.name+' copy',state:{...rec.state,name:rec.name+' copy'},keys,updated:Date.now()}));toast('Duplicated “'+rec.name+'”.');return refresh()}
+  if(a==='del'){if(!confirm('Delete “'+rec.name+'” from this device? This can’t be undone.'))return;await remove(id);if(projId===id){projId=null;lastSig=''}toast('Deleted.');return refresh()}}
+document.addEventListener('click',e=>{if(menu&&!e.target.closest('.vs-menu')&&!e.target.closest('[data-more]'))closeMenu()});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
 function mount(){let start=document.getElementById('veStart');if(!start||document.getElementById('vsRecent'))return;
   let head=[...start.querySelectorAll('h2')].find(h=>/where you left off/i.test(h.textContent));if(!head)return;
   head.textContent='Open a saved project file';
   // Recent videos go at the top, above step 1, and stay hidden until there is one.
   let sec=document.createElement('section');sec.id='vsRecentSec';sec.hidden=true;sec.innerHTML='<h2>Recent videos</h2><p class="vs-help">Saved automatically on this device as you edit.</p>';
   let box=document.createElement('div');box.id='vsRecent';box.className='vs-recent';sec.appendChild(box);start.querySelector('.vs-lead').after(sec);
-  box.onclick=async e=>{let del=e.target.closest('[data-del]');if(del){e.stopPropagation();if(confirm('Delete this video from this device?')){await remove(del.dataset.del);if(projId===del.dataset.del){projId=null;lastSig=''}refresh()}return}
+  box.onclick=async e=>{let more=e.target.closest('[data-more]');if(more){e.stopPropagation();openMenu(more,more.dataset.more);return}
     let card=e.target.closest('.vs-rec');if(!card)return;document.getElementById('veStart').hidden=true;try{await open(card.dataset.id)}catch(x){toast('Couldn’t open that video: '+(x.message||x))}};
   box.onkeydown=e=>{if(e.key==='Enter')e.target.closest('.vs-rec')?.click()};
   let css=document.createElement('style');css.textContent=`#veStart .vs-recent{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:4px}
@@ -69,7 +86,10 @@ function mount(){let start=document.getElementById('veStart');if(!start||documen
 #veStart .vs-rec .th img{max-width:100%;max-height:100%;display:block}
 #veStart .vs-rec b{display:block;font-size:13px;margin:8px 2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #veStart .vs-rec small{display:block;font-size:11px;margin:2px 2px 2px;color:var(--ts-muted,#737373)}
-#veStart .vs-rec .x{position:absolute;top:4px;right:4px;width:28px;height:28px;padding:0;border-radius:50%;display:grid;place-items:center;font-size:16px}`;document.head.appendChild(css);refresh()}
+#veStart .vs-rec .x{position:absolute;top:4px;right:4px;width:32px;height:32px;padding:0;border-radius:50%;display:grid;place-items:center;font-size:18px;line-height:1}
+#veStart .vs-menu{position:absolute;z-index:45;min-width:160px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:14px;background:var(--ts-surface,#fff);border:1px solid var(--ts-border,#e5e5e5);box-shadow:0 10px 30px rgb(0 0 0/.2)}
+#veStart .vs-menu button{text-align:left;border:0!important;border-radius:10px!important;padding:10px 12px!important;font-size:14px;justify-content:flex-start}
+html body #veStart .vs-menu button.vs-danger{color:#dc2626!important}html.ts-dark body #veStart .vs-menu button.vs-danger{color:#ff8b8b!important}`;document.head.appendChild(css);refresh()}
 
 mount();
 // Refresh the list whenever the start screen is shown again (⌂ Start).
