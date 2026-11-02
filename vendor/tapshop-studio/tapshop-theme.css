@@ -61,3 +61,8 @@ html.ts body .search input{border-color:transparent!important}
 html.ts body .panel-divider{background:var(--ts-border)!important}
 html.ts body .panel-divider:hover,html.ts body .panel-divider:focus-visible{background:var(--ts-border-strong)!important}
 html.ts body #time{color:var(--ts-text)!important}
+
+/* Collapsed sidebar "Create": a plain circle with the plus drawn in CSS, so it sits dead centre
+   (the ＋ character doesn't). White circle + black plus on the black button; flips in dark mode. */
+html.ts[data-sidebar="collapsed"] body #mainSidebar>.primary .nav-icon{display:block;width:32px;height:32px;padding:0;border:0!important;border-radius:50%;box-shadow:none!important;font-size:0!important;color:transparent!important;
+  background:linear-gradient(var(--ts-primary),var(--ts-primary)) center/14px 2.5px no-repeat,linear-gradient(var(--ts-primary),var(--ts-primary)) center/2.5px 14px no-repeat,var(--ts-on-primary)!important}
