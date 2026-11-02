@@ -32,6 +32,7 @@ const FILES = new Set([
   "tapshop-theme.css",
   "tapshop-theme.js",
   "video-start.js",
+  "video-captions.js",
   "demo.webm",
 ]);
 
