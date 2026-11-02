@@ -31,6 +31,7 @@ const FILES = new Set([
   "color-picker.js",
   "tapshop-theme.css",
   "tapshop-theme.js",
+  "video-start.js",
   "demo.webm",
 ]);
 
