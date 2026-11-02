@@ -9,9 +9,10 @@ html.ts body{background:var(--ts-bg)!important;color:var(--ts-text)!important;fo
 
 /* Buttons */
 html.ts body button:not([style*="background"]):not(.duration-strip):not(.strip-split):not(.theme-toggle):not(.dialog-x){background:var(--ts-surface)!important;color:var(--ts-text)!important;border:1px solid var(--ts-border-strong)!important;box-shadow:none!important;text-shadow:none!important;border-radius:12px;font-weight:600}
-html.ts body button:not([style*="background"]):not(.duration-strip):not(.strip-split):not(.theme-toggle):not(.dialog-x):hover:not(:disabled){background:var(--ts-hover)!important}
+/* Hover grey only for unselected buttons; on touch screens hover sticks after a tap and would hide the black "selected" look. */
+html.ts body button:not([style*="background"]):not(.duration-strip):not(.strip-split):not(.theme-toggle):not(.dialog-x):not(.primary):not(.active):not(.on):not([aria-pressed="true"]):hover:not(:disabled){background:var(--ts-hover)!important}
 html.ts body button:is(.primary,.active,.on)[class]:not([style*="background"]):not(.duration-strip):not(.strip-split),html.ts body button[aria-pressed="true"]:not([style*="background"]){background:var(--ts-primary)!important;color:var(--ts-on-primary)!important;border-color:var(--ts-primary)!important}
-html.ts body button:is(.primary,.active,.on)[class]:not([style*="background"]):hover:not(:disabled){background:var(--ts-primary-hover)!important}
+@media (hover:hover) and (pointer:fine){html.ts body button:is(.primary,.active,.on)[class]:not([style*="background"]):hover:not(:disabled){background:var(--ts-primary-hover)!important}}
 html.ts body button.primary[style*="background"]{box-shadow:none!important}
 html.ts body button:disabled{opacity:.5}
 html.ts body .dialog-x{background:var(--ts-surface)!important;color:var(--ts-text)!important;border:1px solid var(--ts-border-strong)!important;box-shadow:none!important}
