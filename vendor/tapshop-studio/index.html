@@ -1017,4 +1017,4 @@ const renderPngNoFonts=renderPng;renderPng=function(done){withEmbedded(design,()
 const exportSvgNoFonts=exportSvg;exportSvg=function(){withEmbedded(design,()=>exportSvgNoFonts())};
 if(typeof designPng==='function'){const designPngNoFonts=designPng;designPng=function(d){return withEmbedded(d,()=>designPngNoFonts(d))}}
 if(typeof svgImage==='function'){const svgImageNoFonts=svgImage;svgImage=async function(str){let ns=[...new Set(String(str).match(/TapFont\d+/g)||[])];if(ns.length){await prepFontData(ns);str=withFontCss(str)}return svgImageNoFonts(str)}}
-</script><script src="studio-social.js"></script><link rel="stylesheet" href="tapshop-theme.css"><script src="tapshop-theme.js"></script></body></html>
+</script><script src="studio-social.js"></script><script src="studio-projects.js"></script><link rel="stylesheet" href="tapshop-theme.css"><script src="tapshop-theme.js"></script></body></html>
