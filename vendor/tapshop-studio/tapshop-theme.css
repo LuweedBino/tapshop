@@ -1,0 +1,63 @@
+/* TapShop look for the Studio and Video Editor: the dashboard's neutral palette, system font,
+   rounded-xl controls, black primary buttons (white in dark mode) and flat white cards.
+   Loaded last on both pages; tapshop-theme.js sets html.ts (always) and html.ts-dark.
+   Buttons carrying an inline background (colour swatches, presets) keep their own colour. */
+html.ts{--ts-bg:#fafafa;--ts-surface:#fff;--ts-soft:#f5f5f5;--ts-border:#e5e5e5;--ts-border-strong:#d4d4d4;--ts-text:#171717;--ts-muted:#737373;--ts-primary:#171717;--ts-on-primary:#fff;--ts-primary-hover:#404040;--ts-hover:#f5f5f5;--ts-accent:#8b5cf6;--ts-shadow:0 1px 2px rgb(0 0 0/.05);
+  --plate-top:var(--ts-surface);--plate-bottom:var(--ts-surface);--rim:var(--ts-border-strong);--glint:transparent;--shade:transparent;--inner:transparent;--plate-text:var(--ts-text);--pressed:var(--ts-soft);accent-color:var(--ts-accent)}
+html.ts.ts-dark{--ts-bg:#0f0f13;--ts-surface:#17171c;--ts-soft:#1e1e24;--ts-border:#2f2f37;--ts-border-strong:#3e3e47;--ts-text:#eeeef2;--ts-muted:#a1a1ad;--ts-primary:#eeeef2;--ts-on-primary:#17171c;--ts-primary-hover:#cdcdd5;--ts-hover:#25252c;--ts-accent:#a78bfa;color-scheme:dark}
+html.ts body{background:var(--ts-bg)!important;color:var(--ts-text)!important;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif!important;--plate:var(--ts-surface);--rim:var(--ts-border-strong);--shadow:var(--ts-shadow)}
+
+/* Buttons */
+html.ts body button:not([style*="background"]):not(.duration-strip):not(.strip-split):not(.theme-toggle):not(.dialog-x){background:var(--ts-surface)!important;color:var(--ts-text)!important;border:1px solid var(--ts-border-strong)!important;box-shadow:none!important;text-shadow:none!important;border-radius:12px;font-weight:600}
+html.ts body button:not([style*="background"]):not(.duration-strip):not(.strip-split):not(.theme-toggle):not(.dialog-x):hover:not(:disabled){background:var(--ts-hover)!important}
+html.ts body button:is(.primary,.active,.on)[class]:not([style*="background"]):not(.duration-strip):not(.strip-split),html.ts body button[aria-pressed="true"]:not([style*="background"]){background:var(--ts-primary)!important;color:var(--ts-on-primary)!important;border-color:var(--ts-primary)!important}
+html.ts body button:is(.primary,.active,.on)[class]:not([style*="background"]):hover:not(:disabled){background:var(--ts-primary-hover)!important}
+html.ts body button.primary[style*="background"]{box-shadow:none!important}
+html.ts body button:disabled{opacity:.5}
+html.ts body .dialog-x{background:var(--ts-surface)!important;color:var(--ts-text)!important;border:1px solid var(--ts-border-strong)!important;box-shadow:none!important}
+
+/* Form fields */
+html.ts body :is(input:not([type=range]):not([type=checkbox]):not([type=radio]):not([type=color]),select,textarea){background:var(--ts-surface)!important;color:var(--ts-text)!important;border:1px solid var(--ts-border-strong)!important;border-radius:12px;box-shadow:none!important}
+html.ts body :is(input,select,textarea):focus{outline:none;border-color:var(--ts-primary)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--ts-primary) 12%,transparent)!important}
+html.ts body ::placeholder{color:var(--ts-muted)}
+
+/* Surfaces: panels, cards, dialogs, menus */
+html.ts body :is(aside,#mainSidebar,dialog,.hero,.card,.format,.preset,.sizeform,.workspace,.sidebar-note,.toolcard,.notice,.picker-top,.picker-side,.panel,.top,.timeline,.timebar,.previewtop,.props,.tools,.layers-head){background:var(--ts-surface)!important;color:var(--ts-text)!important;border-color:var(--ts-border)!important;box-shadow:none!important;background-image:none!important}
+html.ts body :is(.card,.format,.preset,.hero,.workspace,.sidebar-note,.toolcard,.notice,dialog){border:1px solid var(--ts-border)!important;border-radius:16px}
+html.ts body :is(.card,.format,.preset):hover{border-color:var(--ts-border-strong)!important}
+html.ts body :is(main,.preview,.canvaswrap,.tracks,.ebody,.picker-main,.picker-layout){background-color:var(--ts-bg)!important;background-image:none!important}
+html.ts body :is(.thumb){background:var(--ts-soft)!important;border-color:var(--ts-border)!important;box-shadow:none!important}
+html.ts body dialog::backdrop{background:rgb(0 0 0/.45)}
+html.ts body :is(.muted,.sub,.hint,small,.eyebrow,.formats-label,.formats-label span,.status,.preset-dim,.picker-note){color:var(--ts-muted)!important}
+html.ts body hr{border-color:var(--ts-border)}
+html.ts body .format b{background:var(--ts-soft)!important;color:var(--ts-text)!important;border:0!important;box-shadow:none!important}
+html.ts body .live-dot{background:var(--ts-text)!important;box-shadow:none!important}
+html.ts body .workspace-initial{background:var(--ts-soft)!important;color:var(--ts-text)!important}
+
+/* Headings and logo in TapShop's bold sans */
+html.ts body :is(h1,h2,h3,.logo,.brand){font-family:inherit!important;color:var(--ts-text)!important;letter-spacing:-.02em}
+html.ts body .hero h1 em{font-family:inherit!important;font-style:normal;color:var(--ts-muted)!important}
+html.ts body :is(.logo,.brand){font-weight:800!important}
+html.ts body :is(.logo span,.brand em){color:var(--ts-text)!important;font-style:normal}
+html.ts body .badge{background:var(--ts-soft)!important;color:var(--ts-muted)!important;border-color:var(--ts-border)!important}
+
+/* Light/dark switch: TapShop's pill with a violet track when on */
+html.ts body .theme-toggle{background:var(--ts-surface)!important;color:var(--ts-text)!important;border:1px solid var(--ts-border-strong)!important;box-shadow:none!important;border-radius:999px}
+html.ts body .theme-track{background:var(--ts-border-strong)!important;border:0!important;box-shadow:none!important}
+html.ts body .theme-toggle[aria-checked="true"] .theme-track{background:#a78bfa!important}
+html.ts body .theme-track span{background:#fff!important}
+
+/* Toasts */
+html.ts body .toast{background:var(--ts-primary)!important;color:var(--ts-on-primary)!important;border:0!important}
+
+/* Small leftovers from the old purple look */
+html.ts body :is(.workspace-name,.workspace .workspace-name,.sidebar-note b,.sidebar-note strong,.sidebar-note h4){color:var(--ts-text)!important}
+html.ts body .workspace .avatar{background:var(--ts-soft)!important;border-color:var(--ts-border)!important;box-shadow:none!important}
+html.ts body .workspace .workspace-initial{background:var(--ts-surface)!important}
+html.ts body .sidebar-note p{color:var(--ts-muted)!important}
+html.ts body .sidebar-note>span{color:var(--ts-text)!important}
+html.ts body .search{background:var(--ts-surface)!important;border-color:var(--ts-border-strong)!important;box-shadow:none!important}
+html.ts body .search input{border-color:transparent!important}
+html.ts body .panel-divider{background:var(--ts-border)!important}
+html.ts body .panel-divider:hover,html.ts body .panel-divider:focus-visible{background:var(--ts-border-strong)!important}
+html.ts body #time{color:var(--ts-text)!important}
