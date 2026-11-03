@@ -3,9 +3,9 @@
 import { useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { uploadFile } from "@/lib/upload";
-import { addVaultItems, createVaultFolder, deleteVaultFolder, deleteVaultItem, moveVaultItems, renameVaultFolder } from "@/app/actions/vault";
+import { addVaultItems, createVaultFolder, deleteVaultFolder, deleteVaultItem, moveVaultItems, renameVaultFolder, renameVaultItem } from "@/app/actions/vault";
 import { StorageMeter } from "./StorageMeter";
-import { formatBytes, VAULT_KINDS, VAULT_MAX_BYTES, VAULT_QUOTA_BYTES, type VaultKind } from "@/lib/vault";
+import { formatBytes, splitFileName, VAULT_KINDS, VAULT_MAX_BYTES, VAULT_QUOTA_BYTES, type VaultKind } from "@/lib/vault";
 
 export type VaultItemView = { id: string; name: string; kind: string; size: number; contentType: string; source: string; folderId: string | null; createdAt: string };
 export type VaultFolderView = { id: string; name: string };
@@ -55,6 +55,7 @@ export function MediaVault({ items, folders, onBack, onExportDesigns, canExportD
   const [naming, setNaming] = useState<"new" | "rename" | null>(null);
   const [draft, setDraft] = useState("");
   const [dropOn, setDropOn] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const folder = folders.find((f) => f.id === place) ?? null;
   const here = place === ALL || (place !== LOOSE && !folder) ? items : items.filter((i) => (place === LOOSE ? !i.folderId : i.folderId === place));
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
@@ -135,6 +136,12 @@ export function MediaVault({ items, folders, onBack, onExportDesigns, canExportD
     const result = await deleteVaultItem(item.id);
     if (result.error) setError(result.error);
     else router.refresh();
+  }
+
+  async function saveItemName(e: FormEvent, item: VaultItemView) {
+    e.preventDefault();
+    if (!renaming) return;
+    if (renaming.name.trim() === splitFileName(item.name).base || await run(() => renameVaultItem(item.id, renaming.name))) setRenaming(null);
   }
 
   return (
@@ -236,7 +243,7 @@ export function MediaVault({ items, folders, onBack, onExportDesigns, canExportD
             </li>
           )}
           {shown.map((item) => (
-            <li key={item.id} draggable={folders.length > 0} onDragStart={(e) => { e.dataTransfer.setData("application/x-vault-item", item.id); e.dataTransfer.effectAllowed = "move"; }} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
+            <li key={item.id} draggable={folders.length > 0 && renaming?.id !== item.id} onDragStart={(e) => { e.dataTransfer.setData("application/x-vault-item", item.id); e.dataTransfer.effectAllowed = "move"; }} className="overflow-hidden rounded-xl border border-neutral-200 bg-white">
               <a href={`/api/vault/${item.id}`} target="_blank" rel="noopener" className="block aspect-video bg-neutral-100">
                 {item.kind === "image" && !item.contentType.includes("svg") ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -248,7 +255,28 @@ export function MediaVault({ items, folders, onBack, onExportDesigns, canExportD
                 )}
               </a>
               <div className="p-2.5">
-                <p className="truncate text-sm font-semibold" title={item.name}>{item.name}</p>
+                {renaming?.id === item.id ? (
+                  <form onSubmit={(e) => saveItemName(e, item)} onKeyDown={(e) => { if (e.key === "Escape") setRenaming(null); }}>
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        aria-label={`New name for ${item.name}`}
+                        value={renaming.name}
+                        maxLength={180}
+                        onChange={(e) => setRenaming({ id: item.id, name: e.target.value })}
+                        onFocus={(e) => e.target.select()}
+                        className="min-w-0 flex-1 rounded-lg border border-neutral-300 bg-white px-2 py-1 text-base font-semibold sm:text-sm"
+                      />
+                      {splitFileName(item.name).ext && <span className="shrink-0 text-xs text-neutral-500">{splitFileName(item.name).ext}</span>}
+                    </div>
+                    <div className="mt-1.5 flex gap-3 text-xs font-semibold">
+                      <button type="submit" disabled={!renaming.name.trim() || !!busy} className="text-violet-700 hover:text-violet-900 disabled:opacity-50">Save</button>
+                      <button type="button" onClick={() => setRenaming(null)} className="text-neutral-700 hover:text-neutral-900">Cancel</button>
+                    </div>
+                  </form>
+                ) : (
+                  <p className="truncate text-sm font-semibold" title={item.name}>{item.name}</p>
+                )}
                 <p className="truncate text-xs text-neutral-500">{formatBytes(item.size)} · {words.length && place === ALL && item.folderId ? `📁 ${folders.find((f) => f.id === item.folderId)?.name ?? "Folder"}` : SOURCE_LABEL[item.source] ?? "Uploaded"}</p>
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold">
                   {USABLE.has(item.kind) && (
@@ -257,6 +285,7 @@ export function MediaVault({ items, folders, onBack, onExportDesigns, canExportD
                     </button>
                   )}
                   <a href={`/api/vault/${item.id}?download=1`} className="text-neutral-700 hover:text-neutral-900">Download</a>
+                  <button type="button" onClick={() => setRenaming({ id: item.id, name: splitFileName(item.name).base })} className="text-neutral-700 hover:text-neutral-900">Rename</button>
                   <button type="button" onClick={() => remove(item)} className="text-red-600 hover:text-red-700">Delete</button>
                 </div>
                 {folders.length > 0 && (

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { deleteObject, ownKey } from "@/lib/storage";
-import { formatBytes, vaultKind, VAULT_MAX_BYTES, VAULT_QUOTA_BYTES } from "@/lib/vault";
+import { formatBytes, splitFileName, vaultKind, VAULT_MAX_BYTES, VAULT_QUOTA_BYTES } from "@/lib/vault";
 
 const Item = z.object({
   key: z.string().min(1),
@@ -45,6 +45,24 @@ export async function deleteVaultItem(id: string): Promise<{ error?: string }> {
   if (!item) return { error: "File not found" };
   await db.vaultItem.delete({ where: { id: item.id } });
   await deleteObject(item.key);
+  revalidatePath("/dashboard/studio");
+  return {};
+}
+
+const FileName = z.string().trim().min(1, "Give the file a name").max(180, "That name is too long");
+
+/** Changes the part of the name people see; the file's ending stays, so it keeps opening the same way. */
+export async function renameVaultItem(id: string, name: string): Promise<{ error?: string }> {
+  const creator = await requireCreator();
+  const parsed = FileName.safeParse(name);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const item = await db.vaultItem.findFirst({ where: { id, creatorId: creator.id }, select: { id: true, name: true } });
+  if (!item) return { error: "File not found" };
+  const { ext } = splitFileName(item.name);
+  const typed = parsed.data.replace(/[\\/\p{Cc}]+/gu, " ").trim();
+  const base = ext && typed.toLowerCase().endsWith(ext.toLowerCase()) ? typed.slice(0, -ext.length).trim() : typed;
+  if (!base) return { error: "Give the file a name" };
+  await db.vaultItem.update({ where: { id: item.id }, data: { name: base + ext } });
   revalidatePath("/dashboard/studio");
   return {};
 }

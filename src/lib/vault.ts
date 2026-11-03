@@ -25,6 +25,12 @@ export function vaultKind(contentType: string, name: string): VaultKind {
   return "other";
 }
 
+/** Splits a file name into the editable part and its ending, which must survive a rename: the Studio and vaultKind recognise projects by theirs. */
+export function splitFileName(name: string) {
+  const match = name.match(/^(.+?)(\.tapshop(?:-design)?\.json|\.[a-z0-9]{1,10})$/i);
+  return match ? { base: match[1], ext: match[2] } : { base: name, ext: "" };
+}
+
 export function formatBytes(n: number) {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
