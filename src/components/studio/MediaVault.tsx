@@ -9,6 +9,7 @@ import { formatBytes, splitFileName, VAULT_KINDS, VAULT_MAX_BYTES, VAULT_QUOTA_B
 
 export type VaultItemView = { id: string; name: string; kind: string; size: number; contentType: string; source: string; folderId: string | null; createdAt: string };
 export type VaultFolderView = { id: string; name: string };
+export type SavedItem = Pick<VaultItemView, "id" | "name" | "kind">;
 
 const ICONS: Record<string, string> = { video: "▶", image: "🖼", audio: "♫", document: "📄", project: "✳", other: "📦" };
 const SOURCE_LABEL: Record<string, string> = { upload: "Uploaded", design: "From Design Studio", video: "From Video Studio" };
@@ -18,6 +19,7 @@ export async function saveToVault(files: { file: File; source: "upload" | "desig
   const adding = files.reduce((n, f) => n + f.file.size, 0);
   if (used + adding > VAULT_QUOTA_BYTES) throw new Error(`Not enough space: ${formatBytes(adding)} won't fit in the ${formatBytes(Math.max(0, VAULT_QUOTA_BYTES - used))} you have left. Delete some files to make room.`);
   const items = [];
+  const saved: SavedItem[] = [];
   let done = 0;
   for (const { file, source } of files) {
     if (file.size > VAULT_MAX_BYTES) throw new Error(`${file.name} is over the ${formatBytes(VAULT_MAX_BYTES)} limit`);
@@ -28,8 +30,9 @@ export async function saveToVault(files: { file: File; source: "upload" | "desig
   for (let i = 0; i < items.length; i += 50) {
     const result = await addVaultItems(items.slice(i, i + 50), folderId);
     if (result.error) throw new Error(result.error);
+    saved.push(...(result.items ?? []));
   }
-  return items.length;
+  return saved;
 }
 
 const USABLE = new Set(["video", "audio", "image", "project"]);
@@ -42,7 +45,7 @@ const SORTS = {
   big: { label: "Biggest first", by: (a: VaultItemView, b: VaultItemView) => b.size - a.size },
 };
 
-export function MediaVault({ items, folders, onBack, onExportDesigns, canExportDesigns, onUse }: { items: VaultItemView[]; folders: VaultFolderView[]; onBack: () => void; onExportDesigns: () => void; canExportDesigns: boolean; onUse: (item: VaultItemView) => void }) {
+export function MediaVault({ items, folders, onBack, onExportDesigns, canExportDesigns, onUse, onSell }: { onSell: (item: VaultItemView) => void; items: VaultItemView[]; folders: VaultFolderView[]; onBack: () => void; onExportDesigns: () => void; canExportDesigns: boolean; onUse: (item: VaultItemView) => void }) {
   const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState<"all" | VaultKind>("all");
@@ -283,6 +286,9 @@ export function MediaVault({ items, folders, onBack, onExportDesigns, canExportD
                     <button type="button" onClick={() => onUse(item)} className="text-violet-700 hover:text-violet-900" title={item.kind === "image" ? "Add to your design" : item.kind === "project" ? "Open this project in Studio" : "Add to your video"}>
                       Use in Studio
                     </button>
+                  )}
+                  {item.kind !== "project" && (
+                    <button type="button" onClick={() => onSell(item)} className="text-emerald-700 hover:text-emerald-900" title="Put this on your store">Sell this</button>
                   )}
                   <a href={`/api/vault/${item.id}?download=1`} className="text-neutral-700 hover:text-neutral-900">Download</a>
                   <button type="button" onClick={() => setRenaming({ id: item.id, name: splitFileName(item.name).base })} className="text-neutral-700 hover:text-neutral-900">Rename</button>

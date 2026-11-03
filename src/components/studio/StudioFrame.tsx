@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { SaveToTapShop, type StudioImage } from "./SaveToTapShop";
-import { MediaVault, saveToVault, type VaultFolderView, type VaultItemView } from "./MediaVault";
+import { MediaVault, saveToVault, type SavedItem, type VaultFolderView, type VaultItemView } from "./MediaVault";
+import { SellThis } from "./SellThis";
 import { UseInStudio, type DesignOption, type StudioChoice } from "./UseInStudio";
-import { VAULT_MAX_BYTES } from "@/lib/vault";
+import { formatBytes, VAULT_MAX_BYTES } from "@/lib/vault";
 
 type VaultFile = { file: File; source: "design" | "video" };
 type Page = "design" | "video";
@@ -34,7 +35,7 @@ function vaultFile(x: unknown): VaultFile | null {
 // the app. Keep src stable: remounting the iframe drops unsaved in-memory video edits, so
 // the Media Vault is shown beside it (with the iframe hidden) rather than replacing it.
 // allow-modals is needed for the "custom size" prompt in the design studio.
-export function StudioFrame({ products, vault, folders }: { products: { id: string; title: string }[]; vault: VaultItemView[]; folders: VaultFolderView[] }) {
+export function StudioFrame({ products, vault, folders, handle, hasPayments }: { products: { id: string; title: string }[]; vault: VaultItemView[]; folders: VaultFolderView[]; handle: string; hasPayments: boolean }) {
   const router = useRouter();
   const frame = useRef<HTMLIFrameElement>(null);
   const [image, setImage] = useState<StudioImage | null>(null);
@@ -42,6 +43,7 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
   const [onDesignHome, setOnDesignHome] = useState(false);
   const [saving, setSaving] = useState<{ text: string; done?: boolean; error?: boolean } | null>(null);
   const [using, setUsing] = useState<VaultItemView | null>(null);
+  const [selling, setSelling] = useState<SavedItem | null>(null);
   const [designs, setDesigns] = useState<DesignOption[] | null>(null);
   // A file waiting for the other Studio page to finish loading (it says tapshop:studio-ready).
   const pending = useRef<{ page: Page; message: unknown; at: number } | null>(null);
@@ -79,13 +81,17 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
     setView("vault");
   }
 
-  async function store(files: VaultFile[]) {
+  async function store(files: VaultFile[], sell = false) {
     if (!files.length) return;
     try {
       setSaving({ text: `Saving 0 of ${files.length} to your Media Vault…` });
-      await saveToVault(files, (d) => setSaving({ text: `Saving ${d} of ${files.length} to your Media Vault…` }), null, vault.reduce((n, i) => n + i.size, 0));
+      const saved = await saveToVault(files, (d) => setSaving({ text: `Saving ${d} of ${files.length} to your Media Vault…` }), null, vault.reduce((n, i) => n + i.size, 0));
       setSaving({ text: `Saved ${files.length} ${files.length === 1 ? "file" : "files"} to your Media Vault`, done: true });
       router.refresh();
+      if (sell && saved[0]) {
+        setSaving(null);
+        setSelling(saved[0]);
+      }
     } catch (e) {
       setSaving({ text: e instanceof Error ? e.message : "Couldn't save to the Media Vault", done: true, error: true });
     }
@@ -113,7 +119,8 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
       }
       if (d.type === "tapshop:vault-save" && Array.isArray(d.items)) {
         const files = d.items.slice(0, 200).map(vaultFile).filter((f: VaultFile | null): f is VaultFile => !!f);
-        store(files);
+        if (!files.length && d.items.length) setSaving({ text: `That file is over the ${formatBytes(VAULT_MAX_BYTES)} limit`, done: true, error: true });
+        store(files, d.sell === true);
         return;
       }
       if (d.type !== "tapshop:export-ready" || d.kind !== "image") return;
@@ -180,7 +187,7 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
         style={height ? { height } : undefined}
         className={`h-[calc(100dvh-140px)] min-h-[420px] w-full rounded-xl border border-neutral-200 bg-white md:h-[calc(100dvh-64px)] ${view === "studio" ? "block" : "hidden"}`}
       />
-      {view === "vault" && <MediaVault items={vault} folders={folders} onBack={() => setView("studio")} onExportDesigns={exportDesigns} canExportDesigns={onDesignHome} onUse={useInStudio} />}
+      {view === "vault" && <MediaVault items={vault} folders={folders} onBack={() => setView("studio")} onExportDesigns={exportDesigns} canExportDesigns={onDesignHome} onUse={useInStudio} onSell={setSelling} />}
       {saving && (
         <div role="status" className={`fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-md items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold shadow-xl ${saving.error ? "bg-red-600 text-white" : "bg-neutral-900 text-white"}`}>
           <span className="flex-1">{saving.text}</span>
@@ -191,6 +198,7 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
         </div>
       )}
       {using && <UseInStudio item={using} designs={designs} onChoose={choose} onClose={() => setUsing(null)} />}
+      {selling && <SellThis item={selling} handle={handle} hasPayments={hasPayments} onClose={() => setSelling(null)} />}
       {image && <SaveToTapShop image={image} products={products} onClose={() => setImage(null)} />}
     </>
   );

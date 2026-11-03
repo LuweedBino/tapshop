@@ -19,5 +19,5 @@ export default async function StudioPage() {
     }),
     db.vaultFolder.findMany({ where: { creatorId: creator.id }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
-  return <StudioFrame products={products} vault={vault.map((v) => ({ ...v, createdAt: v.createdAt.toISOString() }))} folders={folders} />;
+  return <StudioFrame products={products} vault={vault.map((v) => ({ ...v, createdAt: v.createdAt.toISOString() }))} folders={folders} handle={creator.handle} hasPayments={!!creator.stripeAccountId} />;
 }
