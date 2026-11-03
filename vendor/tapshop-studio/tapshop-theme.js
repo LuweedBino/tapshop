@@ -32,3 +32,10 @@
     b.textContent='';let i=document.createElement('span');i.className='ts-ti';i.textContent=m[1];let l=document.createElement('span');l.className='ts-tl';l.textContent='  '+m[2];b.append(i,l);b.classList.add('ts-ic');if(!b.title)b.title=m[2];if(!b.getAttribute('aria-label'))b.setAttribute('aria-label',m[2])};
   const all=()=>tools.querySelectorAll(':scope>button').forEach(split);all();
   new MutationObserver(all).observe(tools,{childList:true,subtree:true,characterData:true})})();
+// Shake each collapse toggle for a second, the first time it shows after the page loads, because
+// people miss them. The tools toggle stays hidden until a design opens, so visibility is watched.
+(()=>{if(matchMedia('(prefers-reduced-motion:reduce)').matches||!window.IntersectionObserver)return;
+  const toggles=['sidebarToggle','toolsToggle'].map(id=>document.getElementById(id)).filter(Boolean);if(!toggles.length)return;
+  const watch=()=>{const seen=new IntersectionObserver(list=>list.forEach(e=>{if(!e.isIntersecting)return;seen.unobserve(e.target);e.target.classList.add('ts-shake')}));
+    toggles.forEach(b=>{b.addEventListener('animationend',()=>b.classList.remove('ts-shake'));seen.observe(b)})};
+  if(document.readyState==='complete')watch();else addEventListener('load',watch,{once:true})})();
