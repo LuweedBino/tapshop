@@ -264,9 +264,9 @@ function build(){
   let style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
   let el=document.createElement('div');el.id='veStart';el.setAttribute('role','region');el.setAttribute('aria-label','Start a new video');
   el.innerHTML=`<div class="vs-wrap">
-  <div class="vs-top"><button type="button" onclick="location.href='index.html'">← Studio</button><span class="sp"></span><button type="button" id="vsBlank" title="Skip and open the editor">Open editor</button></div>
+  <div class="vs-top"><button type="button" onclick="location.href='index.html'">← Studio</button><span class="sp"></span><button type="button" id="vsBlank" title="Skip this and start from scratch">Video Editor</button></div>
   <h1>Make a short video</h1>
-  <p class="vs-lead">Pick where it's going, add your clips and photos, and choose a template if you'd like a head start. You can change anything later.</p>
+  <p class="vs-lead">Pick where it's going, add your clips and photos, and choose a template if you'd like a head start. You can change anything later. Or skip all this and tap <b>Video Editor</b> at the top right to create from scratch.</p>
   <h2><span class="vs-step">1</span>Where will you post it?</h2><p class="vs-help">This sets the shape of your video.</p>
   <div class="vs-plats" id="vsPlats"></div>
   <h2><span class="vs-step">2</span>Add your videos and photos</h2><p class="vs-help">They go on the timeline in this order: videos first, then photos (${PHOTO_SECONDS} seconds each).</p>
