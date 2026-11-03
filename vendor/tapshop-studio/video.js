@@ -369,7 +369,8 @@ function openVaultChoice(){if(inTapShop()&&!exporting)$('vaultChoice').showModal
 function vaultChoose(kind){$('vaultChoice').close();if(kind==='project'){saveProjectToVault();return}openExport();if(!$('exportDialog').open)return;exportToVault=true;$('vaultVideo').classList.add('hidden');for(const w of EXPORT_WORDS)w.el.textContent=w.vault}
 const downloadWithVault=download;download=function(blob,name){if(blob?.type?.startsWith('video/')){lastVideoExport={blob,name};if(exportToVault){exportToVault=false;sendToVault([{blob,name,source:'video'}]);$('exportDialog').close();return}if(inTapShop())$('vaultVideo')?.classList.remove('hidden')}return downloadWithVault(blob,name)};
 function saveVideoToVault(){if(!inTapShop()||!lastVideoExport)return;sendToVault([{...lastVideoExport,source:'video'}]);$('vaultVideo').classList.add('hidden');$('exportDialog').close()}
-function saveProjectToVault(){if(!inTapShop()||exporting)return;let captured=null,real=download;download=(blob,name)=>{captured={blob,name}};try{saveProject()}finally{download=real}if(captured)sendToVault([{...captured,source:'video'}])}
+const VAULT_FILE_LIMIT=500*1024*1024; // VAULT_MAX_BYTES in lib/vault.ts
+function saveProjectToVault(){if(!inTapShop()||exporting)return;let blob=vePackProject();if(!blob){toast('Add something to your video first.');return}if(blob.size>VAULT_FILE_LIMIT){toast('This project is over 500 MB with its clips. Save it as a video instead.');return}sendToVault([{blob,name:($('projectName').value||'Untitled video')+'.tapshop.json',source:'video'}])}
 if(!inTapShop())$('vaultProject')?.remove();
 
 // Importing from the Vault: videos go on the main timeline (or on top as a layer), audio
