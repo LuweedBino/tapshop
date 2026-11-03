@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { deleteVaultItem, renameVaultItem } from "@/app/actions/vault";
 import { readObject, signedDownloadUrl, usingS3 } from "@/lib/storage";
 
 // Opens (or with ?download=1 downloads) a Media Vault file. Only its owner can.
@@ -29,4 +30,22 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       "content-security-policy": "sandbox",
     },
   });
+}
+
+// The Studio's Projects page runs in the editor's iframe, so it can't call server actions.
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const creator = await getCreator();
+  if (!creator) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  const { id } = await params;
+  const body = await req.json().catch(() => null);
+  const result = await renameVaultItem(id, String(body?.name ?? ""));
+  return NextResponse.json(result, { status: result.error ? 400 : 200 });
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const creator = await getCreator();
+  if (!creator) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  const { id } = await params;
+  const result = await deleteVaultItem(id);
+  return NextResponse.json(result, { status: result.error ? 400 : 200 });
 }
