@@ -98,9 +98,14 @@ function openVault(){if(inTapShop())window.parent.postMessage({type:'tapshop:ope
 function vaultName(n){return String(n||'Untitled design').replace(/[\\/:*?"<>|]+/g,'-').trim().slice(0,80)||'design'}
 function designPng(d){return new Promise((res,rej)=>{let url=URL.createObjectURL(new Blob([svgString(d)],{type:'image/svg+xml'})),im=new Image();im.onload=()=>{let c=document.createElement('canvas');c.width=d.w;c.height=d.h;c.getContext('2d').drawImage(im,0,0);URL.revokeObjectURL(url);c.toBlob(b=>b?res(b):rej(Error('Could not export '+d.name)),'image/png')};im.onerror=()=>{URL.revokeObjectURL(url);rej(Error('Could not export '+d.name))};im.src=url})}
 // Sell this: the picture goes to the Vault, then the dashboard opens its Sell this form.
-async function sellDesign(){if(!inTapShop()||!design)return;save();try{window.parent.postMessage({type:'tapshop:vault-save',version:1,sell:true,items:[{blob:await designPng(design),name:vaultName(design.name)+'.png',source:'design'}]},location.origin)}catch(e){toast(e.message)}}
+async function sellDesign(){if(!inTapShop()||!design)return;save();if(hasMotion()){sellChoice();return}try{sendToVault([{blob:await designPng(design),name:vaultName(design.name)+'.png',source:'design'}],true)}catch(e){toast(e.message)}}
+// Anything that moves sells as what it is: a video or a GIF, never a frozen picture.
+const hasMotion=()=>design.els.some(e=>!e.hidden&&(e.type==='video'||(e.anim&&e.anim!=='none')));
+function sellChoice(){let d=document.getElementById('sellChoice');if(!d){d=document.createElement('dialog');d.id='sellChoice';d.className='shapes-dialog vexp';document.body.appendChild(d)}
+ d.innerHTML=`<div class="shapes-top"><h2>Sell this</h2><button type="button" class="shapes-x" aria-label="Close" onclick="this.closest('dialog').close()">×</button></div><p class="hint">This design moves. How would you like to sell it?</p>
+ <button type="button" class="sell-option" onclick="this.closest('dialog').close();openVideoExport('video')"><b>🎬 As a video</b><small>Best quality, keeps any sound</small></button><button type="button" class="sell-option" onclick="this.closest('dialog').close();openVideoExport('gif')"><b>🔁 As a GIF</b><small>Loops forever, no sound, smaller picture</small></button>`;d.showModal()}
 async function designItems(d){let png=await designPng(d),base=vaultName(d.name);return [{blob:png,name:base+'.png',source:'design'},{blob:new Blob([JSON.stringify({format:'tapshop-design',version:1,design:d},null,2)],{type:'application/json'}),name:base+'.tapshop-design.json',source:'design'}]}
-function sendToVault(items){window.parent.postMessage({type:'tapshop:vault-save',version:1,items},location.origin)}
+function sendToVault(items,sell=false){window.parent.postMessage({type:'tapshop:vault-save',version:1,items,sell},location.origin)}
 async function saveDesignToVault(){if(!inTapShop()||!design)return;save();try{sendToVault(await designItems(design))}catch(e){toast(e.message)}}
 async function exportAllToVault(){if(!inTapShop())return;if(!projects.length){toast('You have no saved designs yet.');return}toast('Preparing '+projects.length+' designs for your Media Vault…');let items=[],failed=0;for(const d of projects){try{items.push(...await designItems(d))}catch{failed++}}if(items.length)sendToVault(items);if(failed)toast(failed+' design(s) could not be exported.')}
 window.addEventListener('message',e=>{if(e.source!==window.parent||e.origin!==location.origin)return;let d=e.data;if(d&&d.type==='tapshop:vault-export-all'&&d.version===1)exportAllToVault()});
@@ -632,15 +637,16 @@ const renderLayersNoGroup=renderLayers;renderLayers=function(){renderLayersNoGro
 function videoExportLength(){let n=0;for(const e of design.els){if(e.hidden)continue;if(e.type!=='video'&&e.anim&&e.anim!=='none'){let loop=e.animLoop??TX_LOOPING.has(e.anim);n=Math.max(n,(+e.animDelay||0)+(+e.animDur||1)*(loop?3:1)+1)}
   if(e.type==='video'){let s=+e.start||0,end=e.end||e.duration||5;n=Math.max(n,(end-s)/(+e.speed||1))}}return Math.min(60,Math.max(3,Math.ceil(n||5)))}
 function videoMime(){return ['video/mp4;codecs=avc1','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(m=>window.MediaRecorder?.isTypeSupported?.(m))}
-function openVideoExport(){let d=document.getElementById('videoExport');if(!d){d=document.createElement('dialog');d.id='videoExport';d.className='shapes-dialog vexp';document.body.appendChild(d)}
- let mime=videoMime(),hasMotion=design.els.some(e=>!e.hidden&&(e.type==='video'||(e.anim&&e.anim!=='none')));
- d.innerHTML=`<div class="shapes-top"><h2>Download as video</h2><button type="button" class="shapes-x" aria-label="Close" onclick="cancelVideoExport();this.closest('dialog').close()">×</button></div>
- ${mime?`${hasMotion?'':'<p class="hint">This design has no animations or videos yet, so the video will be still.</p>'}
- <label for="vexpLen">Length (seconds)</label><input id="vexpLen" type="number" min="1" max="60" value="${videoExportLength()}">
- <label for="vexpSize">Size</label><select id="vexpSize"><option value="1">Full size (${design.w} × ${design.h})</option><option value="0.5">Half size (faster, smaller file)</option></select>
- <p class="hint">It records in real time, so keep this tab open until it finishes. Saved as ${/mp4/.test(mime)?'MP4':'WebM'}.</p>
+const GIF_SIZE=480,GIF_FPS=10,GIF_MAX=15;
+function openVideoExport(sell=''){let d=document.getElementById('videoExport');if(!d){d=document.createElement('dialog');d.id='videoExport';d.className='shapes-dialog vexp';document.body.appendChild(d)}
+ d.dataset.sell=typeof sell==='string'?sell:'';sell=d.dataset.sell;let gif=sell==='gif',mime=videoMime(),moving=hasMotion();
+ d.innerHTML=`<div class="shapes-top"><h2>${gif?'Sell as a GIF':sell?'Sell as a video':'Download as video'}</h2><button type="button" class="shapes-x" aria-label="Close" onclick="cancelVideoExport();this.closest('dialog').close()">×</button></div>
+ ${mime?`${moving?'':'<p class="hint">This design has no animations or videos yet, so the video will be still.</p>'}
+ <label for="vexpLen">Length (seconds)</label><input id="vexpLen" type="number" min="1" max="${gif?GIF_MAX:60}" value="${Math.min(gif?GIF_MAX:60,videoExportLength())}">
+ ${gif?'':`<label for="vexpSize">Size</label><select id="vexpSize"><option value="1">Full size (${design.w} × ${design.h})</option><option value="0.5">Half size (faster, smaller file)</option></select>`}
+ <p class="hint">It records in real time, so keep this tab open until it finishes. ${gif?`Up to ${GIF_MAX} seconds, ${GIF_SIZE} px at most.`:`Saved as ${/mp4/.test(mime)?'MP4':'WebM'}.`}${sell?' Then you’ll add a title and price.':''}</p>
  <div class="vexp-progress" hidden><div><span></span></div><p></p></div>
- <div class="vexp-actions"><button type="button" class="primary" id="vexpGo" onclick="runVideoExport()">⏺ Make video</button></div>`:'<p>Video download isn’t supported in this browser. Try Chrome or Edge.</p>'}`;
+ <div class="vexp-actions"><button type="button" class="primary" id="vexpGo" onclick="runVideoExport()">⏺ Make ${gif?'GIF':'video'}</button></div>`:'<p>Video download isn’t supported in this browser. Try Chrome or Edge.</p>'}`;
  d.showModal()}
 let vexp=null;
 function cancelVideoExport(){if(vexp){vexp.cancelled=true;try{vexp.rec?.state==='recording'&&vexp.rec.stop()}catch{}}}
@@ -652,7 +658,7 @@ function drawVideoEl(ctx,e,v){if(!v||v.readyState<2)return;let r=videoRadius(e),
  ctx.save();ctx.globalAlpha=Math.max(.05,Math.min(1,+(e.opacity??1)));ctx.beginPath();ctx.roundRect?ctx.roundRect(e.x,e.y,e.w,e.h,r):ctx.rect(e.x,e.y,e.w,e.h);ctx.clip();
  ctx.drawImage(v,ix+(iw-dw)/2,iy+(ih-dh)/2,dw,dh);if(bw){ctx.lineWidth=bw;ctx.strokeStyle=/^#[0-9a-f]{3,8}$/i.test(e.borderColor||'')?e.borderColor:'#ffffff';ctx.beginPath();ctx.roundRect?ctx.roundRect(e.x+bw/2,e.y+bw/2,e.w-bw,e.h-bw,Math.max(0,r-bw/2)):ctx.rect(e.x+bw/2,e.y+bw/2,e.w-bw,e.h-bw);ctx.stroke()}ctx.restore()}
 async function runVideoExport(){let d=document.getElementById('videoExport'),go=d.querySelector('#vexpGo'),prog=d.querySelector('.vexp-progress'),bar=prog.querySelector('span'),msg=prog.querySelector('p');
- let secs=Math.max(1,Math.min(60,+d.querySelector('#vexpLen').value||5)),scale=+d.querySelector('#vexpSize').value||1,mime=videoMime();if(!mime||vexp)return;
+ let sell=d.dataset.sell||'',gif=sell==='gif',secs=Math.max(1,Math.min(gif?GIF_MAX:60,+d.querySelector('#vexpLen').value||5)),scale=gif?Math.min(1,GIF_SIZE/Math.max(design.w,design.h)):+d.querySelector('#vexpSize').value||1,mime=videoMime();if(!mime||vexp)return;
  go.disabled=true;prog.hidden=false;msg.textContent='Getting ready…';selected=-1;properties();draw();
  // Each video gets its own player for the recording, started right now (inside the tap) so
  // phones and tablets allow it, sound included. The canvas players are left alone, so a video
@@ -683,10 +689,15 @@ async function runVideoExport(){let d=document.getElementById('videoExport'),go=
      ctx.save();ctx.globalAlpha=isNaN(op)?1:op;if(cs.filter&&cs.filter!=='none'&&'filter' in ctx)ctx.filter=cs.filter;let clip=parseInset(cs.clipPath,b);
      ctx.translate(ox,oy);ctx.transform(m.a,m.b,m.c,m.d,m.e,m.f);ctx.translate(-ox,-oy);if(clip){ctx.beginPath();ctx.rect(clip.x,clip.y,clip.w,clip.h);ctx.clip()}ctx.drawImage(L.img,0,0,design.w,design.h);ctx.restore()}}};
   for(const L of layers)if(L.kind==='video'&&L.v){try{L.v.currentTime=+L.e.start||0}catch{}L.v.play().catch(()=>{})}
-  frame(0);rec.start(250);
-  let t0=performance.now();await new Promise(res=>{const tick=()=>{if(vexp.cancelled)return res();let t=(performance.now()-t0)/1000;if(t>=secs){frame(secs);return res()}frame(t);bar.style.width=Math.round(t/secs*100)+'%';msg.textContent=`Recording… ${Math.floor(t)} of ${secs} s`;setTimeout(tick,1000/30)};tick()});
+  // GIF frames are taken from the same drawing, on a white backing because GIFs here are solid.
+  let shots=[],pad=gif?document.createElement('canvas'):null,padCtx=null;if(gif){pad.width=W;pad.height=H;padCtx=pad.getContext('2d',{willReadFrequently:true})}
+  const shoot=t=>{if(!gif)return;padCtx.fillStyle='#fff';padCtx.fillRect(0,0,W,H);padCtx.drawImage(c,0,0);let px=padCtx.getImageData(0,0,W,H).data,want=Math.ceil(Math.min(t,secs)*GIF_FPS);if(!shots.length)shots.push(px);while(shots.length<want)shots.push(px)};
+  frame(0);shoot(0);rec.start(250);
+  let t0=performance.now();await new Promise(res=>{const tick=()=>{if(vexp.cancelled)return res();let t=(performance.now()-t0)/1000;if(t>=secs){frame(secs);shoot(secs);return res()}frame(t);shoot(t);bar.style.width=Math.round(t/secs*100)+'%';msg.textContent=`Recording… ${Math.floor(t)} of ${secs} s`;setTimeout(tick,1000/30)};tick()});
   if(rec.state==='recording')rec.stop();await done;stream.getTracks().forEach(t=>t.stop());
-  if(vexp.cancelled){msg.textContent='Cancelled.'}else{let noSound=[...xv.values()].some(v=>v._noSound);let blob=new Blob(chunks,{type:mime.split(';')[0]}),ext=/mp4/.test(mime)?'mp4':'webm',name=(design.name||'design').replace(/[^a-z0-9 -]/gi,'')+'.'+ext;bar.style.width='100%';
+  if(vexp.cancelled){msg.textContent='Cancelled.'}else if(sell){let blob,name=vaultName(design.name);
+   if(gif){msg.textContent='Making your GIF…';blob=await TapGif.encode(shots,W,H,100/GIF_FPS,p=>{bar.style.width=Math.round(p*100)+'%'});name+='.gif'}else{blob=new Blob(chunks,{type:mime.split(';')[0]});name+=/mp4/.test(mime)?'.mp4':'.webm'}
+   sendToVault([{blob,name,source:'design'}],true);d.close()}else{let noSound=[...xv.values()].some(v=>v._noSound);let blob=new Blob(chunks,{type:mime.split(';')[0]}),ext=/mp4/.test(mime)?'mp4':'webm',name=(design.name||'design').replace(/[^a-z0-9 -]/gi,'')+'.'+ext;bar.style.width='100%';
    msg.textContent='Your video is ready.'+(noSound?' (The browser blocked the video’s sound, so this one is silent.)':'');let acts=d.querySelector('.vexp-actions');acts.innerHTML='';let dl=document.createElement('button');dl.className='primary';dl.textContent='⬇ Download';dl.onclick=()=>{let a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),2000)};acts.append(dl);
    if(inTapShop()){let sv=document.createElement('button');sv.textContent='Save to Vault';sv.onclick=()=>{sendToVault([{blob,name,source:'design'}]);sv.disabled=true;sv.textContent='Sent to your Vault'};acts.append(sv)}
    vexp.result=blob}}
@@ -1019,4 +1030,4 @@ const renderPngNoFonts=renderPng;renderPng=function(done){withEmbedded(design,()
 const exportSvgNoFonts=exportSvg;exportSvg=function(){withEmbedded(design,()=>exportSvgNoFonts())};
 if(typeof designPng==='function'){const designPngNoFonts=designPng;designPng=function(d){return withEmbedded(d,()=>designPngNoFonts(d))}}
 if(typeof svgImage==='function'){const svgImageNoFonts=svgImage;svgImage=async function(str){let ns=[...new Set(String(str).match(/TapFont\d+/g)||[])];if(ns.length){await prepFontData(ns);str=withFontCss(str)}return svgImageNoFonts(str)}}
-</script><script src="studio-social.js"></script><script src="studio-projects.js"></script><link rel="stylesheet" href="tapshop-theme.css"><script src="tapshop-theme.js"></script></body></html>
+</script><script src="gif-encoder.js"></script><script src="studio-social.js"></script><script src="studio-projects.js"></script><link rel="stylesheet" href="tapshop-theme.css"><script src="tapshop-theme.js"></script></body></html>
