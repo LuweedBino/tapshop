@@ -38,15 +38,37 @@ window.veNewProject=async function(){if(!empty())await save(true);pause();clips=
   try{expandedStrip=null;pickedStrip=null}catch{}activeId=null;$('projectName').value='Untitled video';projId=null;lastSig='';playhead=0;render();renderTracks();renderGraphicTracks();await seekTimeline(0)};
 
 async function open(id){let rec=await req((await store('projects')).get(id));if(!rec){toast('That video isn’t on this device any more.');refresh();return}
-  await veNewProject();toast('Opening '+rec.name+'…');let st=rec.state,files={};
+  await veNewProject();toast('Opening '+rec.name+'…');let files={};
   for(let m of await req((await store('media')).index('project').getAll(IDBKeyRange.only(id))))files[m.key]=new File([m.blob],m.name||'media',{type:m.type||m.blob.type});
+  await fill(rec,files);projId=id;lastSig=JSON.stringify(capture());toast('Opened '+rec.name+'.')}
+// Puts a saved project on the timeline. rec.id is the prefix of its media keys in files.
+async function fill(rec,files){let st=rec.state,id=rec.id;
   $('aspect').value=st.aspect||'16:9';setAspect();$('projectName').value=st.name||rec.name;
   // Re-load each video under its saved id so the saved clips point at it unchanged.
   for(let aid of new Set(st.clips.map(c=>c.assetId))){let f=files[id+':a:'+aid];if(!f)continue;try{let a=await loadAsset(f);a.id=aid}catch(e){toast(e.message)}}
   clips=st.clips.filter(c=>assets.some(a=>a.id===c.assetId));selected=Math.min(st.selected??0,clips.length-1);graphicTracks=st.graphic||[];
   for(let s of st.extra||[]){addTrack(s.type);let t=extraTracks.at(-1),f=s.hasFile&&Object.entries(files).find(([k])=>k.startsWith(id+':x:'+s.id+':'))?.[1];
     if(f){targetTrack=t.id;await loadTrackMedia(f)}let {hasFile,...keep}=s;Object.assign(t,keep)}
-  projId=id;history.length=0;try{redoStack.length=0;syncUndoButtons()}catch{}render();renderTracks();renderGraphicTracks();await seekTimeline(0);lastSig=JSON.stringify(capture());toast('Opened '+rec.name+'.')}
+  history.length=0;try{redoStack.length=0;syncUndoButtons()}catch{}render();renderTracks();renderGraphicTracks();await seekTimeline(0)}
+
+// ---------- Projects in the Media Vault ----------
+// One file holding the project and every clip it uses, so it reopens anywhere: MAGIC, the header's
+// length (4 bytes), the header as JSON, then the media files one after another. It keeps the
+// .tapshop.json ending because that's how the Vault and pickers recognise a project, and plain
+// JSON projects from before this still open through the old restoreProject.
+const MAGIC='TAPSHOP1',enc=new TextEncoder();
+function packProject(){if(empty())return null;let state=JSON.parse(JSON.stringify(capture())),id=uid(),list=[],used=new Set(clips.map(c=>c.assetId));
+  for(let a of assets)if(used.has(a.id)&&a.file)list.push({key:id+':a:'+a.id,file:a.file});
+  for(let t of extraTracks)if(t.file)list.push({key:id+':x:'+t.id+':'+t.file.size,file:t.file});
+  let head=enc.encode(JSON.stringify({id,name:state.name||'Untitled video',state,files:list.map(({key,file})=>({key,name:file.name,type:file.type,size:file.size}))})),len=new Uint8Array(4);new DataView(len.buffer).setUint32(0,head.length);
+  return new Blob([MAGIC,len,head,...list.map(m=>m.file)],{type:'application/octet-stream'})}
+async function unpackProject(file){let at=MAGIC.length+4;if(file.size<at||await file.slice(0,MAGIC.length).text()!==MAGIC)return null;
+  let n=new DataView(await file.slice(MAGIC.length,at).arrayBuffer()).getUint32(0),head=JSON.parse(await file.slice(at,at+n).text()),files={};at+=n;
+  for(let m of head.files){files[m.key]=new File([file.slice(at,at+m.size)],m.name,{type:m.type});at+=m.size}
+  return {rec:head,files}}
+window.vePackProject=packProject;
+const restorePlain=restoreProject;restoreProject=async function(file){let packed=null;try{if(file)packed=await unpackProject(file)}catch{}if(!packed)return restorePlain(file);if(exporting)return;
+  document.getElementById('veStart').hidden=true;await veNewProject();toast('Opening '+packed.rec.name+'…');await fill(packed.rec,packed.files);toast('Opened '+packed.rec.name+'.')};
 
 // ---------- Recent videos on the start screen ----------
 const ago=t=>{let s=(Date.now()-t)/1000;return s<60?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':Math.round(s/86400)+' d ago'};
