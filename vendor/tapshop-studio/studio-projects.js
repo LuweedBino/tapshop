@@ -31,6 +31,20 @@ const renderNoManage=render;render=function(){renderNoManage();closeMenu();if(mo
     tools.innerHTML=picking?` · <button type="button" class="vault-link" data-pj="del">Delete selected (${picked.size})</button> · <button type="button" class="vault-link" data-pj="all">${picked.size===projects.length?'Select none':'Select all'}</button> · <button type="button" class="vault-link" data-pj="done">Done</button>`:` · <button type="button" class="vault-link" data-pj="pick">Select</button>`;
     tools.onclick=e=>{let k=e.target.closest('[data-pj]')?.dataset.pj;if(k==='pick'){picking=true;picked.clear()}else if(k==='done'){picking=false;picked.clear()}else if(k==='all'){if(picked.size===projects.length)picked.clear();else projects.forEach(p=>picked.add(p.id))}else if(k==='del')return deletePicked();else return;render()};
     count.appendChild(tools)}};
+// Video projects under the designs: ones saved to the Media Vault, and the Video Editor's Recent
+// videos on this device. Both open in the Video Editor. The database belongs to video-autosave.js,
+// so if it doesn't exist yet the upgrade is abandoned rather than creating it without its stores.
+function recentVideos(){return new Promise(res=>{let scope='local';try{localStorage.setItem('tapshop-scope-probe','1');let k=Object.keys(localStorage).find(k=>/^studio:.+:tapshop-scope-probe$/.test(k));if(k)scope=k.slice(7,-':tapshop-scope-probe'.length)}catch{}
+  let r;try{r=indexedDB.open('tapshop-video-'+scope,1)}catch{return res([])}
+  r.onupgradeneeded=()=>r.transaction.abort();r.onerror=()=>res([]);r.onsuccess=()=>{let d=r.result,all=d.transaction('projects').objectStore('projects').getAll();all.onsuccess=()=>{d.close();res(all.result||[])};all.onerror=()=>{d.close();res([])}}})}
+async function vaultProjects(){if(typeof VaultPicker==='undefined'||!VaultPicker.inTapShop)return [];try{return (await VaultPicker.list()).filter(i=>/\.tapshop\.json$/i.test(i.name))}catch{return []}}
+let videoPass=0;
+async function renderVideos(){let pass=++videoPass,grid=document.getElementById('grid');if(!grid)return;let [recent,vault]=await Promise.all([recentVideos(),vaultProjects()]);if(pass!==videoPass||mode!=='projects')return;
+  document.getElementById('pjVideos')?.remove();let cards=[...vault.map(i=>({name:i.name.replace(/\.tapshop\.json$/i,''),where:'⛁ Media Vault',href:'video.html#'+new URLSearchParams({vault:i.id,name:i.name})})),...recent.sort((a,b)=>b.updated-a.updated).map(p=>({name:p.name,where:'📱 This device',thumb:p.thumb,href:'video.html#'+new URLSearchParams({recent:p.id})}))];
+  if(!cards.length)return;let sec=document.createElement('section');sec.id='pjVideos';let h=document.createElement('h2');h.textContent='Video projects';let box=document.createElement('div');box.className='pj-vids';
+  for(const c of cards){let a=document.createElement('a'),th=document.createElement('span'),b=document.createElement('b'),s=document.createElement('small');a.href=c.href;a.className='pj-vid';th.className='pj-th';if(c.thumb){let i=new Image();i.alt='';i.src=c.thumb;th.appendChild(i)}else th.textContent='🎬';b.textContent=c.name;s.textContent=c.where;a.append(th,b,s);box.appendChild(a)}
+  sec.append(h,box);grid.after(sec)}
+const renderNoVideos=render;render=function(){document.getElementById('pjVideos')?.remove();renderNoVideos();if(mode==='projects')renderVideos();else videoPass++};
 // In Select mode a tap on a card picks it instead of opening it.
 document.addEventListener('click',e=>{if(!picking||mode!=='projects')return;let c=e.target.closest('#grid .pj-card');if(!c||e.target.closest('.pj-more'))return;e.preventDefault();e.stopImmediatePropagation();
   let id=c.dataset.pid;if(picked.has(id))picked.delete(id);else picked.add(id);render()},true);
@@ -46,5 +60,9 @@ html body .pj-menu button.pj-danger{color:#dc2626!important}html.ts-dark body .p
 .pj-check{position:absolute;top:14px;left:14px;z-index:2;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--ts-surface,#fff);color:var(--ts-on-primary,#fff);border:2px solid var(--ts-border-strong,#d4d4d4)}
 .pj-on .pj-check{background:var(--ts-primary,#171717);border-color:var(--ts-primary,#171717)}
 .pj-picking .pj-card{cursor:pointer}.pj-on{outline:3px solid var(--ts-primary,#171717);outline-offset:-1px}
-.pj-tools button{font:inherit}`;document.head.appendChild(css);
+.pj-tools button{font:inherit}
+#pjVideos{margin-top:24px}#pjVideos h2{margin:0 0 12px;font-size:18px}.pj-vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.pj-vid{display:block;padding:8px;border:1px solid var(--ts-border,#e5e5e5);border-radius:16px;background:var(--ts-surface,#fff);color:inherit;text-decoration:none}.pj-vid:hover{border-color:var(--ts-border-strong,#d4d4d4)}
+.pj-th{display:grid;place-items:center;height:150px;border-radius:10px;overflow:hidden;background:var(--ts-soft,#f5f5f5);font-size:32px}.pj-th img{max-width:100%;max-height:100%;display:block}
+.pj-vid b{display:block;margin:8px 2px 0;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pj-vid small{display:block;margin:2px;font-size:11px;color:var(--ts-muted,#737373)}`;document.head.appendChild(css);
 })();

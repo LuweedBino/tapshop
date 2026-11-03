@@ -55,12 +55,13 @@ async function fill(rec,files){let st=rec.state,id=rec.id;
 // One file holding the project and every clip it uses, so it reopens anywhere: MAGIC, the header's
 // length (4 bytes), the header as JSON, then the media files one after another. It keeps the
 // .tapshop.json ending because that's how the Vault and pickers recognise a project, and plain
-// JSON projects from before this still open through the old restoreProject.
+// JSON projects from before this still open through the old restoreProject. origin ties it to its
+// Recent videos entry, so reopening the file updates that entry instead of adding a copy.
 const MAGIC='TAPSHOP1',enc=new TextEncoder();
-function packProject(){if(empty())return null;let state=JSON.parse(JSON.stringify(capture())),id=uid(),list=[],used=new Set(clips.map(c=>c.assetId));
+function packProject(){if(empty())return null;projId=projId||uid();let state=JSON.parse(JSON.stringify(capture())),id=uid(),list=[],used=new Set(clips.map(c=>c.assetId));
   for(let a of assets)if(used.has(a.id)&&a.file)list.push({key:id+':a:'+a.id,file:a.file});
   for(let t of extraTracks)if(t.file)list.push({key:id+':x:'+t.id+':'+t.file.size,file:t.file});
-  let head=enc.encode(JSON.stringify({id,name:state.name||'Untitled video',state,files:list.map(({key,file})=>({key,name:file.name,type:file.type,size:file.size}))})),len=new Uint8Array(4);new DataView(len.buffer).setUint32(0,head.length);
+  let head=enc.encode(JSON.stringify({id,origin:projId,name:state.name||'Untitled video',state,files:list.map(({key,file})=>({key,name:file.name,type:file.type,size:file.size}))})),len=new Uint8Array(4);new DataView(len.buffer).setUint32(0,head.length);
   return new Blob([MAGIC,len,head,...list.map(m=>m.file)],{type:'application/octet-stream'})}
 async function unpackProject(file){let at=MAGIC.length+4;if(file.size<at||await file.slice(0,MAGIC.length).text()!==MAGIC)return null;
   let n=new DataView(await file.slice(MAGIC.length,at).arrayBuffer()).getUint32(0),head=JSON.parse(await file.slice(at,at+n).text()),files={};at+=n;
@@ -68,7 +69,7 @@ async function unpackProject(file){let at=MAGIC.length+4;if(file.size<at||await 
   return {rec:head,files}}
 window.vePackProject=packProject;
 const restorePlain=restoreProject;restoreProject=async function(file){let packed=null;try{if(file)packed=await unpackProject(file)}catch{}if(!packed)return restorePlain(file);if(exporting)return;
-  document.getElementById('veStart').hidden=true;await veNewProject();toast('Opening '+packed.rec.name+'…');await fill(packed.rec,packed.files);toast('Opened '+packed.rec.name+'.')};
+  document.getElementById('veStart').hidden=true;await veNewProject();toast('Opening '+packed.rec.name+'…');await fill(packed.rec,packed.files);projId=packed.rec.origin||null;lastSig='';toast('Opened '+packed.rec.name+'.')};
 
 // ---------- Recent videos on the start screen ----------
 const ago=t=>{let s=(Date.now()-t)/1000;return s<60?'just now':s<3600?Math.round(s/60)+' min ago':s<86400?Math.round(s/3600)+' h ago':Math.round(s/86400)+' d ago'};
@@ -116,6 +117,9 @@ html body #veStart .vs-menu button.vs-danger{color:#dc2626!important}html.ts-dar
 mount();
 // Refresh the list whenever the start screen is shown again (⌂ Start).
 let startEl=document.getElementById('veStart');if(startEl)new MutationObserver(()=>{if(!startEl.hidden)refresh()}).observe(startEl,{attributes:true,attributeFilter:['hidden']});
+// The Studio's Projects page sends a project here as video.html#recent=<id> or #vault=<id>.
+(()=>{let h=new URLSearchParams(location.hash.slice(1)),recent=h.get('recent'),vault=h.get('vault');if(!recent&&!vault)return;window.history.replaceState(null,'',location.pathname);
+  document.getElementById('veStart').hidden=true;if(recent)open(recent).catch(e=>toast('Couldn’t open that video: '+(e.message||e)));else importVaultItem({id:vault,name:h.get('name')||'Project.tapshop.json',kind:'project',contentType:''})})();
 setInterval(()=>save(),EVERY);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save()});
 window.addEventListener('pagehide',()=>save());
