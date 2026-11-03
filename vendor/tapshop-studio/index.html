@@ -637,14 +637,14 @@ const renderLayersNoGroup=renderLayers;renderLayers=function(){renderLayersNoGro
 function videoExportLength(){let n=0;for(const e of design.els){if(e.hidden)continue;if(e.type!=='video'&&e.anim&&e.anim!=='none'){let loop=e.animLoop??TX_LOOPING.has(e.anim);n=Math.max(n,(+e.animDelay||0)+(+e.animDur||1)*(loop?3:1)+1)}
   if(e.type==='video'){let s=+e.start||0,end=e.end||e.duration||5;n=Math.max(n,(end-s)/(+e.speed||1))}}return Math.min(60,Math.max(3,Math.ceil(n||5)))}
 function videoMime(){return ['video/mp4;codecs=avc1','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'].find(m=>window.MediaRecorder?.isTypeSupported?.(m))}
-const GIF_SIZE=480,GIF_FPS=10,GIF_MAX=15;
+const GIF_SIZES=[[320,'Small (320) · stickers, messages'],[480,'Standard (480) · most uses'],[720,'Large (720) · banners, bigger file']],GIF_SIZE=480,GIF_FPS=10,GIF_MAX=15;
 function openVideoExport(sell=''){let d=document.getElementById('videoExport');if(!d){d=document.createElement('dialog');d.id='videoExport';d.className='shapes-dialog vexp';document.body.appendChild(d)}
  d.dataset.sell=typeof sell==='string'?sell:'';sell=d.dataset.sell;let gif=sell==='gif',mime=videoMime(),moving=hasMotion();
  d.innerHTML=`<div class="shapes-top"><h2>${gif?'Sell as a GIF':sell?'Sell as a video':'Download as video'}</h2><button type="button" class="shapes-x" aria-label="Close" onclick="cancelVideoExport();this.closest('dialog').close()">×</button></div>
  ${mime?`${moving?'':'<p class="hint">This design has no animations or videos yet, so the video will be still.</p>'}
  <label for="vexpLen">Length (seconds)</label><input id="vexpLen" type="number" min="1" max="${gif?GIF_MAX:60}" value="${Math.min(gif?GIF_MAX:60,videoExportLength())}">
- ${gif?'':`<label for="vexpSize">Size</label><select id="vexpSize"><option value="1">Full size (${design.w} × ${design.h})</option><option value="0.5">Half size (faster, smaller file)</option></select>`}
- <p class="hint">It records in real time, so keep this tab open until it finishes. ${gif?`Up to ${GIF_MAX} seconds, ${GIF_SIZE} px at most.`:`Saved as ${/mp4/.test(mime)?'MP4':'WebM'}.`}${sell?' Then you’ll add a title and price.':''}</p>
+ ${gif?`<label for="vexpGif">Size</label><select id="vexpGif">${GIF_SIZES.map(([v,l])=>`<option value="${v}" ${v===GIF_SIZE?'selected':''}>${l}</option>`).join('')}</select>`:`<label for="vexpSize">Size</label><select id="vexpSize"><option value="1">Full size (${design.w} × ${design.h})</option><option value="0.5">Half size (faster, smaller file)</option></select>`}
+ <p class="hint">It records in real time, so keep this tab open until it finishes. ${gif?`Up to ${GIF_MAX} seconds.`:`Saved as ${/mp4/.test(mime)?'MP4':'WebM'}.`}${sell?' Then you’ll add a title and price.':''}</p>
  <div class="vexp-progress" hidden><div><span></span></div><p></p></div>
  <div class="vexp-actions"><button type="button" class="primary" id="vexpGo" onclick="runVideoExport()">⏺ Make ${gif?'GIF':'video'}</button></div>`:'<p>Video download isn’t supported in this browser. Try Chrome or Edge.</p>'}`;
  d.showModal()}
@@ -658,7 +658,7 @@ function drawVideoEl(ctx,e,v){if(!v||v.readyState<2)return;let r=videoRadius(e),
  ctx.save();ctx.globalAlpha=Math.max(.05,Math.min(1,+(e.opacity??1)));ctx.beginPath();ctx.roundRect?ctx.roundRect(e.x,e.y,e.w,e.h,r):ctx.rect(e.x,e.y,e.w,e.h);ctx.clip();
  ctx.drawImage(v,ix+(iw-dw)/2,iy+(ih-dh)/2,dw,dh);if(bw){ctx.lineWidth=bw;ctx.strokeStyle=/^#[0-9a-f]{3,8}$/i.test(e.borderColor||'')?e.borderColor:'#ffffff';ctx.beginPath();ctx.roundRect?ctx.roundRect(e.x+bw/2,e.y+bw/2,e.w-bw,e.h-bw,Math.max(0,r-bw/2)):ctx.rect(e.x+bw/2,e.y+bw/2,e.w-bw,e.h-bw);ctx.stroke()}ctx.restore()}
 async function runVideoExport(){let d=document.getElementById('videoExport'),go=d.querySelector('#vexpGo'),prog=d.querySelector('.vexp-progress'),bar=prog.querySelector('span'),msg=prog.querySelector('p');
- let sell=d.dataset.sell||'',gif=sell==='gif',secs=Math.max(1,Math.min(gif?GIF_MAX:60,+d.querySelector('#vexpLen').value||5)),scale=gif?Math.min(1,GIF_SIZE/Math.max(design.w,design.h)):+d.querySelector('#vexpSize').value||1,mime=videoMime();if(!mime||vexp)return;
+ let sell=d.dataset.sell||'',gif=sell==='gif',secs=Math.max(1,Math.min(gif?GIF_MAX:60,+d.querySelector('#vexpLen').value||5)),scale=gif?Math.min(1,(+d.querySelector('#vexpGif').value||GIF_SIZE)/Math.max(design.w,design.h)):+d.querySelector('#vexpSize').value||1,mime=videoMime();if(!mime||vexp)return;
  go.disabled=true;prog.hidden=false;msg.textContent='Getting ready…';selected=-1;properties();draw();
  // Each video gets its own player for the recording, started right now (inside the tap) so
  // phones and tablets allow it, sound included. The canvas players are left alone, so a video
