@@ -14,7 +14,7 @@ const css=`.vc-menu{width:min(340px,92vw);border:1px solid var(--ts-border-stron
 .vc-rec{position:absolute;top:14px;left:50%;transform:translateX(-50%);padding:5px 12px;border-radius:999px;background:#d92d20;font:600 14px system-ui,sans-serif;font-variant-numeric:tabular-nums}.vc-rec[hidden]{display:none}
 .vc-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:#111}
 .vc-side{display:flex;gap:8px}.vc-side.vc-end{justify-content:flex-end}.vc-bar button{font:600 14px system-ui,sans-serif;border-radius:10px;padding:10px 14px;cursor:pointer}.vc-bar button[hidden]{display:none}.vc-bar button:disabled{opacity:.4;cursor:default}
-.vc-modes{display:flex;justify-content:center;gap:4px;grid-column:1/-1}
+.vc-modes[hidden]{display:none}.vc-modes{display:flex;justify-content:center;gap:4px;grid-column:1/-1}
 .vc-bar .vc-shoot{width:64px;height:64px;padding:0;border-radius:50%}.vc-bar .vc-shoot.vc-on{border-radius:14px;width:52px;height:52px;margin:6px}`;
 const FORMATS=['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];
 let styled=false,inputs=null;
@@ -34,13 +34,13 @@ function menu(add){
   document.body.appendChild(d);d.showModal();
 }
 
-function webcam(add){
+function webcam(add,only){
   let d=document.createElement('dialog');d.className='vc-cam';d.setAttribute('aria-label','Camera');
   d.innerHTML=`<div class="vc-wrap"><div class="vc-stage"><video muted playsinline autoplay></video><div class="vc-status" role="status">Starting your camera…</div><div class="vc-rec" hidden></div></div>
 <div class="vc-bar"><div class="vc-modes"><button type="button" data-mode="video" style="${GHOST}">Video</button><button type="button" data-mode="photo" style="${GHOST}">Photo</button></div>
 <div class="vc-side"><button type="button" class="vc-done" style="${GHOST}">Done</button></div><button type="button" class="vc-shoot" style="background:#fff;border:4px solid #fff" aria-label="Start recording" disabled></button><div class="vc-side vc-end"><button type="button" class="vc-flip" style="${GHOST}" hidden>⟲ Flip</button></div></div></div>`;
   document.body.appendChild(d);d.showModal();
-  const q=s=>d.querySelector(s),v=q('video'),status=q('.vc-status'),rec=q('.vc-rec'),shoot=q('.vc-shoot'),flip=q('.vc-flip'),done=q('.vc-done');
+  const q=s=>d.querySelector(s);if(only)q('.vc-modes').hidden=true;const v=q('video'),status=q('.vc-status'),rec=q('.vc-rec'),shoot=q('.vc-shoot'),flip=q('.vc-flip'),done=q('.vc-done');
   let stream=null,mode='video',recorder=null,tick=null,finished=null,count=0,cams=[],cam=0,closed=false;
   const say=t=>{status.textContent=t;status.hidden=!t};
   const saved=()=>{count++;done.textContent=`Done (${count} added)`};
@@ -83,11 +83,12 @@ function webcam(add){
   connect();
 }
 
-function open(add,toast){
+// only:'video' is for places that take video alone: no photo choice on either kind of device.
+function open(add,toast,{only}={}){
   dress();
-  if(matchMedia('(pointer:coarse)').matches)return menu(add);
+  if(matchMedia('(pointer:coarse)').matches){if(only)nativeInputs(add)[only].click();else menu(add);return}
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast('This browser can’t use your camera here.');return}
-  webcam(add);
+  webcam(add,only);
 }
 return {open};
 })();
