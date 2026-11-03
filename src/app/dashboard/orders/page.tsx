@@ -38,6 +38,7 @@ export default async function Orders() {
                   <td className="px-4 py-3 text-right tabular-nums">
                     {money(o.amountCents, o.currency)}
                     {o.status === "REFUNDED" && <span className="ml-1 text-xs text-red-600">refunded</span>}
+                    {o.discountCode && <p className="text-xs text-neutral-500">{o.discountCode}</p>}
                   </td>
                   <td className="hidden px-4 py-3 text-neutral-500 sm:table-cell">{o.paidAt?.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</td>
                 </tr>

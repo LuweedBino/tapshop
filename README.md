@@ -10,7 +10,7 @@ A mobile-first link-in-bio storefront for creators. Followers tap the link in a 
 - **Links**: plain link buttons, like a classic link-in-bio.
 - **Creator dashboard**: profile editor, products (add, edit, reorder, hide, remove), orders, leads with CSV export, 30-day stats, and Stripe Connect onboarding.
 
-Later phases: courses, calendar bookings, memberships, Instagram AutoDM, and Pro features (email flows, upsells and order bumps, payment plans, discount codes, affiliates).
+Later phases: courses, calendar bookings, memberships, Instagram AutoDM, and Pro features (email flows, upsells and order bumps, payment plans, affiliates).
 
 ## Stack
 

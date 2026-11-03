@@ -14,6 +14,11 @@ enum ProductType {
   AFFILIATE
 }
 
+enum DiscountType {
+  PERCENT
+  FIXED
+}
+
 enum OrderStatus {
   PENDING
   PAID
@@ -56,6 +61,7 @@ model Creator {
   vaultFolders    VaultFolder[]
   orders          Order[]
   leads           Lead[]
+  discountCodes   DiscountCode[]
 }
 
 // A creator's portfolio for brands at /<handle>/media-kit. Stats, audience, past
@@ -132,8 +138,32 @@ model Product {
   updatedAt     DateTime    @updatedAt
   orders        Order[]
   leads         Lead[]
+  discountCodes DiscountCode[]
 
   @@index([creatorId, position])
+}
+
+// A code buyers type at checkout. See lib/discounts.ts.
+model DiscountCode {
+  id        String       @id @default(cuid())
+  creatorId String
+  creator   Creator      @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  // Stored in capitals, so buyers can type it either way.
+  code      String
+  type      DiscountType
+  // Percent off (1-100) for PERCENT, cents off for FIXED.
+  value     Int
+  // null = every product in the store. Cascade, so a code for one product can't turn into a store-wide one.
+  productId String?
+  product   Product?     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // null = no limit. Uses are counted from orders, so markPaid doesn't need to know about codes.
+  maxUses   Int?
+  expiresAt DateTime?
+  active    Boolean      @default(true)
+  createdAt DateTime     @default(now())
+  orders    Order[]
+
+  @@unique([creatorId, code])
 }
 
 model Order {
@@ -144,8 +174,14 @@ model Order {
   product         Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   buyerEmail      String
   buyerName       String      @default("")
+  // What the buyer pays, after any discount.
   amountCents     Int
   currency        String
+  // Deleting a code keeps its orders; discountCode keeps the text for the Orders page.
+  discountId      String?
+  discount        DiscountCode? @relation(fields: [discountId], references: [id], onDelete: SetNull)
+  discountCode    String      @default("")
+  discountCents   Int         @default(0)
   status          OrderStatus @default(PENDING)
   stripeSessionId String?     @unique
   downloadToken   String      @unique
@@ -155,6 +191,7 @@ model Order {
   createdAt       DateTime    @default(now())
 
   @@index([creatorId, createdAt])
+  @@index([discountId])
 }
 
 model Lead {

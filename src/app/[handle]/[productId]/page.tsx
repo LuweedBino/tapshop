@@ -76,6 +76,8 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   const affiliate = product.type === "AFFILIATE";
   const extras = affiliate ? parseExtras(product.extras) : null;
   const video = extras?.video ? videoEmbed(extras.video) : null;
+  const now = new Date();
+  const hasCodes = paid && (await db.discountCode.count({ where: { creatorId: creator.id, active: true, AND: [{ OR: [{ productId: null }, { productId: product.id }] }, { OR: [{ expiresAt: null }, { expiresAt: { gt: now } }] }] } })) > 0;
   const cta = paid ? `${defaultCta(product)} · ${priceLabel(product)}` : product.type === "LINK" ? "Continue" : defaultCta(product);
 
   return (
@@ -127,6 +129,8 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
                   productId={product.id}
                   kind={product.type === "DIGITAL" ? "buy" : "optin"}
                   cta={cta}
+                  ctaLabel={defaultCta(product)}
+                  hasCodes={hasCodes}
                   disabledReason={paid && !canSell(creator) ? "This product isn't available for purchase yet." : undefined}
                 />
                 {paid && <p className="mt-3 text-center text-xs text-[var(--card-muted)]">Secure checkout by Stripe. Apple Pay and Google Pay supported.</p>}

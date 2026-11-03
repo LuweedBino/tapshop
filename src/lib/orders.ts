@@ -4,6 +4,8 @@ import { db } from "./db";
 import { env } from "./env";
 import { stripe, stripeEnabled } from "./stripe";
 import { deliveryEmail, sendEmail } from "./email";
+import { CHECKOUT_MINUTES, checkCode, discountCents, normalizeCode, STRIPE_MIN_CENTS } from "./discounts";
+import { money } from "./format";
 
 /** An error whose message is safe to show the buyer. */
 export class CheckoutError extends Error {}
@@ -20,7 +22,7 @@ function stripeAccountFor(creator: { stripeAccountId: string | null; stripeReady
   return creator.stripeAccountId && creator.stripeReady ? { stripeAccount: creator.stripeAccountId } : undefined;
 }
 
-export async function startCheckout(productId: string, buyer: { email: string; name: string }) {
+export async function startCheckout(productId: string, buyer: { email: string; name: string }, rawCode = "") {
   const product = await db.product.findUnique({ where: { id: productId }, include: { creator: true } });
   if (!product || !product.published || product.type !== "DIGITAL") throw new CheckoutError("This product is no longer available");
   if (product.creator.pausedAt) throw new CheckoutError("This store isn't available right now");
@@ -28,19 +30,33 @@ export async function startCheckout(productId: string, buyer: { email: string; n
   // Saved before payment, so people who start checkout but don't finish still land in Leads.
   if (product.collectEmails) await saveLead(product, buyer);
 
-  const order = await db.order.create({
-    data: {
-      creatorId: product.creatorId,
-      productId: product.id,
-      buyerEmail: buyer.email,
-      buyerName: buyer.name,
-      amountCents: product.priceCents,
-      currency: product.currency,
-      downloadToken: nanoid(32),
-    },
+  const code = product.priceCents > 0 ? normalizeCode(rawCode) : "";
+  const order = await db.$transaction(async (tx) => {
+    // Locks the code, so two buyers can't both take its last use.
+    if (code) await tx.$queryRaw`SELECT 1 FROM "DiscountCode" WHERE "creatorId" = ${product.creatorId} AND "code" = ${code} FOR UPDATE`;
+    const checked = code ? await checkCode(tx, product, code) : null;
+    if (checked && "error" in checked) throw new CheckoutError(checked.error);
+    const discount = checked?.code ?? null;
+    const off = discount ? discountCents(product.priceCents, discount) : 0;
+    const amountCents = product.priceCents - off;
+    if (amountCents > 0 && amountCents < STRIPE_MIN_CENTS) throw new CheckoutError(`That code brings the price under ${money(STRIPE_MIN_CENTS, product.currency)}, the lowest amount we can charge`);
+    return tx.order.create({
+      data: {
+        creatorId: product.creatorId,
+        productId: product.id,
+        buyerEmail: buyer.email,
+        buyerName: buyer.name,
+        amountCents,
+        currency: product.currency,
+        downloadToken: nanoid(32),
+        discountId: discount?.id,
+        discountCode: discount?.code,
+        discountCents: off,
+      },
+    });
   });
 
-  if (product.priceCents === 0) {
+  if (order.amountCents === 0) {
     await markPaid(order.id, null);
     return `${env.appUrl}/thanks/${order.id}`;
   }
@@ -54,12 +70,17 @@ export async function startCheckout(productId: string, buyer: { email: string; n
           quantity: 1,
           price_data: {
             currency: product.currency,
-            unit_amount: product.priceCents,
-            product_data: { name: product.title, description: product.subtitle || undefined },
+            unit_amount: order.amountCents,
+            product_data: {
+              name: product.title,
+              description: [product.subtitle, order.discountCode && `Code ${order.discountCode}: ${money(order.discountCents, order.currency)} off`].filter(Boolean).join(" · ") || undefined,
+            },
           },
         },
       ],
       metadata: { orderId: order.id },
+      // A checkout with a code holds one of its uses, so it can't stay open for Stripe's default 24 hours.
+      ...(order.discountId ? { expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_MINUTES * 60 } : {}),
       payment_intent_data: { metadata: { orderId: order.id } },
       success_url: `${env.appUrl}/thanks/${order.id}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${env.appUrl}/${product.creator.handle}/${product.id}`,

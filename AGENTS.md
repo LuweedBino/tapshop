@@ -77,6 +77,7 @@ The feature is called **Portfolio** in the UI, but the code still uses `mediaKit
 ## Payments and files (be careful here)
 
 - Paid orders are marked paid both on the thank-you page and in the Stripe webhook. That path must stay **idempotent**, and the delivery email goes out exactly once.
+- **Discount codes** (`lib/discounts.ts`, `/dashboard/discounts`): a code takes a percent or a fixed amount off one product or the whole store, with an optional use limit and last day. The price is worked out only in `startCheckout`; `previewCode` just shows it to the buyer. Stripe gets the lower price as `unit_amount`, not a Stripe coupon, so `markPaid` needs no changes. Uses are counted from orders (`usedOrders`): paid and refunded ones, plus unpaid ones from the last 35 minutes, which is why checkouts with a code close after 31. `startCheckout` locks the code row while it checks the limit and creates the order. A 100% code skips Stripe like a free product; prices that land between 0 and `STRIPE_MIN_CENTS` are refused. The affiliate page `extras.code` is a different thing: text the creator shows visitors.
 - Paid files are private. They are only served through `/api/download/<token>` after the order is checked. Never give a paid file a public URL.
 - Charges are direct charges on the creator's connected account. `ALLOW_PLATFORM_CHARGES` is for local testing only.
 
@@ -88,4 +89,4 @@ The feature is called **Portfolio** in the UI, but the code still uses `mediaKit
 
 ## Roadmap (from README)
 
-Courses, calendar bookings, memberships, Instagram AutoDM, and Pro features (email flows, upsells and order bumps, payment plans, discount codes, affiliates).
+Courses, calendar bookings, memberships, Instagram AutoDM, and Pro features (email flows, upsells and order bumps, payment plans, affiliates).
