@@ -16,7 +16,7 @@ const Item = z.object({
 });
 
 /** Records files that were already uploaded (privately) into the creator's Media Vault. */
-export async function addVaultItems(input: unknown[], folderId?: string | null): Promise<{ error?: string; added?: number }> {
+export async function addVaultItems(input: unknown[], folderId?: string | null): Promise<{ error?: string; added?: number; items?: { id: string; name: string; kind: string }[] }> {
   const creator = await requireCreator();
   const parsed = z.array(Item).min(1).max(50).safeParse(input);
   if (!parsed.success) return { error: "Those files couldn't be added" };
@@ -35,8 +35,9 @@ export async function addVaultItems(input: unknown[], folderId?: string | null):
     return { error: `Your Media Vault is full (${formatBytes(VAULT_QUOTA_BYTES)}). Delete some files to make room.` };
   }
   await db.vaultItem.createMany({ data: rows, skipDuplicates: true });
+  const items = await db.vaultItem.findMany({ where: { creatorId: creator.id, key: { in: rows.map((r) => r.key) } }, select: { id: true, name: true, kind: true } });
   revalidatePath("/dashboard/studio");
-  return { added: rows.length };
+  return { added: rows.length, items };
 }
 
 export async function deleteVaultItem(id: string): Promise<{ error?: string }> {
@@ -44,7 +45,9 @@ export async function deleteVaultItem(id: string): Promise<{ error?: string }> {
   const item = await db.vaultItem.findFirst({ where: { id, creatorId: creator.id } });
   if (!item) return { error: "File not found" };
   await db.vaultItem.delete({ where: { id: item.id } });
-  await deleteObject(item.key);
+  // "Sell this" products share the Vault's stored file, and buyers keep their downloads even
+  // after a product is archived, so the file stays for as long as any product points at it.
+  if (!(await db.product.count({ where: { fileKey: item.key } }))) await deleteObject(item.key);
   revalidatePath("/dashboard/studio");
   return {};
 }
@@ -65,6 +68,39 @@ export async function renameVaultItem(id: string, name: string): Promise<{ error
   await db.vaultItem.update({ where: { id: item.id }, data: { name: base + ext } });
   revalidatePath("/dashboard/studio");
   return {};
+}
+
+const Sale = z.object({
+  title: z.string().trim().min(1, "Give it a title").max(120),
+  description: z.string().trim().max(5000).default(""),
+  price: z.string().trim().max(20).default("0"),
+  coverKey: z.string().default(""),
+});
+
+/** "Sell this": turns a Vault file into a published product on the main store. */
+export async function sellVaultItem(id: string, input: unknown): Promise<{ error?: string; productId?: string; handle?: string }> {
+  const creator = await requireCreator();
+  const parsed = Sale.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { title, description, price, coverKey } = parsed.data;
+  const amount = Number(price.replace(/[$,\s]/g, "") || "0");
+  if (!Number.isFinite(amount) || amount < 0 || amount > 100000) return { error: "Enter a valid price" };
+  const priceCents = Math.round(amount * 100);
+  if (priceCents > 0 && priceCents < 50) return { error: "Paid products must cost at least $0.50" };
+  const item = await db.vaultItem.findFirst({ where: { id, creatorId: creator.id }, select: { key: true, name: true, kind: true } });
+  if (!item) return { error: "File not found" };
+  if (item.kind === "project") return { error: "Editable projects can't be sold. Save it as a video or picture first." };
+  const cover = ownKey(coverKey, creator.id, "public");
+  if (cover === undefined) return { error: "Invalid cover picture" };
+  const last = await db.product.findFirst({ where: { creatorId: creator.id, pageId: null }, orderBy: { position: "desc" } });
+  const product = await db.product.create({
+    data: { creatorId: creator.id, type: "DIGITAL", title, description, priceCents, coverKey: cover, fileKey: item.key, fileName: item.name, published: true, position: (last?.position ?? -1) + 1 },
+    select: { id: true },
+  });
+  revalidatePath(`/${creator.handle}`, "layout");
+  revalidatePath("/dashboard/products");
+  revalidatePath("/dashboard/studio");
+  return { productId: product.id, handle: creator.handle };
 }
 
 const FolderName = z.string().trim().min(1, "Give the folder a name").max(60, "That name is too long");

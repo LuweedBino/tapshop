@@ -359,23 +359,26 @@ document.querySelectorAll('dialog.closable').forEach(d=>d.addEventListener('clic
 // Media Vault (only inside TapShop): send the exported video or the project file to the
 // dashboard, which stores it privately for this creator.
 function inTapShop(){return window.parent!==window}
-function sendToVault(items){window.parent.postMessage({type:'tapshop:vault-save',version:1,items},location.origin)}
+function sendToVault(items,sell=false){window.parent.postMessage({type:'tapshop:vault-save',version:1,items,sell},location.origin)}
 let lastVideoExport=null,exportToVault=false;
 // Save to Vault asks video or project. "Video" runs the normal export, but the finished file goes
 // to the Vault instead of downloading; the dialog's wording goes back when it closes.
-const EXPORT_WORDS=[[$('exportDialog').querySelector('h2'),'Save video to Vault'],[$('startExport'),'Make video and save']].map(([el,vault])=>({el,vault,normal:el.textContent}));
+const EXPORT_WORDS=[[$('exportDialog').querySelector('h2'),'Save video to Vault','Sell this video'],[$('startExport'),'Make video and save','Make video and continue']].map(([el,vault,sell])=>({el,vault,sell,normal:el.textContent}));
 $('exportDialog').addEventListener('close',()=>{if(exporting)return;exportToVault=false;for(const w of EXPORT_WORDS)w.el.textContent=w.normal});
 function askChoice(title,sub,options){$('choiceTitle').textContent=title;$('choiceSub').textContent=sub;let list=$('choiceList');list.replaceChildren();for(const o of options){let b=document.createElement('button'),t=document.createElement('b'),s=document.createElement('small');b.type='button';b.className='vault-option';t.textContent=o.label;s.textContent=o.hint;b.append(t,s);b.onclick=()=>{$('choiceDialog').close();o.run()};list.appendChild(b)}$('choiceDialog').showModal()}
-function saveVideoToVaultNow(){openExport();if(!$('exportDialog').open)return;exportToVault=true;$('vaultVideo').classList.add('hidden');for(const w of EXPORT_WORDS)w.el.textContent=w.vault}
+function saveVideoToVaultNow(){exportForVault(true)}
+function sellVideo(){if(inTapShop()&&!exporting)exportForVault('sell')}
+// "Sell this" makes the finished video, saves it to the Vault, then the dashboard opens its Sell this form.
+function exportForVault(how){openExport();if(!$('exportDialog').open)return;exportToVault=how;$('vaultVideo').classList.add('hidden');for(const w of EXPORT_WORDS)w.el.textContent=how==='sell'?w.sell:w.vault}
 function openVaultChoice(){if(!inTapShop()||exporting)return;askChoice('Save to Vault','How would you like to save this?',[{label:'🎬 As a video',hint:'A finished video, ready to post or sell',run:saveVideoToVaultNow},{label:'✳ As a project',hint:'Keeps your clips and edits so you can change them later',run:saveProjectToVault}])}
 function openSaveChoice(){if(exporting)return;if(!inTapShop()){saveProjectToDevice();return}askChoice('Save project','Your clips and edits are saved together. Where should it go?',[{label:'📱 This device',hint:'Downloads a project file',run:saveProjectToDevice},{label:'⛁ Media Vault',hint:'Open it from any device you sign in on',run:saveProjectToVault}])}
 function openProjectChoice(){if(exporting)return;if(!inTapShop()){$('restore').click();return}askChoice('Open project','Where is your project?',[{label:'📱 This device',hint:'Pick a project file',run:()=>$('restore').click()},{label:'⛁ Media Vault',hint:'Projects you saved to your Vault',run:()=>openVaultPicker(['project'])}])}
 function saveProjectToDevice(){if(exporting)return;let blob=vePackProject();if(!blob){toast('Add something to your video first.');return}download(blob,($('projectName').value||'Untitled video')+'.tapshop.json')}
-const downloadWithVault=download;download=function(blob,name){if(blob?.type?.startsWith('video/')){lastVideoExport={blob,name};if(exportToVault){exportToVault=false;sendToVault([{blob,name,source:'video'}]);$('exportDialog').close();return}if(inTapShop())$('vaultVideo')?.classList.remove('hidden')}return downloadWithVault(blob,name)};
+const downloadWithVault=download;download=function(blob,name){if(blob?.type?.startsWith('video/')){lastVideoExport={blob,name};if(exportToVault){let sell=exportToVault==='sell';exportToVault=false;sendToVault([{blob,name,source:'video'}],sell);$('exportDialog').close();return}if(inTapShop())$('vaultVideo')?.classList.remove('hidden')}return downloadWithVault(blob,name)};
 function saveVideoToVault(){if(!inTapShop()||!lastVideoExport)return;sendToVault([{...lastVideoExport,source:'video'}]);$('vaultVideo').classList.add('hidden');$('exportDialog').close()}
 const VAULT_FILE_LIMIT=500*1024*1024; // VAULT_MAX_BYTES in lib/vault.ts
 function saveProjectToVault(){if(!inTapShop()||exporting)return;let blob=vePackProject();if(!blob){toast('Add something to your video first.');return}if(blob.size>VAULT_FILE_LIMIT){toast('This project is over 500 MB with its clips. Save it as a video instead.');return}sendToVault([{blob,name:($('projectName').value||'Untitled video')+'.tapshop.json',source:'video'}])}
-if(!inTapShop())$('vaultProject')?.remove();
+if(!inTapShop()){$('vaultProject')?.remove();$('sellVideo')?.remove()}
 
 // Importing from the Vault: videos go on the main timeline (or on top as a layer), audio
 // gets its own track, and a saved .tapshop.json project is reopened.
