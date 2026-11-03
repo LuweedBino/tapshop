@@ -358,8 +358,14 @@ document.querySelectorAll('dialog.closable').forEach(d=>d.addEventListener('clic
 // dashboard, which stores it privately for this creator.
 function inTapShop(){return window.parent!==window}
 function sendToVault(items){window.parent.postMessage({type:'tapshop:vault-save',version:1,items},location.origin)}
-let lastVideoExport=null;
-const downloadWithVault=download;download=function(blob,name){if(blob?.type?.startsWith('video/')){lastVideoExport={blob,name};if(inTapShop())$('vaultVideo')?.classList.remove('hidden')}return downloadWithVault(blob,name)};
+let lastVideoExport=null,exportToVault=false;
+// Save to Vault asks video or project. "Video" runs the normal export, but the finished file goes
+// to the Vault instead of downloading; the dialog's wording goes back when it closes.
+const EXPORT_WORDS=[[$('exportDialog').querySelector('h2'),'Save video to Vault'],[$('startExport'),'Make video and save']].map(([el,vault])=>({el,vault,normal:el.textContent}));
+$('exportDialog').addEventListener('close',()=>{if(exporting)return;exportToVault=false;for(const w of EXPORT_WORDS)w.el.textContent=w.normal});
+function openVaultChoice(){if(inTapShop()&&!exporting)$('vaultChoice').showModal()}
+function vaultChoose(kind){$('vaultChoice').close();if(kind==='project'){saveProjectToVault();return}openExport();if(!$('exportDialog').open)return;exportToVault=true;$('vaultVideo').classList.add('hidden');for(const w of EXPORT_WORDS)w.el.textContent=w.vault}
+const downloadWithVault=download;download=function(blob,name){if(blob?.type?.startsWith('video/')){lastVideoExport={blob,name};if(exportToVault){exportToVault=false;sendToVault([{blob,name,source:'video'}]);$('exportDialog').close();return}if(inTapShop())$('vaultVideo')?.classList.remove('hidden')}return downloadWithVault(blob,name)};
 function saveVideoToVault(){if(!inTapShop()||!lastVideoExport)return;sendToVault([{...lastVideoExport,source:'video'}]);$('vaultVideo').classList.add('hidden');$('exportDialog').close()}
 function saveProjectToVault(){if(!inTapShop()||exporting)return;let captured=null,real=download;download=(blob,name)=>{captured={blob,name}};try{saveProject()}finally{download=real}if(captured)sendToVault([{...captured,source:'video'}])}
 if(!inTapShop())$('vaultProject')?.remove();
