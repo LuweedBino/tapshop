@@ -11,7 +11,7 @@ const Input = z
   .object({
     code: z.string().transform(normalizeCode).pipe(z.string().regex(CODE_RE, "Use 3-30 letters, numbers, dashes or underscores for the code")),
     type: z.enum(["PERCENT", "FIXED"]),
-    amount: z.coerce.number({ invalid_type_error: "Enter the discount amount" }).positive("Enter the discount amount"),
+    amount: z.coerce.number({ error: "Enter the discount amount" }).positive("Enter the discount amount"),
     productId: z.string().trim().default(""),
     maxUses: z.union([z.literal(""), z.coerce.number().int("Use a whole number for the limit").min(1, "The limit must be at least 1").max(1_000_000)]).default(""),
     expiresAt: z.union([z.literal(""), z.coerce.date()]).default(""),
