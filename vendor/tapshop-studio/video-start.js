@@ -1,5 +1,5 @@
 // Video Editor start screen: pick where the video is going (sets the frame shape), add videos and
-// photos (device or Media Vault), optionally pick a short-video template, then open the editor with
+// photos (device, camera or Media Vault), optionally pick a short-video template, then open the editor with
 // everything on the timeline. Videos go on the main timeline in the order picked; photos follow,
 // 3 s each, as picture tracks (the same 'brand:logo' image tracks the brand kit uses).
 // Anything that loads media from elsewhere (Vault "Use in Studio", projects) closes the screen.
@@ -269,7 +269,7 @@ function build(){
   <h2><span class="vs-step">1</span>Where will you post it?</h2><p class="vs-help">This sets the shape of your video.</p>
   <div class="vs-plats" id="vsPlats"></div>
   <h2><span class="vs-step">2</span>Add your videos and photos</h2><p class="vs-help">They go on the timeline in this order: videos first, then photos (${PHOTO_SECONDS} seconds each).</p>
-  <div class="vs-drop" id="vsDrop"><div class="big" aria-hidden="true">＋</div><p>Drop files here, or choose them</p><div class="vs-row"><button type="button" class="primary" id="vsPick">Choose from device</button><button type="button" id="vsVault">⛁ From Media Vault</button></div>
+  <div class="vs-drop" id="vsDrop"><div class="big" aria-hidden="true">＋</div><p>Drop files here, or choose them</p><div class="vs-row"><button type="button" class="primary" id="vsPick">Choose from device</button><button type="button" id="vsCamera">📷 Use camera</button><button type="button" id="vsVault">⛁ From Media Vault</button></div>
   <input type="file" id="vsInput" accept="video/*,image/*" multiple hidden></div>
   <div class="vs-files" id="vsFiles" hidden></div>
   <h2><span class="vs-step">3</span>Pick a template <span style="font-weight:500;color:var(--ts-muted,#737373);font-size:13px">(optional)</span></h2><p class="vs-help">Ready-made text and timing for short videos. Tap again to unselect.</p>
@@ -293,6 +293,7 @@ function build(){
   $$('vsTpls').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickTpl(e.target.closest('.vs-tpl'))}};
   $$('vsPick').onclick=()=>$$('vsInput').click();
   $$('vsInput').onchange=function(){addFiles(this.files);this.value=''};
+  $$('vsCamera').onclick=()=>VideoCamera.open(addFiles,toast);
   let drop=$$('vsDrop');
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');addFiles(e.dataTransfer.files)};

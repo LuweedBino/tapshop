@@ -32,6 +32,7 @@ const FILES = new Set([
   "tapshop-theme.css",
   "tapshop-theme.js",
   "video-start.js",
+  "video-camera.js",
   "video-captions.js",
   "video-autosave.js",
   "studio-social.js",
