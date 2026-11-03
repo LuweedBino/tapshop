@@ -49,7 +49,63 @@ function videoFrame(url: string) {
   });
 }
 
-type Frames = { count: number; at: (i: number) => Promise<Blob | null>; close: () => void };
+type Frames = { count: number; start: number; label?: (i: number) => string; at: (i: number) => Promise<Blob | null>; close: () => void };
+
+const VIDEO_STEPS = 120;
+const once = (target: EventTarget, event: string, wait: number) =>
+  new Promise<void>((resolve) => {
+    const done = () => {
+      clearTimeout(timer);
+      target.removeEventListener(event, done);
+      resolve();
+    };
+    const timer = setTimeout(done, wait);
+    target.addEventListener(event, done);
+  });
+
+/** The stored video can only be seeked once it's all here, so the slider appears after the download. */
+async function videoFrames(url: string, signal: AbortSignal): Promise<Frames | null> {
+  const res = await fetch(url, { signal });
+  if (!res.ok) return null;
+  const src = URL.createObjectURL(await res.blob());
+  const video = document.createElement("video");
+  const close = () => {
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(src);
+  };
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.src = src;
+  await once(video, "loadeddata", 15000);
+  // Browser recordings don't state their length: seeking past the end makes the browser work it out.
+  if (!Number.isFinite(video.duration) || !video.duration) {
+    video.currentTime = 1e7;
+    await once(video, "durationchange", 5000);
+  }
+  const length = video.duration;
+  if (!video.videoWidth || !Number.isFinite(length) || length < 0.2) {
+    close();
+    return null;
+  }
+  const count = Math.min(VIDEO_STEPS, Math.max(2, Math.ceil(length * 4)));
+  const time = (i: number) => (i / (count - 1)) * Math.max(0, length - 0.05);
+  return {
+    count,
+    start: Math.round((Math.min(0.5, length / 2) / length) * (count - 1)),
+    label: (i) => {
+      const tenths = Math.floor(time(i) * 10);
+      return `${Math.floor(tenths / 600)}:${((tenths % 600) / 10).toFixed(1).padStart(4, "0")}`;
+    },
+    at: async (i) => {
+      video.currentTime = time(i);
+      await once(video, "seeked", 3000);
+      return shrink(video, video.videoWidth, video.videoHeight);
+    },
+    close,
+  };
+}
 // ImageDecoder isn't in every browser or in TypeScript's own list yet, so it's described here.
 type GifDecoder = {
   tracks: { ready: Promise<void>; selectedTrack: { frameCount: number } | null };
@@ -70,6 +126,7 @@ async function gifFrames(blob: Blob): Promise<Frames | null> {
   }
   return {
     count,
+    start: Math.floor(count / 2),
     at: async (i) => {
       const { image } = await decoder.decode({ frameIndex: i });
       try {
@@ -83,9 +140,9 @@ async function gifFrames(blob: Blob): Promise<Frames | null> {
 }
 
 /** Vault files are private, so a cover is a separate small picture made from the file. */
-async function coverFrom(item: SavedItem): Promise<{ blob: Blob | null; frames?: Frames | null }> {
+async function coverFrom(item: SavedItem, signal: AbortSignal): Promise<{ blob: Blob | null; frames?: Frames | null; later?: Promise<Frames | null> }> {
   const url = `/api/vault/${item.id}?raw=1`;
-  if (item.kind === "video") return { blob: await videoFrame(url) };
+  if (item.kind === "video") return { blob: await videoFrame(url), later: videoFrames(url, signal).catch(() => null) };
   if (item.kind !== "image") return { blob: null };
   const res = await fetch(url);
   if (!res.ok) return { blob: null };
@@ -93,7 +150,7 @@ async function coverFrom(item: SavedItem): Promise<{ blob: Blob | null; frames?:
   if (file.type === "image/gif" || /\.gif$/i.test(item.name)) {
     const frames = await gifFrames(file).catch(() => null);
     // The middle frame: a GIF's first frame is often before anything has animated in.
-    if (frames) return { blob: await frames.at(Math.floor(frames.count / 2)), frames };
+    if (frames) return { blob: await frames.at(frames.start), frames };
   }
   const bitmap = await createImageBitmap(file);
   try {
@@ -121,17 +178,22 @@ export function SellThis({ item, handle, hasPayments, onClose }: { item: SavedIt
   useEffect(() => {
     let live = true;
     let opened: Frames | null | undefined;
-    coverFrom(item).then(({ blob, frames: found }) => {
+    const stop = new AbortController();
+    const use = (found: Frames | null | undefined) => {
+      if (!found) return;
+      if (!live) return found.close();
       opened = found;
-      if (!live) return found?.close();
-      if (blob) setAuto(blob);
-      if (found) {
-        setFrames(found);
-        setFrame(Math.floor(found.count / 2));
-      }
+      setFrames(found);
+      setFrame(found.start);
+    };
+    coverFrom(item, stop.signal).then(({ blob, frames: found, later }) => {
+      if (live && blob) setAuto(blob);
+      use(found);
+      later?.then(use);
     }, () => {});
     return () => {
       live = false;
+      stop.abort();
       opened?.close();
     };
   }, [item]);
@@ -214,7 +276,7 @@ export function SellThis({ item, handle, hasPayments, onClose }: { item: SavedIt
             )}
             {frames && preview && !coverKey && (
               <label className="block">
-                <span className="label">Cover frame: {frame + 1} of {frames.count}</span>
+                <span className="label">Cover frame: {frames.label ? frames.label(frame) : `${frame + 1} of ${frames.count}`}</span>
                 <input type="range" min={0} max={frames.count - 1} step={1} value={frame} onChange={(e) => pickFrame(Number(e.target.value))} className="w-full" aria-label="Choose the cover frame" />
               </label>
             )}
