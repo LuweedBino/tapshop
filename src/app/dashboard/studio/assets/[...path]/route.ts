@@ -38,6 +38,7 @@ const FILES = new Set([
   "studio-social.js",
   "studio-projects.js",
   "gif-encoder.js",
+  "studio-pages.js",
   "demo.webm",
 ]);
 

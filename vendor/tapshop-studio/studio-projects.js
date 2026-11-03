@@ -80,7 +80,7 @@ html body .pj-menu button.pj-danger{color:#dc2626!important}html.ts-dark body .p
 .pj-on .pj-check{background:var(--ts-primary,#171717);border-color:var(--ts-primary,#171717)}
 .pj-picking .pj-card{cursor:pointer}.pj-on{outline:3px solid var(--ts-primary,#171717);outline-offset:-1px}
 .pj-tools button{font:inherit}
-.sell-option{display:block;width:100%;margin-top:8px;padding:12px 14px;text-align:left}.sell-option b,.sell-option small{display:block}.sell-option small{margin-top:3px;font-weight:400;opacity:.7}
+.sell-option b,.sell-option small{display:block}.sell-option small{margin-top:3px;font-weight:400;opacity:.7}
 #pjVideos{margin-top:24px}#pjVideos h2{margin:0 0 12px;font-size:18px}.pj-vids{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 .pj-vid{position:relative;padding:8px;border:1px solid var(--ts-border,#e5e5e5);border-radius:16px;background:var(--ts-surface,#fff);color:inherit;text-decoration:none}.pj-vid:hover{border-color:var(--ts-border-strong,#d4d4d4)}
 .pj-vid a{display:block;color:inherit;text-decoration:none}.pj-th{display:grid;place-items:center;height:150px;border-radius:10px;overflow:hidden;background:var(--ts-soft,#f5f5f5);font-size:32px}.pj-th img{max-width:100%;max-height:100%;display:block}
