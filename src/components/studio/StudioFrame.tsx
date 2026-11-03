@@ -175,6 +175,7 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
         title="TapShop Studio"
         src="/dashboard/studio/assets/index.html"
         sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals"
+        allow="camera; microphone"
         style={height ? { height } : undefined}
         className={`h-[calc(100dvh-140px)] min-h-[420px] w-full rounded-xl border border-neutral-200 bg-white md:h-[calc(100dvh-64px)] ${view === "studio" ? "block" : "hidden"}`}
       />
