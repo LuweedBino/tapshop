@@ -9,7 +9,7 @@
 .vp-x{float:right;position:sticky;top:0;width:36px;height:36px;border-radius:50%;border:1px solid #8a7aa855;background:inherit;color:inherit;font-size:20px;cursor:pointer}
 .vp-list{display:grid;gap:8px}.vp-item[hidden]{display:none}.vp-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:8px;border:1px solid #8a7aa855;border-radius:12px;background:transparent;color:inherit;cursor:pointer;font:inherit}
 .vp-item:hover,.vp-item:focus-visible{border-color:#a07ae0;background:#a07ae01a}.vp-thumb{flex:0 0 64px;height:40px;border-radius:8px;background:#8a7aa833;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:18px}
-.vp-thumb img{width:100%;height:100%;object-fit:cover}.vp-name{display:block;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vp-meta{font-size:11px;opacity:.65}
+.vp-thumb{position:relative}.vp-thumb img{width:100%;height:100%;object-fit:cover}.vp-thumb.vp-frame::after{content:'▶';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:#0009;color:#fff;font-size:9px;line-height:20px;text-align:center}.vp-name{display:block;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.vp-meta{font-size:11px;opacity:.65}
 .vp.vp-hidden{opacity:0}.vp.vp-hidden::backdrop{background:transparent}.vp-item.vp-drag{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}.vp-ghost{position:fixed;z-index:2147483647;pointer-events:none;transform:translate(-50%,-130%);padding:8px 12px;border-radius:12px;background:#221d2c;color:#fff;font:600 13px system-ui,sans-serif;box-shadow:0 8px 24px #0006;white-space:nowrap;max-width:80vw;overflow:hidden;text-overflow:ellipsis;opacity:.92}.vp-ghost.vp-no{background:#6b6378}
 .vp-search{width:100%;box-sizing:border-box;margin:0 0 10px;padding:9px 12px;border:1px solid #8a7aa877;border-radius:10px;background:transparent;color:inherit;font:14px system-ui,sans-serif}.vp-none{padding:16px;text-align:center;font-size:13px;opacity:.75}
 .vp-folders{display:flex;gap:6px;overflow-x:auto;margin:0 0 10px;padding-bottom:2px}.vp-folder{white-space:nowrap;padding:6px 11px;border:1px solid #8a7aa855;border-radius:10px;background:transparent;color:inherit;font:600 12px system-ui,sans-serif;cursor:pointer}.vp-folder[aria-pressed=true]{background:#8a5fd6;border-color:#8a5fd6;color:#fff}
@@ -21,13 +21,41 @@
   async function load(){let r=await fetch('/api/vault',{credentials:'same-origin',cache:'no-store'});if(!r.ok)throw Error('Your Media Vault could not be loaded.');let j=await r.json();return {items:j.items||[],folders:j.folders||[]}}
   async function list(){return (await load()).items}
   async function file(item){let r=await fetch('/api/vault/'+encodeURIComponent(item.id)+'?raw=1',{credentials:'same-origin'});if(!r.ok)throw Error('That file could not be loaded from your Media Vault.');let b=await r.blob();return new File([b],item.name,{type:item.contentType||b.type||'application/octet-stream'})}
+  // Video thumbnails: there is no stored picture for a video, so a hidden <video> loads the start
+  // of the file, one frame is copied into a small JPEG and the download stops. ?raw=1 keeps it
+  // same-origin, which the canvas needs. Frames are remembered so each video is only read once.
+  const THUMB_KEY='tapshop-vault-video-thumbs',THUMB_KEEP=100,THUMB_AT=.5,THUMB_SIZE=240,THUMB_WAIT=20000,THUMB_JOBS=2;
+  let thumbs=null;
+  function savedThumbs(){if(!thumbs){try{thumbs=JSON.parse(localStorage.getItem(THUMB_KEY))||{}}catch{thumbs={}}}return thumbs}
+  function keepThumb(id,url){let s=savedThumbs();s[id]=url;let ids=Object.keys(s);for(const k of ids.slice(0,Math.max(0,ids.length-THUMB_KEEP)))delete s[k];try{localStorage.setItem(THUMB_KEY,JSON.stringify(s))}catch{}}
+  function showFrame(span,url){let img=new Image();img.alt='';img.src=url;span.replaceChildren(img);span.classList.add('vp-frame')}
+  function grabFrame(id){
+    let v=document.createElement('video'),finish,wait,kick,seek;
+    let done=new Promise(res=>{finish=url=>{clearTimeout(wait);clearTimeout(kick);clearTimeout(seek);v.onloadeddata=v.onseeked=v.onerror=null;v.removeAttribute('src');v.load();res(url)}});
+    const draw=()=>{let w=v.videoWidth,h=v.videoHeight,url=null;if(w&&h){try{let k=Math.min(1,THUMB_SIZE/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.round(w*k);c.height=Math.round(h*k);c.getContext('2d').drawImage(v,0,0,c.width,c.height);url=c.toDataURL('image/jpeg',.7)}catch{}}finish(url)};
+    v.muted=true;v.playsInline=true;v.preload='auto';
+    v.onerror=()=>finish(null);
+    v.onloadeddata=()=>{let at=Math.min(THUMB_AT,(v.duration||0)/2),s=v.seekable;v.pause();if(at>0&&s.length&&s.end(s.length-1)>=at){v.onseeked=draw;seek=setTimeout(draw,2000);v.currentTime=at}else draw()};
+    wait=setTimeout(()=>finish(null),THUMB_WAIT);
+    // iPhones only start loading a video once it is asked to play.
+    kick=setTimeout(()=>{if(v.readyState<2)v.play()?.catch(()=>{})},1500);
+    v.src='/api/vault/'+encodeURIComponent(id)+'?raw=1';v.load();
+    return {done,cancel:()=>finish(null)};
+  }
+  // Only rows on screen load, a couple at a time, and closing the picker stops the rest.
+  function videoThumbs(d){
+    let queue=[],jobs=new Set(),spans=new Map();
+    const pump=()=>{while(jobs.size<THUMB_JOBS&&queue.length){let b=queue.shift(),{id,span}=spans.get(b),job=grabFrame(id);jobs.add(job);job.done.then(url=>{jobs.delete(job);if(url){keepThumb(id,url);showFrame(span,url)}pump()})}};
+    let seen=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){seen.unobserve(e.target);queue.push(e.target)}pump()},{root:d,rootMargin:'120px'});
+    return {add(b,id){let span=b.querySelector('.vp-thumb'),url=savedThumbs()[id];if(url){showFrame(span,url);return}spans.set(b,{id,span});seen.observe(b)},stop(){seen.disconnect();queue.length=0;for(const j of [...jobs])j.cancel()}};
+  }
   async function open({title='From your Media Vault',kinds,accept,onPick,drag}){
     if(!inTapShop)return;
     if(!style){style=document.createElement('style');style.textContent=css;document.head.appendChild(style)}
     let d=document.createElement('dialog');d.className='vp'+(dark()?' vp-dark':'');d.setAttribute('aria-label',title);
     d.innerHTML=`<button type="button" class="vp-x" aria-label="Close">×</button><h2>${esc(title)}</h2><p>Loading your files…</p><input class="vp-search" type="search" placeholder="🔍 Search your files" aria-label="Search files by name" hidden><div class="vp-folders" hidden></div><div class="vp-list"></div>`;
     document.body.appendChild(d);d.showModal();
-    const close=()=>{d.close();d.remove()};
+    const frames=videoThumbs(d),close=()=>{frames.stop();d.close();d.remove()};
     d.querySelector('.vp-x').onclick=close;d.addEventListener('cancel',e=>{e.preventDefault();close()});
     d.addEventListener('click',e=>{if(e.target!==d)return;let r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close()});
     let items,folders;try{({items,folders}=await load());items=items.filter(i=>(!kinds||kinds.includes(i.kind))&&(!accept||accept(i)))}catch(e){d.querySelector('p').textContent=e.message;return}
@@ -43,7 +71,7 @@
     if(items.length>5){search.hidden=false;search.oninput=refilter}
     for(const it of items){let b=document.createElement('button');b.dataset.folder=it.folderId||'';b.dataset.name=it.name.toLowerCase();b.type='button';b.className='vp-item';
       b.innerHTML=`<span class="vp-thumb">${it.kind==='image'&&!/svg/.test(it.contentType)?`<img src="/api/vault/${encodeURIComponent(it.id)}" alt="" loading="lazy">`:(KIND_ICON[it.kind]||'📦')}</span><span style="min-width:0"><span class="vp-name">${esc(it.name)}</span><span class="vp-meta">${size(it.size)}</span></span>`;
-      b.onclick=()=>{if(b.dataset.dragged){delete b.dataset.dragged;return}close();onPick(it)};if(drag)draggable(b,it,d,close,drag);box.appendChild(b)}
+      b.onclick=()=>{if(b.dataset.dragged){delete b.dataset.dragged;return}close();onPick(it)};if(drag)draggable(b,it,d,close,drag);box.appendChild(b);if(it.kind==='video')frames.add(b,it.id)}
     box.appendChild(none);
     let more=document.createElement('button');more.type='button';more.className='vp-link';more.textContent='Open Media Vault';more.onclick=()=>{close();window.parent.postMessage({type:'tapshop:open-vault',version:1},location.origin)};d.appendChild(more);
   }
