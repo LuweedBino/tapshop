@@ -98,6 +98,7 @@ export function StudioFrame({ products, vault, folders }: { products: { id: stri
       const d = e.data;
       if (!d || d.version !== 1) return;
       if (d.type === "tapshop:open-vault") return openVault();
+      if (d.type === "tapshop:vault-changed") return router.refresh();
       if (d.type === "tapshop:designs") return setDesigns(designOptions(d.items));
       // A design's video → "Open in Video Editor". The editor fetches it by id, so the server still checks ownership.
       if (d.type === "tapshop:edit-video" && d.item && typeof d.item.id === "string" && d.item.id) {

@@ -218,6 +218,7 @@ const css=`#veStart[hidden],#veStart [hidden]{display:none!important}
 #veStart .vs-drop p{margin:8px 0 14px;color:var(--ts-muted,#737373);font-size:14px}
 #veStart .vs-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
 #veStart .vs-row button{padding:10px 16px}
+#veStart #vsCamSave{margin-top:10px;padding:10px 16px}#veStart #vsCamSave[hidden]{display:none}
 #veStart .vs-files{display:flex;gap:10px;overflow-x:auto;padding:14px 2px 4px}
 #veStart .vs-file{position:relative;flex:none;width:84px}
 #veStart .vs-file .th{width:84px;height:112px;border-radius:12px;overflow:hidden;background:var(--ts-soft,#f5f5f5);border:1px solid var(--ts-border,#e5e5e5)}
@@ -272,6 +273,7 @@ function build(){
   <div class="vs-drop" id="vsDrop"><div class="big" aria-hidden="true">＋</div><p>Drop files here, or choose them</p><div class="vs-row"><button type="button" class="primary" id="vsPick">Choose from device</button><button type="button" id="vsCamera">📷 Use camera</button><button type="button" id="vsVault">⛁ From Media Vault</button></div>
   <input type="file" id="vsInput" accept="video/*,image/*" multiple hidden></div>
   <div class="vs-files" id="vsFiles" hidden></div>
+  <button type="button" id="vsCamSave" hidden></button>
   <h2><span class="vs-step">3</span>Pick a template <span style="font-weight:500;color:var(--ts-muted,#737373);font-size:13px">(optional)</span></h2><p class="vs-help">Ready-made text and timing for short videos. Tap again to unselect.</p>
   <div class="vs-cats" id="vsCats" role="group" aria-label="Template type"></div>
   <div class="vs-tpls" id="vsTpls"></div>
@@ -293,7 +295,8 @@ function build(){
   $$('vsTpls').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickTpl(e.target.closest('.vs-tpl'))}};
   $$('vsPick').onclick=()=>$$('vsInput').click();
   $$('vsInput').onchange=function(){addFiles(this.files);this.value=''};
-  $$('vsCamera').onclick=()=>VideoCamera.open(addFiles,toast);
+  $$('vsCamera').onclick=()=>VideoCamera.open(l=>addFiles(l,true),toast);
+  $$('vsCamSave').onclick=saveCameraShots;
   let drop=$$('vsDrop');
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');addFiles(e.dataTransfer.files)};
@@ -307,9 +310,13 @@ function build(){
   sync();
 }
 
-function addFiles(list){let added=0,skipped=0;for(let f of [...(list||[])]){let kind=isVideo(f)?'video':isImage(f)?'image':null;if(!kind){skipped++;continue}pending.push({file:f,kind,url:URL.createObjectURL(f)});added++}
+function addFiles(list,camera=false){let added=0,skipped=0;for(let f of [...(list||[])]){let kind=isVideo(f)?'video':isImage(f)?'image':null;if(!kind){skipped++;continue}pending.push({file:f,kind,url:URL.createObjectURL(f),camera});added++}
   if(skipped)toast(skipped===1?'That file isn’t a video or photo.':skipped+' files weren’t videos or photos.');sync();
   if(added){let box=document.getElementById('vsFiles');requestAnimationFrame(()=>box.scrollTo({left:box.scrollWidth,behavior:'smooth'}))}}
+// Camera shots only exist on the device until they're saved, so they get a one-tap save to the Vault.
+const CAM_LIMIT=500*1024*1024; // VAULT_MAX_BYTES in lib/vault.ts
+const unsavedShots=()=>pending.filter(p=>p.camera&&!p.saved&&p.file.size<=CAM_LIMIT);
+function saveCameraShots(){let shots=unsavedShots();if(!shots.length)return;sendToVault(shots.map(p=>({blob:p.file,name:p.file.name,source:'video'})));for(const p of shots)p.saved=true;sync()}
 // Videos first, then photos, matching what the help text promises.
 const ordered=()=>[...pending.filter(p=>p.kind==='video'),...pending.filter(p=>p.kind==='image')];
 
@@ -319,6 +326,7 @@ function sync(){
   document.querySelectorAll('#veStart .vs-tpl').forEach(c=>{c.setAttribute('aria-pressed',String(c.dataset.id===template));c.hidden=tplCat!=='all'&&c.dataset.cat!==tplCat&&c.dataset.id!==template});
   document.querySelectorAll('#veStart .vs-cats button').forEach(b=>{let on=b.dataset.cat===tplCat;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on))});
   let files=$$('vsFiles'),list=ordered();files.hidden=!list.length;
+  let shots=unsavedShots().length,camSave=$$('vsCamSave');camSave.hidden=!shots||!inTapShop();camSave.textContent=`⛁ Save ${shots===1?'camera shot':shots+' camera shots'} to Vault`;
   files.innerHTML=list.map(p=>{let i=pending.indexOf(p);return `<div class="vs-file"><div class="th">${p.kind==='video'?`<video src="${p.url}#t=0.5" muted playsinline preload="metadata"></video>`:`<img src="${p.url}" alt="">`}</div><span class="n">${list.indexOf(p)+1}</span><span class="k">${p.kind==='video'?'VIDEO':'PHOTO'}</span><button type="button" class="x" data-i="${i}" aria-label="Remove ${esc(p.file.name)}">×</button><small>${esc(p.file.name)}</small></div>`}).join('');
   let pl=PLATFORMS.find(p=>p.id===platform),tp=TEMPLATES.find(t=>t.id===template),v=pending.filter(p=>p.kind==='video').length,ph=pending.length-v;
   let what=[v&&(v+' video'+(v>1?'s':'')),ph&&(ph+' photo'+(ph>1?'s':''))].filter(Boolean).join(' + ')||'no files yet';
