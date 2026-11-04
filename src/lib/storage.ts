@@ -92,23 +92,61 @@ export async function readLocal(key: string) {
 }
 
 /** Reads a file from local disk or Vercel Blob. Returns null if it doesn't exist. */
-export async function readObject(key: string): Promise<{ body: BodyInit; contentType: string } | null> {
+export type StoredObject = {
+  body: BodyInit;
+  contentType: string;
+  /** Length of `body` in bytes, when known. */
+  size?: number;
+  /** Set when `body` is only the requested part of the file. */
+  contentRange?: string;
+};
+
+// `range` is an HTTP Range header value ("bytes=0-1023"). Video players need it: iPhones won't play
+// a video from a server that can't send part of a file.
+export async function readObject(key: string, range?: string): Promise<StoredObject | null> {
   if (usingS3()) {
-    const res = await s3().send(new GetObjectCommand({ Bucket: env.s3.bucket, Key: key })).catch(() => null);
+    const res = await s3().send(new GetObjectCommand({ Bucket: env.s3.bucket, Key: key, Range: range })).catch(() => null);
     if (!res?.Body) return null;
-    return { body: res.Body.transformToWebStream() as unknown as ReadableStream, contentType: res.ContentType ?? "application/octet-stream" };
+    return {
+      body: res.Body.transformToWebStream() as unknown as ReadableStream,
+      contentType: res.ContentType ?? "application/octet-stream",
+      size: res.ContentLength,
+      contentRange: res.ContentRange,
+    };
   }
   if (backend() === "blob") {
-    const res = await getBlob(key, { access: "private" }).catch(() => null);
+    const res = await getBlob(key, { access: "private", headers: range ? { range } : undefined }).catch(() => null);
     if (!res || res.statusCode !== 200) return null;
-    return { body: res.stream, contentType: res.blob.contentType };
+    return {
+      body: res.stream,
+      contentType: res.blob.contentType,
+      size: res.blob.size || undefined,
+      contentRange: res.headers.get("content-range") ?? undefined,
+    };
   }
   try {
     const { body, contentType } = await readLocal(key);
-    return { body: new Uint8Array(body), contentType };
+    const part = range ? localRange(range, body.length) : null;
+    if (part) {
+      return {
+        body: new Uint8Array(body.subarray(part.start, part.end + 1)),
+        contentType,
+        size: part.end - part.start + 1,
+        contentRange: `bytes ${part.start}-${part.end}/${body.length}`,
+      };
+    }
+    return { body: new Uint8Array(body), contentType, size: body.length };
   } catch {
     return null;
   }
+}
+
+function localRange(range: string, size: number) {
+  const m = /^bytes=(\d*)-(\d*)$/.exec(range);
+  if (!m || (!m[1] && !m[2])) return null;
+  const start = m[1] ? Number(m[1]) : Math.max(0, size - Number(m[2]));
+  const end = m[1] && m[2] ? Math.min(Number(m[2]), size - 1) : size - 1;
+  return start <= end ? { start, end } : null;
 }
 
 export async function signedDownloadUrl(key: string, downloadName?: string) {

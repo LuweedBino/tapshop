@@ -19,10 +19,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   // so the editor can read it without the bucket allowing cross-origin GETs.
   const raw = new URL(req.url).searchParams.has("raw");
   if (usingS3() && !raw) return NextResponse.redirect(await signedDownloadUrl(item.key, download ? name : undefined));
-  const file = await readObject(item.key);
+  const range = req.headers.get("range");
+  const file = await readObject(item.key, range && /^bytes=(\d+-\d*|-\d+)$/.test(range) ? range : undefined);
   if (!file) return new NextResponse("File not found", { status: 404 });
   return new NextResponse(file.body, {
+    status: file.contentRange ? 206 : 200,
     headers: {
+      "accept-ranges": "bytes",
+      ...(file.size ? { "content-length": String(file.size) } : {}),
+      ...(file.contentRange ? { "content-range": file.contentRange } : {}),
       "content-type": item.contentType || file.contentType,
       "content-disposition": `${download ? "attachment" : "inline"}; filename="${name}"`,
       "cache-control": "private, no-store",
