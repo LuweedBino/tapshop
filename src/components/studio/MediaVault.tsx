@@ -15,7 +15,7 @@ const ICONS: Record<string, string> = { video: "▶", image: "🖼", audio: "♫
 const SOURCE_LABEL: Record<string, string> = { upload: "Uploaded", design: "From Design Studio", video: "From Video Studio" };
 
 /** Uploads files privately and records them in the Vault. Shared by the Vault and Studio exports. */
-export async function saveToVault(files: { file: File; source: "upload" | "design" | "video" }[], onProgress?: (done: number) => void, folderId?: string | null, used = 0) {
+export async function saveToVault(files: { file: File; source: "upload" | "design" | "video" }[], onProgress?: (done: number, percent?: number) => void, folderId?: string | null, used = 0) {
   const adding = files.reduce((n, f) => n + f.file.size, 0);
   if (used + adding > VAULT_QUOTA_BYTES) throw new Error(`Not enough space: ${formatBytes(adding)} won't fit in the ${formatBytes(Math.max(0, VAULT_QUOTA_BYTES - used))} you have left. Delete some files to make room.`);
   const items = [];
@@ -23,7 +23,7 @@ export async function saveToVault(files: { file: File; source: "upload" | "desig
   let done = 0;
   for (const { file, source } of files) {
     if (file.size > VAULT_MAX_BYTES) throw new Error(`${file.name} is over the ${formatBytes(VAULT_MAX_BYTES)} limit`);
-    const key = await uploadFile(file, "private");
+    const key = await uploadFile(file, "private", (percent) => onProgress?.(done, percent));
     items.push({ key, name: file.name, contentType: file.type || "application/octet-stream", size: file.size, source });
     onProgress?.(++done);
   }

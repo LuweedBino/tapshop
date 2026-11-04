@@ -2,7 +2,7 @@ import { upload as blobUpload } from "@vercel/blob/client";
 
 // Browser-side: uploads straight to storage (S3 presigned URL, Vercel Blob, or the local dev
 // endpoint) so files never pass through a server action. Returns the new storage key.
-export async function uploadFile(file: File, visibility: "public" | "private") {
+export async function uploadFile(file: File, visibility: "public" | "private", onPercent?: (percent: number) => void) {
   const contentType = file.type || "application/octet-stream";
   const res = await fetch("/api/upload", {
     method: "POST",
@@ -15,7 +15,7 @@ export async function uploadFile(file: File, visibility: "public" | "private") {
     const put = await fetch(data.url, { method: "PUT", headers: { "content-type": contentType }, body: file });
     if (!put.ok) throw new Error("Upload failed");
   } else {
-    await blobUpload(data.key, file, { access: "private", handleUploadUrl: "/api/upload/blob", contentType: file.type || undefined, multipart: file.size > 50 * 1024 * 1024 });
+    await blobUpload(data.key, file, { access: "private", handleUploadUrl: "/api/upload/blob", contentType: file.type || undefined, onUploadProgress: (e) => onPercent?.(Math.round(e.percentage)), multipart: file.size > 50 * 1024 * 1024 });
   }
   return data.key as string;
 }
