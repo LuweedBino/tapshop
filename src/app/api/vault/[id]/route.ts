@@ -15,6 +15,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const inlineSafe = /^(image\/(png|jpe?g|gif|webp|avif)|video\/|audio\/|application\/pdf|text\/plain)/.test(item.contentType);
   const download = new URL(req.url).searchParams.has("download") || !inlineSafe;
   const name = item.name.replace(/["\r\n]/g, "");
+  // A video or audio file opened in its own tab is fetched a second time by the browser's player.
+  // CSP sandbox makes that second fetch cross-site, so the sign-in cookie is left off and it fails.
+  // These types can't run code (nosniff, and the type is cut down to its bare form), so they go without it.
+  const media = download ? null : /^(video|audio)\/[a-z0-9.+-]+/i.exec(item.contentType)?.[0];
   // ?raw=1 is the Studio importing the file: always stream it from here (no redirect to S3),
   // so the editor can read it without the bucket allowing cross-origin GETs.
   const raw = new URL(req.url).searchParams.has("raw");
@@ -28,11 +32,11 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       "accept-ranges": "bytes",
       ...(file.size ? { "content-length": String(file.size) } : {}),
       ...(file.contentRange ? { "content-range": file.contentRange } : {}),
-      "content-type": item.contentType || file.contentType,
+      "content-type": media ?? (item.contentType || file.contentType),
       "content-disposition": `${download ? "attachment" : "inline"}; filename="${name}"`,
       "cache-control": "private, no-store",
       "x-content-type-options": "nosniff",
-      "content-security-policy": "sandbox",
+      ...(media ? {} : { "content-security-policy": "sandbox" }),
     },
   });
 }
