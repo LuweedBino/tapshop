@@ -39,3 +39,7 @@
   const watch=()=>{const seen=new IntersectionObserver(list=>list.forEach(e=>{if(!e.isIntersecting)return;seen.unobserve(e.target);e.target.classList.add('ts-shake')}));
     toggles.forEach(b=>{b.addEventListener('animationend',()=>b.classList.remove('ts-shake'));seen.observe(b)})};
   if(document.readyState==='complete')watch();else addEventListener('load',watch,{once:true})})();
+
+/* Tell the video empty-state words how wide the preview frame is, so they fit inside it at any shape. */
+(()=>{const c=document.getElementById('canvas'),e=document.getElementById('empty');if(!c||!e||!window.ResizeObserver)return;
+  new ResizeObserver(()=>e.style.setProperty('--ew',c.getBoundingClientRect().width+'px')).observe(c)})();
