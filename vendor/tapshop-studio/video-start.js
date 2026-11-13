@@ -218,7 +218,7 @@ const css=`#veStart[hidden],#veStart [hidden]{display:none!important}
 #veStart .vs-or span{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ts-muted,#737373);background:var(--ts-surface,#fff);padding:0 8px;line-height:1;transform:translateY(0)}
 #veStart h2{font-size:17px;margin:28px 0 4px;letter-spacing:-.01em}
 #veStart .vs-step{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ts-primary,#171717);color:var(--ts-on-primary,#fff);font-size:12px;margin-right:8px;vertical-align:2px}
-#veStart .vs-flash{animation:vs-flash 1.4s ease}@keyframes vs-flash{0%,100%{box-shadow:none}25%{box-shadow:0 0 0 4px #ff3ea555;border-radius:16px}}
+#veStart .vs-flash{border-radius:16px;animation:vs-flash 4.5s ease-out}@keyframes vs-flash{0%{box-shadow:0 0 0 0 #ff3ea500}8%,40%{box-shadow:0 0 0 4px #ff3ea566}100%{box-shadow:0 0 0 4px #ff3ea500}}
 #veStart .vs-help{color:var(--ts-muted,#737373);font-size:13px;margin:0 0 12px}
 #veStart .vs-plats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 #veStart .vs-plat{display:flex;align-items:center;gap:12px;text-align:left;padding:12px;min-height:64px}
