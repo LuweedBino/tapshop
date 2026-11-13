@@ -8,7 +8,7 @@ import { DashNav } from "@/components/DashNav";
 const SHOW_MS = 1400;
 const FOLD_MS = 350;
 const SHAKE_MS = 1100;
-const POP_MS = 1300;
+const POP_MS = 700;
 
 // Phone header: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
 // which fold away. Tapping the logo or the toggle shows them. On every page load the buttons open, fold
