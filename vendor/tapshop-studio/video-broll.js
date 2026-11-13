@@ -241,8 +241,14 @@ async function build(){if(exporting)return;const btn=dlg.querySelector('#brBuild
 // ---------- ways in ----------
 window.openBroll=open;
 {let g=[...document.querySelectorAll('.timebar button')].find(b=>/Reviews|Graphics/.test(b.textContent)),b=document.createElement('button');b.type='button';b.textContent='🎞️ B-roll';b.title='Build a video from your clips with a story template and free music';b.onclick=()=>open();if(g)g.after(b);else document.querySelector('.timebar')?.appendChild(b)}
-function startButton(){let cats=$$('vsCats');if(!cats||$$('vsBroll'))return;let b=document.createElement('button');b.type='button';b.id='vsBroll';b.className='vs-reviews';
-  b.innerHTML='<b>🎞️ Build a video from your clips</b><span>Drop in your b-roll clips, pick a story like Hook → Problem → Solution, and we turn your b-roll into a finished video with words on screen and free music.</span>';
-  b.onclick=()=>{let go=$$('vsGo');if(go)go.click();let el=$$('veStart');if(el)el.hidden=true;setTimeout(()=>open(true),60)};($$('vsReviews')||cats).before(b)}
+// The two quick makers (this one and ⭐ Reviews) sit together at the top of the start screen, right under
+// its intro and above Recent videos. Other scripts add things after the intro later, so keep them in place.
+function startButton(){let start=$$('veStart'),lead=start?.querySelector('.vs-lead');if(!lead)return;
+  let box=$$('vsQuick');if(!box){box=document.createElement('div');box.id='vsQuick';box.className='vs-quick'}
+  if(!$$('vsBroll')){let b=document.createElement('button');b.type='button';b.id='vsBroll';b.className='vs-reviews';
+    b.innerHTML='<b>🎞️ Build a video from your b-roll</b><span>Drop in your b-roll clips, pick a story like Hook → Problem → Solution, and we turn your b-roll into a finished video with words on screen and free music.</span>';
+    b.onclick=()=>{let go=$$('vsGo');if(go)go.click();let el=$$('veStart');if(el)el.hidden=true;setTimeout(()=>open(true),60)};box.appendChild(b)}
+  let rv=$$('vsReviews');if(rv&&rv.parentElement!==box)box.appendChild(rv);
+  if(lead.nextElementSibling!==box)lead.after(box)}
 new MutationObserver(startButton).observe(document.body,{childList:true,subtree:true});startButton();
 })();
