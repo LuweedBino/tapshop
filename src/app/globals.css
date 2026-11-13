@@ -169,3 +169,8 @@ body:has(.tapshop-dark){background:#0f0f13;color:#eeeef2}
 .mk-marquee:hover { animation-play-state: paused; }
 @keyframes mk-marquee { to { transform: translateX(calc(-50% - 0.75rem)); } }
 @media (prefers-reduced-motion: reduce) { .mk-marquee { animation: none; flex-wrap: wrap; width: auto; } }
+
+/* Dashboard page-buttons toggle: shakes once after the buttons fold away on each page load (DashTopNav). */
+@keyframes dash-shake { 0%, 100% { translate: 0; rotate: 0deg; } 10%, 30%, 50%, 70%, 90% { translate: -2px 0; rotate: -12deg; } 20%, 40%, 60%, 80% { translate: 2px 0; rotate: 12deg; } }
+.dash-shake { animation: dash-shake 1s ease-in-out; }
+@media (prefers-reduced-motion: reduce) { .dash-shake { animation: none; } }
