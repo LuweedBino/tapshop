@@ -368,7 +368,7 @@ async function start(){
   try{if(hasWork()&&window.veNewProject)await veNewProject();applyAspect();await importPending();let tp=TEMPLATES.find(t=>t.id===template);if(tp)addTemplate(tp);
     if($('projectName')&&tp)$('projectName').value=PLATFORMS.find(p=>p.id===platform).name+' · '+tp.name;
     template=null;close();await seekTimeline(0);
-    toast(clips.length||graphicTracks.length?'Your video is ready to edit.':'Add a video with “＋ Video track” to get going.')}
+    toast(clips.length||graphicTracks.length?'Your video is ready to edit.':'Add a video with “📹 Video” to get going.')}
   catch(e){toast(e.message)}finally{go.disabled=false}
 }
 
