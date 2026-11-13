@@ -44,7 +44,7 @@ function card(g,t,pic,w,h,u,W,H,L,total,anim,quiet){
   g.restore()}
 function background(g,t,L,W,H,len){let a=C(L/.4)*C((len-L)/.4);if(a<=0||t.bg==='none')return;g.save();g.globalAlpha*=a;
   if(t.bg==='blur'){let src=g.canvas,s=mkTmp(Math.max(8,W/14),Math.max(8,H/14));s.g.drawImage(src,0,0,s.c.width,s.c.height);g.imageSmoothingQuality='high';g.drawImage(s.c,0,0,W,H);g.fillStyle='#0004';g.fillRect(0,0,W,H)}
-  else if(t.bg==='color'){let gr=g.createLinearGradient(0,0,W,H);gr.addColorStop(0,t.c3);gr.addColorStop(1,shade(t.c3,-.45));g.fillStyle=gr;g.fillRect(0,0,W,H)}
+  else if(t.bg==='color'){if(t.c3==='transparent'){g.restore();return}let gr=g.createLinearGradient(0,0,W,H);gr.addColorStop(0,t.c3);gr.addColorStop(1,shade(t.c3,-.45));g.fillStyle=gr;g.fillRect(0,0,W,H)}
   else{g.fillStyle='#000';g.globalAlpha*=.5;g.fillRect(0,0,W,H)}g.restore()}
 let tmp=null;function mkTmp(w,h){w=Math.round(w);h=Math.round(h);if(!tmp)tmp={c:document.createElement('canvas')};if(tmp.c.width!==w||tmp.c.height!==h){tmp.c.width=w;tmp.c.height=h}tmp.g=tmp.c.getContext('2d');tmp.g.clearRect(0,0,w,h);return tmp}
 function shade(hex,k){let n=parseInt(String(hex||'#000').slice(1),16)||0,f=v=>Math.round(Math.max(0,Math.min(255,v+(k<0?v*k:(255-v)*k))));return `rgb(${f(n>>16&255)},${f(n>>8&255)},${f(n&255)})`}
