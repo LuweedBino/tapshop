@@ -98,7 +98,7 @@ function fontString(t){return (t.italic?'italic ':'')+(t.bold?'bold ':'')+t.size
 function renderText(t){
   let m=mk(1,1),g=g2(m);g.font=fontString(t);let lines=String(t.str||' ').split('\n'),lh=t.size*(t.lh||1.2),pad=Math.ceil(t.size*.25+(t.stroke||0)),w=Math.ceil(Math.max(1,...lines.map(s=>g.measureText(s).width)))+pad*2,h=Math.ceil(lines.length*lh)+pad*2;
   let c=mk(w,h);g=g2(c);g.font=fontString(t);g.textBaseline='middle';g.textAlign=t.align||'left';g.lineJoin='round';let x=t.align==='center'?w/2:t.align==='right'?w-pad:pad;
-  lines.forEach((s,i)=>{let y=pad+lh*i+lh/2;if(t.stroke>0){g.lineWidth=t.stroke*2;g.strokeStyle=t.strokeColor||'#000';g.strokeText(s,x,y)}g.fillStyle=t.color;g.fillText(s,x,y)});return c;
+  lines.forEach((s,i)=>{let y=pad+lh*i+lh/2;if(t.stroke>0){g.lineWidth=t.stroke*2;g.strokeStyle=t.strokeColor||'#000';g.strokeText(s,x,y)}g.fillStyle=t.color;g.globalAlpha=t.alpha??1;g.fillText(s,x,y);g.globalAlpha=1});return c;
 }
 let textCommitT=0;
 function flushText(){if(textCommitT){clearTimeout(textCommitT);textCommitT=0;commit('Edit text')}}
@@ -207,14 +207,15 @@ const TOOLS=[
 <label class="opt"><span>Size <b id="txtSizeV"></b></span><input type="range" id="txtSize" min="6" max="600"></label>
 <div class="optbtns"><button id="txtB" style="font-weight:800">B</button><button id="txtI" style="font-style:italic">I</button><button data-al="left">⯇</button><button data-al="center">≡</button><button data-al="right">⯈</button></div>
 <label class="opt"><span>Colour</span><input type="color" id="txtColor"></label>
+<label class="opt"><span>Text see-through <b id="txtAlphaV"></b></span><input type="range" id="txtAlpha" min="0" max="100"></label>
 <label class="opt"><span>Line spacing <b id="txtLhV"></b></span><input type="range" id="txtLh" min="0.7" max="3" step="0.05"></label>
 <label class="opt"><span>Outline <b id="txtStV"></b></span><input type="range" id="txtSt" min="0" max="40"></label>
 <label class="opt"><span>Outline colour</span><input type="color" id="txtStC"></label>`;
-    $('txtStr').value=t.str;$('txtFont').value=t.font;$('txtSize').value=t.size;$('txtSizeV').textContent=t.size+' px';$('txtColor').value=t.color;$('txtLh').value=t.lh;$('txtLhV').textContent=t.lh;$('txtSt').value=t.stroke;$('txtStV').textContent=t.stroke+' px';$('txtStC').value=t.strokeColor;
+    $('txtStr').value=t.str;$('txtFont').value=t.font;$('txtSize').value=t.size;$('txtSizeV').textContent=t.size+' px';$('txtColor').value=t.color;$('txtAlpha').value=Math.round((t.alpha??1)*100);$('txtAlphaV').textContent=Math.round(100-(t.alpha??1)*100)+'%';$('txtLh').value=t.lh;$('txtLhV').textContent=t.lh;$('txtSt').value=t.stroke;$('txtStV').textContent=t.stroke+' px';$('txtStC').value=t.strokeColor;
     const mark=()=>{let T=layer().text;$('txtB').classList.toggle('primary',T.bold);$('txtI').classList.toggle('primary',T.italic);box.querySelectorAll('[data-al]').forEach(b=>b.classList.toggle('primary',b.dataset.al===T.align))};mark();
     const keep=(k,v)=>{editText(k,v);(savedOpts.textDefaults=savedOpts.textDefaults||{})[k]=v;saveOpts()};
     $('txtStr').oninput=e=>editText('str',e.target.value);$('txtFont').onchange=e=>keep('font',e.target.value);
-    $('txtSize').oninput=e=>{keep('size',+e.target.value);$('txtSizeV').textContent=e.target.value+' px'};$('txtColor').oninput=e=>editText('color',e.target.value);
+    $('txtSize').oninput=e=>{keep('size',+e.target.value);$('txtSizeV').textContent=e.target.value+' px'};$('txtColor').oninput=e=>editText('color',e.target.value);$('txtAlpha').oninput=e=>{editText('alpha',e.target.value/100);$('txtAlphaV').textContent=(100-e.target.value)+'%'};
     $('txtLh').oninput=e=>{keep('lh',+e.target.value);$('txtLhV').textContent=e.target.value};$('txtSt').oninput=e=>{keep('stroke',+e.target.value);$('txtStV').textContent=e.target.value+' px'};$('txtStC').oninput=e=>keep('strokeColor',e.target.value);
     $('txtB').onclick=()=>{keep('bold',!layer().text.bold);mark()};$('txtI').onclick=()=>{keep('italic',!layer().text.italic);mark()};box.querySelectorAll('[data-al]').forEach(b=>b.onclick=()=>{keep('align',b.dataset.al);mark()})},
   cancel(){let s=this.s;this.s=null;if(s&&s.moved){s.l.x=s.x;s.l.y=s.y;render()}},onLayer(){renderOptions()},leave(){flushText()}},
