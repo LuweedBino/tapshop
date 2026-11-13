@@ -35,6 +35,7 @@ const FILES = new Set([
   "video-camera.js",
   "video-gfx.js",
   "video-gfx-more.js",
+  "video-reviews.js",
   "video-captions.js",
   "video-autosave.js",
   "video-export.js",
