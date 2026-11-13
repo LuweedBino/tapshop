@@ -24,9 +24,15 @@ input[type=range]{accent-color:var(--hi);width:100%}input[type=checkbox]{accent-
 .menu kbd{margin-left:auto;font:11px system-ui;color:var(--muted)}.menu hr{border:0;border-top:1px solid var(--line);margin:4px 2px}.menu h6{margin:6px 10px 2px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted)}
 .main{display:grid;grid-template-columns:auto 1fr 270px;min-height:0}
 #toolbox{background:var(--panel);border-right:1px solid var(--line);padding:6px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;align-items:center}
-.toolgrid{display:grid;grid-template-columns:repeat(2,38px);gap:3px}
-.toolgrid button{width:38px;height:38px;padding:0;font-size:17px;line-height:1;border-color:transparent;background:transparent;display:grid;place-items:center}
-.toolgrid button.on{background:var(--hi);color:var(--hiText)}
+/* Round tool icons with the name under them, like the Video Editor's timeline bar. */
+.toolgrid{display:grid;grid-template-columns:repeat(2,56px);gap:8px 2px}
+.toolgrid button{display:flex;flex-direction:column;align-items:center;gap:3px;width:56px;padding:1px 0 0;border:0;border-radius:0;background:transparent;color:var(--text)}
+.toolgrid button:hover{background:transparent}
+.toolgrid .tb-ic{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;font-size:16px;line-height:1;background:var(--soft);border:1px solid var(--line);transition:background .15s,transform .1s}
+.toolgrid button:hover .tb-ic{background:var(--line)}.toolgrid button:active .tb-ic{transform:scale(.92)}
+.toolgrid button.on .tb-ic{background:var(--hi);color:var(--hiText);border-color:var(--hi)}
+.toolgrid button:focus-visible{outline:none}.toolgrid button:focus-visible .tb-ic{outline:2px solid var(--accent);outline-offset:2px}
+.toolgrid .tb-tx{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;font-weight:600;line-height:1.2;text-align:center}
 .swatches{position:relative;width:62px;height:56px;margin-top:4px;flex:none}
 .swatches .sw{position:absolute;width:34px;height:34px;border-radius:7px;border:2px solid var(--panel);box-shadow:0 0 0 1px var(--line);padding:0}
 #fgSw{left:0;top:0;z-index:2}#bgSw{left:20px;top:18px}
@@ -73,7 +79,7 @@ input[type=range]{accent-color:var(--hi);width:100%}input[type=checkbox]{accent-
  .main{grid-template-columns:1fr;grid-template-rows:1fr auto auto}
  #stage{grid-row:1}
  #toolbox{grid-row:2;flex-direction:row;border-right:0;border-top:1px solid var(--line);overflow-x:auto;overflow-y:hidden;padding:4px 6px;align-items:center}
- .toolgrid{grid-template-columns:none;grid-auto-flow:column;grid-template-rows:38px}
+ .toolgrid{grid-template-columns:none;grid-auto-flow:column;grid-template-rows:auto;gap:2px}.toolgrid .tb-ic{width:34px;height:34px}
  .swatches{width:58px;height:44px;margin:0 4px}.swatches .sw{width:28px;height:28px}#bgSw{left:18px;top:14px}
  #dock{grid-row:3;border-left:0;border-top:1px solid var(--line);grid-template-rows:auto auto;max-height:42dvh}
  #dock.closed .pane{display:none}
