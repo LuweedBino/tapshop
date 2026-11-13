@@ -11,7 +11,7 @@ const SHOW_MS = 1300;
 const BREEZE_AFTER_FOLD = 260;
 const BREEZE_MS = 900;
 const POP_AFTER_BREEZE = 380;
-const POP_MS = 800;
+const POP_MS = 1750;
 
 // Phone header: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
 // which fold away. Tapping the logo or the toggle shows them. On every page load the buttons glide open and
@@ -112,6 +112,8 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
           <span aria-hidden="true" className="dash-spark" style={{ top: "-7px", left: "22%" }}>✦</span>
           <span aria-hidden="true" className="dash-spark" style={{ bottom: "-6px", left: "58%" }}>✧</span>
           <span aria-hidden="true" className="dash-spark" style={{ top: "26%", right: "-9px" }}>✦</span>
+          <span aria-hidden="true" className="dash-spark dash-spark-x" style={{ top: "-9px", right: "8%" }}>✦</span>
+          <span aria-hidden="true" className="dash-spark dash-spark-x" style={{ bottom: "-7px", left: "6%" }}>✦</span>
           <button
             type="button"
             onClick={toggle}
