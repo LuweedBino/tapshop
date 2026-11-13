@@ -275,7 +275,9 @@ function renderOptions(){
   p.appendChild(box);if(tool.panel)tool.panel(box);
   if(tool.hint){let n=document.createElement('p');n.className='hint';n.textContent=tool.hint;p.appendChild(n)}
 }
-function buildToolbox(){let g=$('toolgrid');g.innerHTML='';for(const t of TOOLS){let b=document.createElement('button');b.dataset.tool=t.id;b.textContent=t.icon;let k=t.key===' '?'Space':(t.shift?'Shift+':'')+t.key.toUpperCase();b.title=t.name+' ('+k+')';b.setAttribute('aria-label',t.name);b.onclick=()=>{setTool(t.id);if(!touchy)showTab('opts')};g.appendChild(b)}}
+// Short names shown under each round tool icon; the full name stays in the tooltip and aria-label.
+const TOOL_SHORT={transform:'Transform',rect:'Rectangle',ellipse:'Ellipse',lasso:'Lasso',wand:'Magic wand',bycolor:'By colour',brush:'Brush',pencil:'Pencil',bucket:'Fill',shapes:'Shapes',heal:'Heal',blur:'Blur',dodge:'Dodge',picker:'Picker'};
+function buildToolbox(){let g=$('toolgrid');g.innerHTML='';for(const t of TOOLS){let b=document.createElement('button');b.dataset.tool=t.id;b.className='tb-btn';let ic=document.createElement('span');ic.className='tb-ic';ic.setAttribute('aria-hidden','true');ic.textContent=t.icon;let tx=document.createElement('span');tx.className='tb-tx';tx.setAttribute('aria-hidden','true');tx.textContent=TOOL_SHORT[t.id]||t.name;b.append(ic,tx);let k=t.key===' '?'Space':(t.shift?'Shift+':'')+t.key.toUpperCase();b.title=t.name+' ('+k+')';b.setAttribute('aria-label',t.name);b.onclick=()=>{setTool(t.id);if(!touchy)showTab('opts')};g.appendChild(b)}}
 
 // ---- Pointer handling on the stage
 let pointers=new Map(),gest=null,pan=null,spaceDown=false,active=null;

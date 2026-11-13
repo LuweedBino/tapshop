@@ -69,13 +69,31 @@ html.ts body #time{color:var(--ts-text)!important}
 html.ts[data-sidebar="collapsed"] body #mainSidebar>.primary .nav-icon{display:block;width:32px;height:32px;padding:0;border:0!important;border-radius:50%;box-shadow:none!important;font-size:0!important;color:transparent!important;
   background:linear-gradient(var(--ts-primary),var(--ts-primary)) center/14px 2.5px no-repeat,linear-gradient(var(--ts-primary),var(--ts-primary)) center/2.5px 14px no-repeat,var(--ts-on-primary)!important}
 
-/* Design editor: when the left tools panel is folded, keep its main buttons as icon squares
-   (tapshop-theme.js splits "◆  Shapes" into an icon and a label) instead of hiding everything. */
-html.ts[data-tools="collapsed"] body .tools>button.ts-ic{display:flex!important;align-items:center;justify-content:center;width:40px;height:40px;min-height:0;padding:0!important;margin:0 auto 8px!important;font-size:17px}
-html.ts[data-tools="collapsed"] body .tools>button.ts-ic .ts-tl{display:none}
-html.ts[data-tools="collapsed"] body .tools>:not(.tools-head):not(button.ts-ic){display:none!important}
+/* Design editor tools panel: round icons with the name under them, like the Video Editor's timeline bar
+   (tapshop-theme.js splits "◆  Shapes" into .tb-ic + .tb-tx). Buttons sit in a grid; everything else
+   (headings, background settings) spans the full width. Folded, only the circles show. */
+html.ts:not([data-tools="collapsed"]) body .tools{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));grid-auto-rows:max-content;column-gap:4px;row-gap:12px;align-content:start;justify-items:center}
+html.ts:not([data-tools="collapsed"]) body .tools>:not(button.tb-btn){grid-column:1/-1;justify-self:stretch}
+html.ts:not([data-tools="collapsed"]) body .tools>h3{margin:8px 0 0}
+html.ts body .tools>button.tb-btn.tb-btn{display:flex!important;flex-direction:column;align-items:center;gap:4px;width:100%;max-width:62px;min-width:0;min-height:max-content!important;height:auto!important;margin:0!important;padding:1px 0 0!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;color:var(--ts-text)!important;transform:none!important;cursor:pointer}
+html.ts body #editorTools>button.tb-btn.tb-btn{background:none!important;border:0!important;box-shadow:none!important;color:var(--ts-text)!important}
+html.ts body .tools>button.tb-btn .tb-ic{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;font-size:17px;line-height:1;background:var(--ts-hover);border:1px solid var(--ts-border);transition:background .15s,transform .1s}
+html.ts body .tools>button.tb-btn:hover:not(:disabled) .tb-ic{background:var(--ts-border-strong)}
+html.ts body .tools>button.tb-btn:active:not(:disabled) .tb-ic{transform:scale(.92)}
+html.ts body .tools>button.tb-btn:is(.on,.active,[aria-pressed="true"],[aria-expanded="true"]) .tb-ic{background:var(--ts-primary);color:var(--ts-on-primary);border-color:var(--ts-primary)}
+html.ts body .tools>button#multiBtn.tb-btn.on .tb-ic{background:#ff3ea5;color:#fff;border-color:#ff3ea5}
+html.ts body .tools>button.tb-btn:focus-visible{outline:none}html.ts body .tools>button.tb-btn:focus-visible .tb-ic{outline:2px solid #ff3ea5;outline-offset:2px}
+html.ts body .tools>button.tb-btn:disabled{opacity:.4}
+html.ts body .tools .tb-tx{display:block;width:100%;overflow:hidden;white-space:nowrap;font-size:10.5px;font-weight:600;line-height:1.25;text-align:center}
+html.ts body .tools .tb-tx>span{display:inline-block}
+html.ts body .tools .tb-tx.run{text-align:left;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+html.ts body .tools .tb-tx.run>span{padding:0 3px;animation:ts-tick var(--dur,5s) ease-in-out infinite alternate}
+@keyframes ts-tick{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--over,0px))}}
+@media (prefers-reduced-motion:reduce){html.ts body .tools .tb-tx.run>span{animation:none}}
+html.ts[data-tools="collapsed"] body .tools>button.tb-btn.tb-btn{margin:0 auto 10px!important;width:40px}
+html.ts[data-tools="collapsed"] body .tools>button.tb-btn .tb-tx{display:none}
+html.ts[data-tools="collapsed"] body .tools>:not(.tools-head):not(button.tb-btn){display:none!important}
 html.ts[data-tools="collapsed"] body .tools .tools-head{margin-bottom:10px}
-html.ts body .tools>button.ts-ic .ts-ti{display:inline-block;min-width:1.2em;text-align:center}
 
 /* Collapse toggles shake once after loading (tapshop-theme.js). Uses translate/rotate, not transform,
    because the sidebar toggle needs its own transform to stay in place. */
