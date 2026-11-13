@@ -212,6 +212,7 @@ const css=`#veStart[hidden],#veStart [hidden]{display:none!important}
 #veStart .vs-pt small{display:block;font-size:12.5px;color:var(--ts-muted,#737373);margin-top:2px;font-weight:500}
 #veStart .vs-pa{flex:none;font-size:22px;line-height:1;opacity:.35;transition:transform .2s,opacity .2s}
 #veStart .vs-paths button:hover .vs-pa{transform:translateX(3px);opacity:.7}
+#veStart .vs-recentlink{display:block;margin:12px auto 0;padding:6px 12px!important;border:0!important;background:none!important;box-shadow:none!important;color:var(--ts-muted,#737373)!important;font-size:13.5px;font-weight:600;letter-spacing:.01em;font-style:italic;cursor:pointer}#veStart .vs-recentlink[hidden]{display:none}#veStart .vs-recentlink:hover{color:var(--ts-text,#171717)!important;text-decoration:underline;text-underline-offset:3px}#veStart .vs-recentlink span{font-style:normal;margin-left:2px}
 #veStart .vs-or{display:flex;align-items:center;gap:12px;padding:0 16px;height:0;position:relative}
 #veStart .vs-or::before,#veStart .vs-or::after{content:'';flex:1;border-top:1px solid var(--ts-border,#e5e5e5)}
 #veStart .vs-or span{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ts-muted,#737373);background:var(--ts-surface,#fff);padding:0 8px;line-height:1;transform:translateY(0)}
@@ -289,7 +290,7 @@ function build(){
   <li><button type="button" data-path="steps"><span class="vs-pi" aria-hidden="true">1·2·3</span><span class="vs-pt"><b>Follow the 1-2-3 steps</b><small>Choose a shape, add clips, add a template</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
   <li class="vs-or" aria-hidden="true"><span>or</span></li>
   <li><button type="button" data-path="blank"><span class="vs-pi" aria-hidden="true">✎</span><span class="vs-pt"><b>Skip all this and tap Video Editor</b><small>At the top right, to create from scratch</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
-  </ol></div>
+  </ol><button type="button" class="vs-recentlink" id="vsRecentLink" hidden>or continue with a recent video <span aria-hidden="true">›</span></button></div>
   <h2><span class="vs-step">1</span>Where will you post it?</h2><p class="vs-help">This sets the shape of your video.</p>
   <div class="vs-plats" id="vsPlats"></div>
   <h2><span class="vs-step">2</span>Add your videos and photos</h2><p class="vs-help">They go on the timeline in this order: videos first, then photos (${PHOTO_SECONDS} seconds each).</p>
@@ -327,6 +328,9 @@ function build(){
   $$('vsFiles').onclick=e=>{let b=e.target.closest('.x');if(!b)return;let i=+b.dataset.i,[gone]=pending.splice(i,1);if(gone?.url)URL.revokeObjectURL(gone.url);sync()};
   $$('vsBlank').onclick=()=>{applyAspect();close()};
   // The three paths in the intro: jump to the quick makers, jump to step 1, or open the editor.
+  // "or continue with a recent video" shows only while there is one (Recent videos, video-autosave.js).
+  {let link=$$('vsRecentLink'),sync=()=>{let sec=document.getElementById("vsRecentSec"),h=!sec||sec.hidden;if(link.hidden!==h)link.hidden=h};sync();new MutationObserver(sync).observe(el,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});
+   link.onclick=()=>{let to=document.getElementById('vsRecentSec');to?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});if(to){to.classList.remove('vs-flash');void to.offsetWidth;to.classList.add('vs-flash')}}}
   el.querySelector('.vs-paths').onclick=e=>{let b=e.target.closest('[data-path]');if(!b)return;let p=b.dataset.path;
     if(p==='blank'){$$('vsBlank').click();return}
     let to=p==='quick'?document.getElementById('vsQuick'):$$('vsPlats')?.previousElementSibling?.previousElementSibling;
