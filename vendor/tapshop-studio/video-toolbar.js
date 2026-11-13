@@ -18,7 +18,9 @@ html .timebar button.tb-btn:disabled{opacity:.4;cursor:default}html .timebar but
 .tb-tx.run{text-align:left;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
 .tb-tx.run>span{padding:0 3px;animation:tb-tick var(--dur,5s) ease-in-out infinite alternate}
 @keyframes tb-tick{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--over,0px))}}
-@media (prefers-reduced-motion:reduce){.tb-tx.run>span{animation:none}.tb-tx.run{text-overflow:ellipsis}}
+@media (prefers-reduced-motion:reduce){.tb-tx.run>span,.strip-name.run>span{animation:none}.tb-tx.run{text-overflow:ellipsis}}
+.strip-name>span{display:inline-block}.strip-name.run{text-overflow:clip;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 88%,transparent)}
+.strip-name.run>span{padding:0 2px;animation:tb-tick var(--dur,5s) ease-in-out infinite alternate}
 .tb-sec[data-sec=view] .tb-btns{align-self:center;padding-top:8px}
 .tb-btns .status{white-space:nowrap;font-size:11px;opacity:.7}.tb-btns .timeline-zoom{width:110px;flex:none;margin:0}.tb-zoomlab{font-size:11px;white-space:nowrap;opacity:.8}
 .tracks{position:relative}.tl-title{position:absolute;left:4px;display:flex;align-items:center;font-weight:800;font-size:12px;letter-spacing:.02em;pointer-events:none;z-index:2;overflow:hidden;white-space:nowrap}
@@ -59,5 +61,14 @@ const tracks=document.querySelector('.tracks'),ruler=document.getElementById('ru
 if(tracks&&ruler){let t=document.createElement('div');t.className='tl-title';t.textContent='Timeline';tracks.appendChild(t);
   const place=()=>{let w=ruler.offsetLeft-4;t.style.top=ruler.offsetTop+'px';t.style.height=ruler.offsetHeight+'px';t.style.width=Math.max(0,w)+'px';t.hidden=w<50};
   place();if(window.ResizeObserver)new ResizeObserver(place).observe(tracks);addEventListener('resize',place);setTimeout(place,300)}
+
+// Track names left of the lanes: names too long for the column slide back and forth like the buttons.
+function nameTicker(n){let t=n.firstElementChild;if(!t){t=document.createElement('span');t.textContent=n.textContent;n.textContent='';n.appendChild(t);n.title=t.textContent}
+  let over=t.scrollWidth-(n.clientWidth-6);n.classList.toggle('run',over>1);if(over>1){n.style.setProperty('--over',(-over-4)+'px');n.style.setProperty('--dur',Math.max(3,over/12+2.5)+'s')}}
+const tl=document.querySelector('.timeline');let nameQ=0;
+const names=()=>{nameQ=0;tl.querySelectorAll('.strip-name').forEach(nameTicker)};
+const queueNames=()=>{if(!nameQ)nameQ=requestAnimationFrame(names)};
+if(tl){new MutationObserver(ms=>{if(ms.some(m=>[...m.addedNodes].some(x=>x.nodeType===1&&!x.matches('.strip-name>span'))))queueNames()}).observe(tl,{childList:true,subtree:true});
+  queueNames();addEventListener('resize',queueNames);if(document.fonts)document.fonts.ready.then(queueNames)}
 
 })();

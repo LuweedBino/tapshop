@@ -45,7 +45,7 @@ importMusic=async function(file){if(!file||exporting)return;addTrack('audio');le
 
 // Playhead: a vertical line through every track with a small downward triangle on top.
 // It follows playback and seeking; drag the triangle (or tap the ruler) to move it.
-const LANE_START=122; // ruler margin = row padding (12px) + track name column (110px)
+const LANE_START=76; // ruler margin = row padding (8px) + track name column (68px)
 let splitButton=document.createElement('button');splitButton.type='button';splitButton.className='strip-split';splitButton.textContent='✂ Split';splitButton.hidden=true;
 let playheadLine=document.createElement('div');playheadLine.className='timeline-playhead';playheadLine.setAttribute('aria-hidden','true');playheadLine.title='Drag to move the playhead';
 let playheadHead=document.createElement('div');playheadHead.className='timeline-playhead-head';playheadHead.title='Drag to move the playhead';playheadLine.appendChild(playheadHead);tracksHost.appendChild(playheadLine);
