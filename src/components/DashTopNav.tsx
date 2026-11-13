@@ -65,6 +65,17 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
     setOpen((o) => !o);
   }
 
+  // Restart the press-and-sparkle: switch it off, then on again two frames later so the animation replays.
+  function sparkle() {
+    setPop(false);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        setPop(true);
+        timers.current.push(window.setTimeout(() => setPop(false), POP_MS));
+      }),
+    );
+  }
+
   return (
     <>
       <div className="flex items-center justify-between md:mb-6 md:block">
@@ -74,9 +85,11 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
             className="dash-logo"
             onClick={(e) => {
               // On phones the logo is the big button for the page buttons.
-              if (!phone) return;
-              e.preventDefault();
-              toggle();
+              if (phone) {
+                e.preventDefault();
+                toggle();
+              }
+              sparkle();
             }}
           >
             TapShop
