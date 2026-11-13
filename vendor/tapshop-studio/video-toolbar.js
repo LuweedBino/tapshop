@@ -9,7 +9,17 @@ const st=document.createElement('style');st.textContent=`
 .tb-sec{display:flex;flex-direction:column;gap:3px;flex:none;padding:0 12px;border-left:1px solid var(--ts-border,#8a7aa855)}
 .tb-sec:first-child{border-left:0;padding-left:4px}.tb-sec:last-child{padding-right:0}
 .tb-lab{font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;opacity:.55;line-height:1.2}
-.tb-btns{display:flex;gap:6px;align-items:center;flex:1}.tb-btns button{white-space:nowrap;flex:none}
+.tb-btns{display:flex;gap:4px;align-items:flex-start;flex:1}
+html .timebar .tb-btns button.tb-btn{display:flex;flex-direction:column;align-items:center;gap:5px;width:62px;flex:none;padding:2px 0 0!important;margin:0;border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;color:inherit;min-height:0;cursor:pointer}
+.tb-ic{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;font-size:20px;line-height:1;background:var(--ts-hover,#3a3a44);border:1px solid var(--ts-border,#8a7aa855);transition:background .15s,transform .1s}
+html .timebar button.tb-btn:hover:not(:disabled) .tb-ic{background:var(--ts-border-strong,#55505f)}html .timebar button.tb-btn:active:not(:disabled) .tb-ic{transform:scale(.92)}
+html .timebar button.tb-btn:disabled{opacity:.4;cursor:default}html .timebar button.tb-btn:focus-visible{outline:none}html .timebar button.tb-btn:focus-visible .tb-ic{outline:2px solid #ff3ea5;outline-offset:2px}
+.tb-tx{display:block;width:100%;overflow:hidden;white-space:nowrap;font-size:11px;font-weight:600;line-height:1.25;text-align:center}.tb-tx>span{display:inline-block}
+.tb-tx.run{text-align:left;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+.tb-tx.run>span{padding:0 3px;animation:tb-tick var(--dur,5s) ease-in-out infinite alternate}
+@keyframes tb-tick{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--over,0px))}}
+@media (prefers-reduced-motion:reduce){.tb-tx.run>span{animation:none}.tb-tx.run{text-overflow:ellipsis}}
+.tb-sec[data-sec=view] .tb-btns{align-self:center;padding-top:8px}
 .tb-btns .status{white-space:nowrap;font-size:11px;opacity:.7}.tb-btns .timeline-zoom{width:110px;flex:none;margin:0}.tb-zoomlab{font-size:11px;white-space:nowrap;opacity:.8}
 .tracks{position:relative}.tl-title{position:absolute;left:4px;display:flex;align-items:center;font-weight:800;font-size:12px;letter-spacing:.02em;pointer-events:none;z-index:2;overflow:hidden;white-space:nowrap}
 @media (pointer:coarse){.timebar{scroll-snap-type:x proximity}.tb-sec{scroll-snap-align:start}}`;document.head.appendChild(st);
@@ -31,7 +41,18 @@ function sort(){
   for(const k of ['add','create','edit','view'])if(secs[k].parentElement.parentElement!==bar)bar.appendChild(secs[k].parentElement);
   let z=secs.view.querySelector('.timeline-zoom');if(z&&!z.previousElementSibling?.classList.contains('tb-zoomlab')){let l=document.createElement('span');l.className='tb-zoomlab';l.textContent='🔍 Zoom';l.setAttribute('aria-hidden','true');z.before(l);z.setAttribute('aria-label','Zoom the timeline')}
 }
-sort();new MutationObserver(()=>{if([...bar.children].some(c=>!c.classList.contains('tb-sec')))sort()}).observe(bar,{childList:true});
+// Quick-settings look: a round icon with the name under it. Names too long for the space scroll
+// sideways like a ticker. Buttons whose text is replaced later are rebuilt by the observer.
+const ICONS={Delete:'🗑',Duplicate:'⧉'},MOVE={'moveClip(-1)':['◀','Move left'],'moveClip(1)':['▶','Move right']};
+function circle(b){if(b.querySelector(':scope>.tb-ic'))return;let raw=label(b),ic='',tx=raw,mv=MOVE[act(b)];
+  if(mv)[ic,tx]=mv;else{let m=raw.match(/^(\p{Extended_Pictographic}️?|[^\p{L}\p{N}\s]+)\s*(.*)$/u);if(m&&m[2]){ic=m[1];tx=m[2]}else ic=ICONS[raw]||raw.slice(0,1)}
+  if(!b.title)b.title=tx;if(!b.getAttribute('aria-label'))b.setAttribute('aria-label',tx);b.classList.add('tb-btn');
+  b.innerHTML=`<span class="tb-ic" aria-hidden="true">${ic}</span><span class="tb-tx" aria-hidden="true"><span>${tx.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}</span></span>`;ticker(b)}
+function ticker(b){let box=b.querySelector('.tb-tx'),t=box?.firstElementChild;if(!t)return;requestAnimationFrame(()=>{let over=t.scrollWidth-box.clientWidth;box.classList.toggle('run',over>1);if(over>1){box.style.setProperty('--over',(-over-6)+'px');box.style.setProperty('--dur',Math.max(3,over/12+2.5)+'s')}})}
+function circles(){bar.querySelectorAll('.tb-btns button').forEach(circle)}
+new MutationObserver(ms=>{for(const m of ms){let b=m.target.closest?.('button')||m.target.parentElement?.closest?.('button');if(b&&bar.contains(b)&&!b.querySelector(':scope>.tb-ic'))circle(b)}}).observe(bar,{subtree:true,childList:true,characterData:true});
+sort();circles();addEventListener('resize',()=>bar.querySelectorAll('.tb-btn').forEach(ticker));if(document.fonts)document.fonts.ready.then(()=>bar.querySelectorAll('.tb-btn').forEach(ticker));
+new MutationObserver(()=>{if([...bar.children].some(c=>!c.classList.contains('tb-sec'))){sort();circles()}}).observe(bar,{childList:true});
 
 // "Timeline" sits in the corner left of the ruler (above the track names).
 const tracks=document.querySelector('.tracks'),ruler=document.getElementById('ruler');
