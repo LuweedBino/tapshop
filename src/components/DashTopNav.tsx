@@ -11,8 +11,8 @@ const SHAKE_MS = 1100;
 const POP_MS = 1300;
 
 // Phone header: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
-// which fold away. Tapping the logo or the toggle shows them. On every page load the logo presses in and
-// sparkles, the buttons open, fold again, then the toggle shakes so people notice it.
+// which fold away. Tapping the logo or the toggle shows them. On every page load the buttons open, fold
+// again, the toggle shakes so people notice it, and then the logo presses in and sparkles.
 // On computers the buttons sit in the sidebar and always show.
 export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.ReactNode }) {
   const path = usePathname();
@@ -43,15 +43,16 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
       ids.push(window.setTimeout(fn, ms));
     };
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!still) {
-      later(() => setPop(true), 50);
-      later(() => setPop(false), 50 + POP_MS);
-    }
+    // Order: buttons open, fold, the toggle shakes, and only then the logo presses in and sparkles.
+    const shakeAt = 50 + SHOW_MS + FOLD_MS;
+    const popAt = shakeAt + SHAKE_MS;
     later(() => setOpen(true), 50);
     later(() => setOpen(false), 50 + SHOW_MS);
     if (!still) {
-      later(() => setShake(true), 50 + SHOW_MS + FOLD_MS);
-      later(() => setShake(false), 50 + SHOW_MS + FOLD_MS + SHAKE_MS);
+      later(() => setShake(true), shakeAt);
+      later(() => setShake(false), popAt);
+      later(() => setPop(true), popAt);
+      later(() => setPop(false), popAt + POP_MS);
     }
     return () => {
       ids.forEach(clearTimeout);
