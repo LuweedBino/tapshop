@@ -5,23 +5,23 @@
 const bar=document.querySelector('.timebar');if(!bar)return;
 const label=b=>(b.textContent||'').trim(),act=b=>b.getAttribute('onclick')||'';
 const st=document.createElement('style');st.textContent=`
-.timebar{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;gap:0!important;padding:6px 12px 8px!important;align-items:stretch!important;scrollbar-width:thin;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
-.tb-sec{display:flex;flex-direction:column;gap:3px;flex:none;padding:0 12px;border-left:1px solid var(--ts-border,#8a7aa855)}
+.timebar{flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;gap:0!important;padding:4px 10px 5px!important;align-items:stretch!important;scrollbar-width:thin;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.tb-sec{display:flex;flex-direction:column;gap:2px;flex:none;padding:0 10px;border-left:1px solid var(--ts-border,#8a7aa855)}
 .tb-sec:first-child{border-left:0;padding-left:4px}.tb-sec:last-child{padding-right:0}
-.tb-lab{font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;opacity:.55;line-height:1.2}
+.tb-lab{font-size:8px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;opacity:.55;line-height:1.2}
 .tb-btns{display:flex;gap:4px;align-items:flex-start;flex:1}
-html .timebar .tb-btns button.tb-btn{display:flex;flex-direction:column;align-items:center;gap:5px;width:62px;flex:none;padding:2px 0 0!important;margin:0;border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;color:inherit;min-height:0;cursor:pointer}
-.tb-ic{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;font-size:20px;line-height:1;background:var(--ts-hover,#3a3a44);border:1px solid var(--ts-border,#8a7aa855);transition:background .15s,transform .1s}
+html .timebar .tb-btns button.tb-btn{display:flex;flex-direction:column;align-items:center;gap:3px;width:52px;flex:none;padding:1px 0 0!important;margin:0;border:0!important;background:none!important;box-shadow:none!important;border-radius:0!important;color:inherit;min-height:0;cursor:pointer}
+.tb-ic{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;font-size:16px;line-height:1;background:var(--ts-hover,#3a3a44);border:1px solid var(--ts-border,#8a7aa855);transition:background .15s,transform .1s}
 html .timebar button.tb-btn:hover:not(:disabled) .tb-ic{background:var(--ts-border-strong,#55505f)}html .timebar button.tb-btn:active:not(:disabled) .tb-ic{transform:scale(.92)}
 html .timebar button.tb-btn:disabled{opacity:.4;cursor:default}html .timebar button.tb-btn:focus-visible{outline:none}html .timebar button.tb-btn:focus-visible .tb-ic{outline:2px solid #ff3ea5;outline-offset:2px}
-.tb-tx{display:block;width:100%;overflow:hidden;white-space:nowrap;font-size:11px;font-weight:600;line-height:1.25;text-align:center}.tb-tx>span{display:inline-block}
+.tb-tx{display:block;width:100%;overflow:hidden;white-space:nowrap;font-size:10px;font-weight:600;line-height:1.2;text-align:center}.tb-tx>span{display:inline-block}
 .tb-tx.run{text-align:left;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
 .tb-tx.run>span{padding:0 3px;animation:tb-tick var(--dur,5s) ease-in-out infinite alternate}
 @keyframes tb-tick{0%,15%{transform:translateX(0)}85%,100%{transform:translateX(var(--over,0px))}}
 @media (prefers-reduced-motion:reduce){.tb-tx.run>span,.strip-name.run>span{animation:none}.tb-tx.run{text-overflow:ellipsis}}
 .strip-name>span{display:inline-block}.strip-name.run{text-overflow:clip;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 88%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 88%,transparent)}
 .strip-name.run>span{padding:0 2px;animation:tb-tick var(--dur,5s) ease-in-out infinite alternate}
-.tb-sec[data-sec=view] .tb-btns{align-self:center;padding-top:8px}
+.tb-sec[data-sec=view] .tb-btns{align-self:center;padding-top:4px}
 .tb-btns .status{white-space:nowrap;font-size:11px;opacity:.7}.tb-btns .timeline-zoom{width:110px;flex:none;margin:0}.tb-zoomlab{font-size:11px;white-space:nowrap;opacity:.8}
 .tracks{position:relative}.tl-title{position:absolute;left:4px;display:flex;align-items:center;font-weight:800;font-size:12px;letter-spacing:.02em;pointer-events:none;z-index:2;overflow:hidden;white-space:nowrap}
 @media (pointer:coarse){.timebar{scroll-snap-type:x proximity}.tb-sec{scroll-snap-align:start}}`;document.head.appendChild(st);
