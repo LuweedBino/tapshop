@@ -40,6 +40,7 @@ const FILES = new Set([
   "video-autosave.js",
   "video-export.js",
   "video-toolbar.js",
+  "video-topbar.js",
   "mediabunny.js",
   "studio-social.js",
   "studio-projects.js",
