@@ -22,6 +22,9 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
   const [open, setOpen] = useState(false);
   const [shake, setShake] = useState(false);
   const [pop, setPop] = useState(false);
+  // The toggle's arrow always turns counter-clockwise, half a turn each time the buttons open or close.
+  const [spin, setSpin] = useState(0);
+  const lastOpen = useRef(false);
   const [phone, setPhone] = useState(true);
   const timers = useRef<number[]>([]);
 
@@ -30,6 +33,12 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
     timers.current = [];
     setShake(false);
   };
+
+  useEffect(() => {
+    if (lastOpen.current === open) return;
+    lastOpen.current = open;
+    setSpin((d) => d - 180);
+  }, [open]);
 
   useEffect(() => {
     const mq = matchMedia("(min-width: 768px)");
@@ -110,7 +119,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
             title={open ? "Hide page buttons" : "Show page buttons"}
             className={`absolute -bottom-3 -left-3 z-[1] grid h-5 w-5 place-items-center rounded-full border border-neutral-300 bg-white text-neutral-700 shadow-sm md:hidden ${shake ? "dash-breeze" : ""}`}
           >
-            <svg viewBox="0 0 12 12" className={`h-2.5 w-2.5 transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 transition-[rotate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ rotate: `${spin}deg` }} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M2.5 4.5 6 8l3.5-3.5" />
             </svg>
           </button>
