@@ -33,7 +33,7 @@ function remember(hex){try{localStorage.setItem(RECENT_KEY,JSON.stringify([hex,.
 
 let box=null,cur=null;
 function css(){if(document.getElementById('cpk-css'))return;let st=document.createElement('style');st.id='cpk-css';st.textContent=`
-.cpk{position:fixed;z-index:10000;width:176px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;box-sizing:border-box;padding:6px;border-radius:10px;border:2px solid #fff;background:#fff;color:#292135;box-shadow:0 0 0 1px #0004,0 12px 40px #0004;font:10px system-ui,sans-serif;display:grid;grid-template-columns:minmax(0,1fr);gap:4px;touch-action:none;user-select:none;-webkit-user-select:none}
+.cpk{position:fixed;z-index:10000;inset:auto;margin:0;width:176px;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;box-sizing:border-box;padding:6px;border-radius:10px;border:2px solid #fff;background:#fff;color:#292135;box-shadow:0 0 0 1px #0004,0 12px 40px #0004;font:10px system-ui,sans-serif;display:grid;grid-template-columns:minmax(0,1fr);gap:4px;touch-action:none;user-select:none;-webkit-user-select:none}
 .cpk.dark{background:#211d2b;color:#f2eff8}
 .cpk.sheet{left:8px!important;right:8px;bottom:8px;top:auto!important;width:auto;max-width:none;max-height:55vh;overflow:auto}
 .cpk-sv{position:relative;height:54px;border-radius:8px;cursor:crosshair;background:linear-gradient(transparent,#000),linear-gradient(90deg,#fff,transparent)}
@@ -68,7 +68,10 @@ function open(input){close(true);css();let rgb=hexToRgb(input.value)||[0,0,0],[h
  <div class="cpk-sub">Colours</div><div class="cpk-sw">${sw(PRESETS)}</div>
  ${rec.length?`<div class="cpk-sub">Recent</div><div class="cpk-sw">${sw(rec)}</div>`:''}
  <div class="cpk-act"><button type="button" class="cancel">Cancel</button><button type="button" class="done">Done</button></div>`;
- document.body.appendChild(box);place();paint(false);
+ // Open pop-ups (modal dialogs) sit in the browser's top layer and cover everything else, so the
+ // picker goes in the top layer too (popover), and inside that pop-up so its taps aren't blocked.
+ let host=(input.closest&&input.closest('dialog[open]'))||document.body;if(box.showPopover)box.setAttribute('popover','manual');
+ host.appendChild(box);if(box.showPopover)try{box.showPopover()}catch{}place();paint(false);
  let sv=box.querySelector('.cpk-sv'),svAt=e=>{let r=sv.getBoundingClientRect();cur.s=clamp((e.clientX-r.left)/r.width,0,1);cur.v=1-clamp((e.clientY-r.top)/r.height,0,1);paint(true)};
  sv.addEventListener('pointerdown',e=>{e.preventDefault();sv.setPointerCapture(e.pointerId);svAt(e);const mv=ev=>svAt(ev),up=()=>{sv.removeEventListener('pointermove',mv);sv.removeEventListener('pointerup',up);sv.removeEventListener('pointercancel',up)};sv.addEventListener('pointermove',mv);sv.addEventListener('pointerup',up);sv.addEventListener('pointercancel',up)});
  box.querySelector('.cpk-hue').addEventListener('input',e=>{cur.h=+e.target.value;paint(true)});
