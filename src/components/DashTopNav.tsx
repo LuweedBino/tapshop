@@ -15,13 +15,15 @@ const POP_MS = 800;
 
 // Phone header: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
 // which fold away. Tapping the logo or the toggle shows them. On every page load the buttons glide open and
-// shut, a soft breeze ripples out of the toggle, then flows across the logo as a shine and sparkles.
+// shut, a soft breeze ripples out of the toggle, then flows across the logo as a shine and sparkles
+// (no press; the logo only presses in when it's tapped).
 // On computers the buttons sit in the sidebar and always show.
 export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.ReactNode }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
   const [shake, setShake] = useState(false);
-  const [pop, setPop] = useState(false);
+  // "glint" = shine and sparkles only (after a page opens); "tap" also presses the logo in.
+  const [pop, setPop] = useState<false | "glint" | "tap">(false);
   // The toggle's arrow always turns counter-clockwise, half a turn each time the buttons open or close.
   const [spin, setSpin] = useState(0);
   const lastOpen = useRef(false);
@@ -63,7 +65,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
     if (!still) {
       later(() => setShake(true), breezeAt);
       later(() => setShake(false), breezeAt + BREEZE_MS);
-      later(() => setPop(true), popAt);
+      later(() => setPop("glint"), popAt);
       later(() => setPop(false), popAt + POP_MS);
     }
     return () => {
@@ -83,7 +85,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
     setPop(false);
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        setPop(true);
+        setPop("tap");
         timers.current.push(window.setTimeout(() => setPop(false), POP_MS));
       }),
     );
@@ -92,7 +94,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
   return (
     <>
       <div className="flex items-center justify-between md:mb-6 md:block">
-        <div className={`relative ${pop ? "dash-pop" : ""}`}>
+        <div className={`relative ${pop === "tap" ? "dash-pop" : pop === "glint" ? "dash-glint" : ""}`}>
           <Link
             href="/dashboard"
             className="dash-logo"
