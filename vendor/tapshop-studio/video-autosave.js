@@ -101,8 +101,8 @@ function mount(){let start=document.getElementById('veStart');if(!start||documen
   box.onclick=async e=>{let more=e.target.closest('[data-more]');if(more){e.stopPropagation();openMenu(more,more.dataset.more);return}
     let card=e.target.closest('.vs-rec');if(!card)return;document.getElementById('veStart').hidden=true;try{await open(card.dataset.id)}catch(x){toast('Couldn’t open that video: '+(x.message||x))}};
   box.onkeydown=e=>{if(e.key==='Enter')e.target.closest('.vs-rec')?.click()};
-  let css=document.createElement('style');css.textContent=`#veStart .vs-recent{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-bottom:4px}
-@media(max-width:520px){#veStart .vs-recent{display:flex;overflow-x:auto;padding-bottom:4px}#veStart .vs-rec{flex:none;width:140px}}
+  let css=document.createElement('style');css.textContent=`#veStart .vs-recent{display:flex;gap:12px;margin:0 -16px 4px;padding:2px 16px 10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scroll-padding-left:16px;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin}#veStart .vs-rec{flex:none;width:150px;scroll-snap-align:start}
+@media(max-width:520px){#veStart .vs-rec{width:140px}}
 #veStart .vs-rec{position:relative;cursor:pointer;border:1px solid var(--ts-border,#e5e5e5);border-radius:16px;background:var(--ts-surface,#fff);padding:8px}
 #veStart .vs-rec:hover{border-color:var(--ts-border-strong,#d4d4d4)}
 #veStart .vs-rec .th{height:150px;border-radius:10px;background:var(--ts-soft,#f5f5f5);display:grid;place-items:center;overflow:hidden}
