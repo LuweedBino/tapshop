@@ -15,6 +15,28 @@ const ALPHA_RULES=[
  [i=>/editGraphic\('[^']+','gradTo'/.test(i.getAttribute('oninput')||''),i=>trackRange(i,'opacity')],
  [i=>/editGraphic\('[^']+','color'/.test(i.getAttribute('oninput')||''),i=>trackRange(i,'opacity')],
 ];
+// "No colour" for colours that have their own on/off instead of a see-through slider.
+const hnd=i=>(i.getAttribute('oninput')||'')+' '+(i.getAttribute('onchange')||'');
+const call=(f,...a)=>{if(typeof window[f]!=='function')return false;window[f](...a);return true};
+const gid=i=>(/(?:editGraphic|gfxSet|capSet)\('([^']+)'/.exec(hnd(i))||[])[1];
+const NONE_RULES=[
+ [i=>/update\('outlineColor'/.test(hnd(i)),()=>call('shapeSet',{stroke:false},true)],
+ [i=>/update\('borderColor'/.test(hnd(i))&&/update\('border'/.test(i.previousElementSibling?.getAttribute('oninput')||''),()=>call('update','border',0)],
+ [i=>/update\('borderColor'/.test(hnd(i)),()=>call('shapeSet',{borderStyle:'none'},true)],
+ [i=>/update\('fxColor'/.test(hnd(i)),()=>call('shapeSet',{effect:'none'},true)],
+ [i=>/editGraphic\('[^']+','borderColor'/.test(hnd(i)),i=>call('editGraphic',gid(i),'borderOn',false)],
+ [i=>/editGraphic\('[^']+','boxBorderColor'/.test(hnd(i)),i=>call('editGraphic',gid(i),'boxBorder','none')],
+ [i=>/editGraphic\('[^']+','effectColor'/.test(hnd(i)),i=>call('editGraphic',gid(i),'textEffect','plain')],
+ [i=>/gfxSet\('[^']+','c[123]'/.test(hnd(i)),i=>call('gfxSet',gid(i),/'(c[123])'/.exec(hnd(i))[1],'transparent')],
+ [i=>/capSet\('[^']+','box'/.test(hnd(i)),i=>call('capSet',gid(i),'boxOpacity',0)],
+ [i=>/capSet\('[^']+','stroke'/.test(hnd(i)),i=>call('capSet',gid(i),'strokeW',0)],
+ [i=>/capSet\('[^']+','hlColor'/.test(hnd(i)),i=>call('capSet',gid(i),'hl','none')],
+ [i=>i.id==='txtStC',()=>{let r=document.getElementById('txtSt');if(!r)return false;fire(r,0);return true}],
+];
+// Checked before the see-through slider: a shape's fill turns into "No fill (border only)".
+const NONE_FIRST=[
+ [i=>{if(!/update\('fill'/.test(hnd(i)))return false;try{return ['shape','rect','circle'].includes(design.els[selected].type)}catch{return false}},()=>call('shapeSet',{noFill:true,stroke:true},true)],
+];
 function trackRange(i,key){let id=/editGraphic\('([^']+)'/.exec(i.getAttribute('oninput'))[1];return document.querySelector(`input[type=range][oninput*="editGraphic('${id}','${key}'"]`)}
 const alphaFor=i=>{for(const [test,find] of ALPHA_RULES)if(test(i)){let r=find(i);if(r)return r}return null};
 
@@ -51,6 +73,7 @@ function css(){if(document.getElementById('cpk-css'))return;let st=document.crea
 .cpk-act{display:flex;gap:5px;justify-content:flex-end}.cpk-act .done{background:#9b6cf0;border-color:#9b6cf0;color:#fff}
 .cpk-bh{display:flex;justify-content:space-between;align-items:center}.cpk .cpk-bedit{height:16px;min-width:0;padding:0 6px;font-size:9px;text-transform:none;letter-spacing:0;opacity:1}
 .cpk-sw .cpk-badd{border:1.5px dashed currentColor!important;background:transparent!important;font-size:13px;line-height:1;opacity:.7}.cpk-brand button{position:relative}.cpk-brand i{position:absolute;inset:0;display:grid;place-items:center;font:700 12px system-ui;font-style:normal;color:#fff;background:#0007;border-radius:4px}
+.cpk .cpk-sw .cpk-none{background:linear-gradient(to top right,transparent calc(50% - 1.5px),#ff3b30 calc(50% - 1px),#ff3b30 calc(50% + 1px),transparent calc(50% + 1.5px)),repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/8px 8px!important}.cpk-note{font-size:10px;font-weight:600;line-height:1.3;color:#ff6b62;margin-top:-2px}
 .cpk-sub{font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;opacity:.6;margin-bottom:-3px}
 .cpk-grip{display:flex;align-items:center;justify-content:space-between;margin:-3px -3px -2px;padding:1px 4px;border-radius:5px;cursor:grab;font-size:9px;font-weight:700;opacity:.6;touch-action:none}.cpk-grip:active{cursor:grabbing}.cpk.sheet .cpk-grip{cursor:default}`;document.head.appendChild(st)}
 
@@ -65,7 +88,7 @@ function open(input){close(true);css();let rgb=hexToRgb(input.value)||[0,0,0],[h
  ${range?`<div class="cpk-lbl"><span>Transparency</span><b class="cpk-av"></b></div><input type="range" class="cpk-alpha cpk-chk" min="${range.min||0}" max="${range.max||100}" step="${range.step||1}" aria-label="Transparency">`:''}
  <div class="cpk-top"><span class="cpk-prev cpk-chk"><b></b></span><input class="cpk-hex" maxlength="7" spellcheck="false" aria-label="Colour code">${'EyeDropper' in window?'<button type="button" class="cpk-eye" title="Pick a colour from the screen" aria-label="Pick a colour from the screen">💧</button>':''}</div>
  <div class="cpk-sub cpk-bh"><span>Brand colours</span><button type="button" class="cpk-bedit" aria-pressed="false">Edit</button></div><div class="cpk-sw cpk-brand"></div>
- <div class="cpk-sub">Colours</div><div class="cpk-sw">${sw(PRESETS)}</div>
+ <div class="cpk-sub">Colours</div><div class="cpk-sw"><button type="button" class="cpk-none" aria-label="No colour (see-through)" title="No colour"></button>${sw(PRESETS)}</div><div class="cpk-note" hidden></div>
  ${rec.length?`<div class="cpk-sub">Recent</div><div class="cpk-sw">${sw(rec)}</div>`:''}
  <div class="cpk-act"><button type="button" class="cancel">Cancel</button><button type="button" class="done">Done</button></div>`;
  // Open pop-ups (modal dialogs) sit in the browser's top layer and cover everything else, so the
@@ -79,6 +102,7 @@ function open(input){close(true);css();let rgb=hexToRgb(input.value)||[0,0,0],[h
  let hex=box.querySelector('.cpk-hex');hex.addEventListener('input',()=>{let c=hexToRgb(hex.value);if(c&&/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex.value.trim())){[cur.h,cur.s,cur.v]=rgbToHsv(...c);paint(true,true)}});
  hex.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();close(false)}});
  box.addEventListener('click',e=>{let b=e.target.closest?.('.cpk-sw button');if(!b||!box.contains(b))return;
+  if(b.classList.contains('cpk-none')){noColour();return}
   if(b.classList.contains('cpk-badd')){let h=hexNow();setBrand([...brand().filter(c=>c!==h),h]);renderBrand();return}
   if(b.closest('.cpk-brand')&&box.classList.contains('bedit')){setBrand(brand().filter(c=>c!==b.dataset.c));renderBrand();return}
   [cur.h,cur.s,cur.v]=rgbToHsv(...hexToRgb(b.dataset.c));paint(true)});
@@ -94,6 +118,11 @@ function renderBrand(){if(!box)return;let row=box.querySelector('.cpk-brand'),li
  box.querySelector('.cpk-bedit').hidden=!list.length&&!ed;if(!list.length&&ed){box.classList.remove('bedit');renderBrand()}}
 function hexNow(){return rgbToHex(...hsvToRgb(cur.h,cur.s,cur.v))}
 function fire(el,v){el.value=v;el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}))}
+function noColour(){if(!cur)return;let inp=cur.input=live(cur.input);
+ for(const [test,act] of NONE_FIRST)if(test(inp)){let ok=false;try{ok=act(inp)!==false}catch{}if(ok){cur.changed=false;close(false);return}}
+ if(cur.range){cur.range=live(cur.range);setAlpha(cur.range.min||0);return}
+ for(const [test,act] of NONE_RULES)if(test(inp)){let ok=false;try{ok=act(inp)!==false}catch{}if(ok){cur.changed=false;close(false);return}}
+ let n=box.querySelector('.cpk-note');n.textContent='This colour can’t be see-through.';n.hidden=false;clearTimeout(n._t);n._t=setTimeout(()=>{if(n)n.hidden=true},2600)}
 function setAlpha(v){if(!cur?.range)return;cur.changed=true;fire(cur.range=live(cur.range),v);paint(false)}
 function paint(apply,fromHex){if(!box||!cur)return;let hex=hexNow(),pure=rgbToHex(...hsvToRgb(cur.h,1,1)),sv=box.querySelector('.cpk-sv');
  sv.style.backgroundColor=pure;let k=sv.querySelector('i');k.style.left=cur.s*100+'%';k.style.top=(1-cur.v)*100+'%';k.style.background=hex;
@@ -102,7 +131,7 @@ function paint(apply,fromHex){if(!box||!cur)return;let hex=hexNow(),pure=rgbToHe
   a.style.backgroundImage=`linear-gradient(90deg,${hex}00,${hex}),${CHK},${CHK}`;a.style.backgroundSize='100% 100%,10px 10px,10px 10px';a.style.backgroundPosition='0 0,0 0,5px 5px';box.querySelector('.cpk-av').textContent=Math.round(100-+r.value)+'% see-through'}
  box.querySelector('.cpk-prev b').style.cssText=`background:${hex};opacity:${clamp(op,0,1)}`;
  if(!fromHex)box.querySelector('.cpk-hex').value=hex.toUpperCase();
- box.querySelectorAll('.cpk-sw button').forEach(b=>b.classList.toggle('on',(b.dataset.c||'').toLowerCase()===hex));
+ box.querySelectorAll('.cpk-sw button').forEach(b=>b.classList.toggle('on',(b.dataset.c||'').toLowerCase()===hex));box.querySelector('.cpk-none')?.classList.toggle('on',!!(cur.range&&+cur.range.value<=+(cur.range.min||0)));
  if(apply&&hex!==String(cur.input.value).toLowerCase()){cur.changed=true;fire(cur.input=live(cur.input),hex)}}
 function place(){if(!box||!cur)return;if(cur.moved&&innerWidth>=300&&innerHeight>=360){let r=box.getBoundingClientRect();box.style.left=clamp(r.left,0,innerWidth-r.width)+'px';box.style.top=clamp(r.top,0,innerHeight-r.height)+'px';return}let narrow=innerWidth<300||innerHeight<360;box.classList.toggle('sheet',narrow);if(narrow){box.style.left='';box.style.top='';return}
  let r=cur.input.getBoundingClientRect(),w=box.offsetWidth,h=box.offsetHeight,x=clamp(r.left,8,innerWidth-w-8),y=r.bottom+8;if(y+h>innerHeight-8)y=r.top-h-8;if(y<8)y=clamp((innerHeight-h)/2,8,innerHeight-h-8);
