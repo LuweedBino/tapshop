@@ -41,6 +41,11 @@ const FILES = new Set([
   "studio-projects.js",
   "gif-encoder.js",
   "studio-pages.js",
+  "photo.html",
+  "photo-core.js",
+  "photo-adjust.js",
+  "photo-tools.js",
+  "photo-io.js",
   "demo.webm",
 ]);
 
