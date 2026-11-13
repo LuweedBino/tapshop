@@ -242,7 +242,7 @@ async function build(){if(exporting)return;const btn=dlg.querySelector('#brBuild
 window.openBroll=open;
 {let g=[...document.querySelectorAll('.timebar button')].find(b=>/Reviews|Graphics/.test(b.textContent)),b=document.createElement('button');b.type='button';b.textContent='🎞️ B-roll';b.title='Build a video from your clips with a story template and free music';b.onclick=()=>open();if(g)g.after(b);else document.querySelector('.timebar')?.appendChild(b)}
 function startButton(){let cats=$$('vsCats');if(!cats||$$('vsBroll'))return;let b=document.createElement('button');b.type='button';b.id='vsBroll';b.className='vs-reviews';
-  b.innerHTML='<b>🎞️ Build a video from your clips</b><span>Drop in your clips, pick a story like Hook → Problem → Solution, and we put them in order with words on screen and free music.</span>';
+  b.innerHTML='<b>🎞️ Build a video from your clips</b><span>Drop in your b-roll clips, pick a story like Hook → Problem → Solution, and we turn your b-roll into a finished video with words on screen and free music.</span>';
   b.onclick=()=>{let go=$$('vsGo');if(go)go.click();let el=$$('veStart');if(el)el.hidden=true;setTimeout(()=>open(true),60)};($$('vsReviews')||cats).before(b)}
 new MutationObserver(startButton).observe(document.body,{childList:true,subtree:true});startButton();
 })();
