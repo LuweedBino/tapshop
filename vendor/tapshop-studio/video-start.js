@@ -244,7 +244,8 @@ html body #veStart .vs-plat[aria-pressed="true"]{position:relative;background:va
 #veStart .vs-file .k{position:absolute;bottom:26px;left:6px;font-size:10px;font-weight:700;color:#fff;background:#000b;border-radius:6px;padding:1px 5px}
 #veStart .vs-file .x{position:absolute;top:4px;right:4px;width:26px;height:26px;padding:0;border-radius:50%;font-size:15px;line-height:1;display:grid;place-items:center}
 #veStart .vs-file small{display:block;font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#veStart .vs-tpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+/* Two rows that scroll sideways together, as one strip. */
+#veStart .vs-tpls{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;grid-auto-columns:160px;gap:12px;margin:0 -16px;padding:2px 16px 10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scroll-padding-left:16px;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin}#veStart .vs-tpl{scroll-snap-align:start}
 #veStart .vs-tpl{cursor:pointer;border:1px solid var(--ts-border,#e5e5e5);border-radius:16px;background:var(--ts-surface,#fff);padding:8px;outline:none;transition:border-color .15s}
 #veStart .vs-tpl:hover{border-color:var(--ts-border-strong,#d4d4d4)}
 #veStart .vs-tpl:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--ts-primary,#171717) 25%,transparent)}
@@ -268,7 +269,7 @@ html body #veStart .vs-plat[aria-pressed="true"]{position:relative;background:va
 #veStart .vs-go .sum{flex:1;min-width:0;font-size:13px;color:var(--ts-muted,#737373);line-height:1.35}
 #veStart .vs-go .sum b{color:var(--ts-text,#171717)}
 #veStart .vs-go .primary{padding:13px 22px;font-size:15px;white-space:nowrap}
-@media(max-width:520px){#veStart .vs-plats{grid-template-columns:1fr 1fr}#veStart .vs-tpls{grid-template-columns:1fr 1fr}#veStart .vs-plat{padding:10px;gap:8px}}`;
+@media(max-width:520px){#veStart .vs-plats{grid-template-columns:1fr 1fr}#veStart .vs-tpls{grid-auto-columns:146px}#veStart .vs-plat{padding:10px;gap:8px}}`;
 
 function shapeBox(aspect){let [w,h]=aspect.split(':').map(Number),s=26/Math.max(w,h);return `<span class="vs-shape" aria-hidden="true"><i style="width:${Math.round(w*s)}px;height:${Math.round(h*s)}px"></i></span>`}
 // Shrink a line of template text so it (plus its box padding) fits 90% of a frame W px wide and 720 px tall.
