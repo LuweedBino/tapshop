@@ -4,12 +4,13 @@ import { useEffect } from "react";
 import type { VaultItemView } from "./MediaVault";
 
 export type DesignOption = { id: string; name: string; w: number; h: number; thumb: string | null };
-export type StudioChoice = { to: "video" } | { to: "design"; design: string };
+export type StudioChoice = { to: "video" } | { to: "photo" } | { to: "design"; design: string };
 
-/** "Use in Studio": pick the video editor, a new design, or one of the saved designs. */
+/** "Use in Studio": pick the video editor, Photo Lab, a new design, or one of the saved designs. */
 export function UseInStudio({ item, designs, onChoose, onClose }: { item: VaultItemView; designs: DesignOption[] | null; onChoose: (c: StudioChoice) => void; onClose: () => void }) {
   const forVideo = item.kind === "video" || item.kind === "audio";
   const forDesign = item.kind === "video" || item.kind === "image";
+  const forPhoto = item.kind === "image" && !/svg/i.test(item.contentType);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -44,9 +45,19 @@ export function UseInStudio({ item, designs, onChoose, onClose }: { item: VaultI
           </button>
         )}
 
+        {forPhoto && (
+          <button type="button" onClick={() => onChoose({ to: "photo" })} className="mb-4 flex w-full items-center gap-3 rounded-xl border-2 border-neutral-900 p-3 text-left hover:bg-neutral-50">
+            <span className="text-2xl" aria-hidden>◑</span>
+            <span>
+              <span className="block font-semibold">Edit in Photo Lab</span>
+              <span className="block text-sm text-neutral-500">Retouch, adjust colours, add filters and layers</span>
+            </span>
+          </button>
+        )}
+
         {forDesign && (
           <>
-            <h3 className="mb-2 text-sm font-semibold text-neutral-700">{forVideo ? "Or put it in a design" : "Put it in a design"}</h3>
+            <h3 className="mb-2 text-sm font-semibold text-neutral-700">{forVideo || forPhoto ? "Or put it in a design" : "Put it in a design"}</h3>
             <button type="button" onClick={() => onChoose({ to: "design", design: "new" })} className="mb-3 flex w-full items-center gap-3 rounded-xl border border-neutral-300 p-3 text-left hover:bg-neutral-50">
               <span className="flex h-12 w-12 flex-none items-center justify-center rounded-lg border-2 border-dashed border-neutral-300 text-2xl" aria-hidden>＋</span>
               <span>

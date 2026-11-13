@@ -100,7 +100,7 @@
   // Dashboard → editor messages (version 1): tapshop:vault-import puts a Vault file in this
   // page (on the design page, target {design:'new'|id} says which design), and
   // tapshop:list-designs asks for the saved designs so "Use in Studio" can offer them.
-  const page=location.pathname.endsWith('video.html')?'video':'design';
+  const page=location.pathname.endsWith('video.html')?'video':location.pathname.endsWith('photo.html')?'photo':'design';
   function designs(){let list=[];try{list=JSON.parse(localStorage.getItem('forma-projects')||'[]')}catch{}
     return (Array.isArray(list)?list:[]).filter(d=>d&&typeof d.id==='string').slice(0,60).map(d=>{let thumb=null;try{if(typeof svgString==='function')thumb='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svgString(d))}catch{}return {id:d.id,name:String(d.name||'Untitled design'),w:+d.w||0,h:+d.h||0,thumb}})}
   window.addEventListener('message',e=>{if(e.source!==window.parent||e.origin!==location.origin)return;let m=e.data;if(!m||m.version!==1)return;

@@ -9,8 +9,8 @@ import { UseInStudio, type DesignOption, type StudioChoice } from "./UseInStudio
 import { formatBytes, VAULT_MAX_BYTES } from "@/lib/vault";
 
 type VaultFile = { file: File; source: "design" | "video" };
-type Page = "design" | "video";
-const PAGE_PATH: Record<Page, string> = { design: "/index.html", video: "/video.html" };
+type Page = "design" | "video" | "photo";
+const PAGE_PATH: Record<Page, string> = { design: "/index.html", video: "/video.html", photo: "/photo.html" };
 
 // Reads the editor's reply to tapshop:list-designs. Thumbnails must be SVG data URLs (shown in <img>, so they can't run code).
 function designOptions(x: unknown): DesignOption[] {
@@ -184,6 +184,7 @@ export function StudioFrame({ products, vault, folders, handle, hasPayments }: {
     setUsing(null);
     setView("studio");
     if (choice.to === "video") sendTo("video", importMessage(item));
+    else if (choice.to === "photo") sendTo("photo", importMessage(item));
     else sendTo("design", importMessage(item, choice.design));
   }
 
