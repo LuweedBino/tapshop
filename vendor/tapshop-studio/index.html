@@ -200,7 +200,12 @@ html[data-tools="collapsed"] .tools-head{justify-content:center;margin:0}
  body .props.moved{transform:none}.props-head{cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}.props-head.dragging{cursor:grabbing}
  .props-head h3::before{content:'⠿ ';opacity:.6}}
 @media(max-width:650px){.ebody{--tools-w:118px}html[data-tools="collapsed"] .ebody{--tools-w:54px}.etop{gap:5px;padding:6px 8px}.etop button{padding:8px 10px}.stage{padding:10px}}
-</style>
+</style><style>/* Phones and tablets: the settings card used to float over the middle of the design, so taps on the design
+hit the card instead. It now sits along the bottom, and the design gets room to scroll above it. Dragging the
+card (.moved) still puts it wherever the creator likes. */
+@media(max-width:1000px){body .ebody .props:not(.moved){position:fixed;top:auto;left:auto;right:8px;bottom:max(8px,env(safe-area-inset-bottom));transform:none;width:min(420px,calc(100% - 16px));max-height:42vh;max-height:42dvh;z-index:20}
+ .ebody:has(.props:not(.empty):not(.min):not(.moved)) .stage{padding-bottom:calc(42vh + 24px)}
+ .ebody:has(.props.min:not(.empty):not(.moved)) .stage{padding-bottom:70px}}</style>
 <script>
 const TOOLS_ICON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>';
 function syncTools(){let c=document.documentElement.dataset.tools==='collapsed',b=document.getElementById('toolsToggle');if(!b)return;b.setAttribute('aria-expanded',String(!c));b.title=c?'Show tools panel':'Hide tools panel';b.setAttribute('aria-label',b.title)}
@@ -228,7 +233,7 @@ const propertiesUnmarked=properties;properties=function(){propertiesUnmarked();l
 let propsAt=null;
 function narrow(){return matchMedia('(max-width:1000px)').matches}
 function placeProps(){let p=document.getElementById('props'),box=p.parentElement;if(!narrow()){p.classList.remove('moved');p.style.left=p.style.top='';return}
- if(!propsAt){let spot=freeSpot(p,box);if(!spot){p.classList.remove('moved');p.style.left=p.style.top='';return}p.classList.add('moved');p.style.left=spot.x+'px';p.style.top=spot.y+'px';return}
+ if(!propsAt){p.classList.remove('moved');p.style.left=p.style.top='';return}/* Undragged, it docks along the bottom (CSS below), so it never sits on top of other items. */
  let x=Math.max(4,Math.min(propsAt.x,box.clientWidth-p.offsetWidth-4)),y=Math.max(4,Math.min(propsAt.y,box.clientHeight-p.offsetHeight-4));p.classList.add('moved');p.style.left=x+'px';p.style.top=y+'px'}
 // Until the panel is dragged somewhere, it opens where it covers as little as possible of the
 // selected element (centred over the canvas when that's clear), so the element stays tappable.
@@ -333,7 +338,7 @@ const highlightBase=highlight;highlight=function(){highlightBase();let svg=docum
 function placeHandles(svg,el){let e=boxOf(svg,el),k=design.w/Math.max(1,svg.getBoundingClientRect().width),line=2*k,set=(n,a)=>{for(const [x,v] of Object.entries(a))n.setAttribute(x,v)};
  let f=svg.querySelector('[data-frame]');if(f)set(f,{x:e.x,y:e.y,width:e.w,height:e.h,'stroke-width':line});
  svg.querySelectorAll('[data-handle]').forEach(g=>{let h=g.dataset.handle,cx=e.x+(h.includes('w')?0:h.includes('e')?e.w:e.w/2),cy=e.y+(h.includes('n')?0:h.includes('s')?e.h:e.h/2),horiz=h==='n'||h==='s',[hit,mark]=g.children;
-  set(hit,{cx,cy,r:18*k});set(mark,{fill:'#fff',stroke:'#8854ec','stroke-width':line});
+  /* The touch zone leans outward so a finger in the middle of a small box moves it instead of resizing. */let ox=h.includes('w')?-1:h.includes('e')?1:0,oy=h.includes('n')?-1:h.includes('s')?1:0,nrm=Math.hypot(ox,oy)||1;set(hit,{cx:cx+ox/nrm*11*k,cy:cy+oy/nrm*11*k,r:18*k});set(mark,{fill:'#fff',stroke:'#8854ec','stroke-width':line});
   if(h.length===1)set(mark,{x:cx-(horiz?12:4)*k,y:cy-(horiz?4:12)*k,width:(horiz?24:8)*k,height:(horiz?8:24)*k,rx:4*k});else set(mark,{cx,cy,r:7*k})})}
 function resizeStart(ev,h){let e=design.els[selected],svg=document.querySelector('#stage svg');if(!e||!svg||resizing)return;ev.preventDefault();ev.stopPropagation();checkpoint();try{ev.currentTarget.setPointerCapture(ev.pointerId)}catch{}
  let s0=boxOf(svg,e);resizing={h,e,svg,p0:point(ev,svg),s:s0,ar:e.type==='text'?s0.w/s0.h:e.ar||e.w/e.h,id:ev.pointerId,orig:{x:e.x,y:e.y,w:e.w,h:e.h,size:e.size}};
