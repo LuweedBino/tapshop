@@ -135,7 +135,7 @@ let selGfx=null;const bounds=new Map();
 const drawBefore=draw;draw=function(){drawBefore();let W=canvas.width,H=canvas.height;bounds.clear();
   for(const t of graphicTracks){if(!isGfx(t)||t.hidden)continue;let L=playhead-t.offset;if(L<0||L>=t.length)continue;let b=drawGfx(ctx,t,L,W,H);if(b)bounds.set(t.id,b)}
   if(selGfx&&!exporting&&bounds.has(selGfx)){let b=bounds.get(selGfx);ctx.save();ctx.setLineDash([8,6]);ctx.lineWidth=2;ctx.strokeStyle='#ff3ea5';ctx.strokeRect(b.cx-b.r,b.cy-b.r,b.r*2,b.r*2);ctx.restore()}};
-const exportBefore=exportVideo;exportVideo=async function(...a){let s=selGfx;selGfx=null;try{await Promise.all(graphicTracks.filter(isGfx).map(t=>document.fonts.load(fnt(t,64))))}catch{}try{return await exportBefore.apply(this,a)}finally{selGfx=s}};
+const exportBefore=exportVideo;exportVideo=async function(...a){let s=selGfx;selGfx=null;try{await Promise.all(graphicTracks.filter(isGfx).map(t=>document.fonts.load(fnt(t,64))))}catch{}try{await Promise.all(graphicTracks.filter(isGfx).map(t=>byId(t.gfx).prepare?.(t)))}catch{}try{return await exportBefore.apply(this,a)}finally{selGfx=s}};
 
 // ---- Drag a graphic on the preview (before the text/shape handlers see the touch).
 let drag=null;
@@ -162,18 +162,19 @@ function fill(){let tabs=dlg.querySelector('.gfx-tabs');tabs.innerHTML='';for(co
   cancelAnimationFrame(raf);let t0=performance.now();const tick=now=>{let L=(now-t0)/1000;for(const b of grid.children){if(!b._p||(io&&!seen.has(b)))continue;let p=b._p,c=b.firstChild,g=c.getContext('2d'),t=defaults(p),len=Math.min(p.len,4);if(!p.full){t.x=50;t.y=50;t.scale=p.pv||1.35}else if(p.id==='progress')t.scale=2;t.length=len+.8;g.clearRect(0,0,c.width,c.height);drawGfx(g,t,(L%(len+.8)),c.width,c.height)}raf=requestAnimationFrame(tick)};raf=requestAnimationFrame(tick)}
 function brand(){try{return (JSON.parse(localStorage.getItem('tapshop-brand-colors'))||[]).filter(x=>/^#[0-9a-f]{6}$/i.test(x))}catch{return []}}
 function defaults(p){let t={type:'gfx',gfx:p.id,name:p.name,x:p.x,y:p.y,scale:1,rotation:0,c1:p.c[0],c2:p.c[1],c3:p.c[2],font:'system-ui',length:p.len};for(const f of p.f)t[f.k]=f.def;return t}
-function addGfx(id){let p=byId(id);if(!p)return;if(typeof snapshot==='function')snapshot();
+function addGfx(id){let p=byId(id);if(!p)return;if(p.open){let r=replaceId?graphicTracks.find(t=>t.id===replaceId):null;dlg.close();p.open(r);return}if(typeof snapshot==='function')snapshot();
   if(replaceId){let t=graphicTracks.find(t=>t.id===replaceId);if(t){let keep={id:t.id,offset:t.offset,length:t.length,hidden:t.hidden};Object.keys(t).forEach(k=>delete t[k]);Object.assign(t,defaults(p),keep);finish(t);return}}
   let t={id:uid(),...defaults(p),offset:Math.max(0,Math.round(playhead*10)/10),hidden:false};
   let room=total()-t.offset;if(p.id==='progress'&&total()>0){t.offset=0;t.length=Math.max(1,Math.round(total()*10)/10)}else if(room>.5&&room<t.length)t.length=Math.round(room*10)/10;
   let b=brand();if(b.length&&(p.brand||['hook','type','number','new','shop','linkbio','lower','step','progress','countdown'].includes(p.id))){t.c1=b[0];if(b[1]&&p.col[1]&&p.col[1]!=='—')t.c2=b[1]}
   graphicTracks.push(t);finish(t);toast(p.name+' added. Drag it on the preview to place it.')}
 function finish(t){dlg.close();selGfx=t.id;try{expandedStrip=t.id}catch{}if(!playing){let mid=t.offset+Math.min(t.length*.6,1.5);if(playhead<t.offset||playhead>=t.offset+t.length)seekTimeline(Math.min(mid,total()))}renderGraphicTracks();draw()}
+window.veGfxDefaults=id=>{let p=byId(id);return p?defaults(p):null};window.veGfxInsert=t=>{if(!graphicTracks.includes(t))graphicTracks.push(t);finish(t)};
 window.openGfx=function(id){replaceId=id||null;fill();dlg.showModal()};
 
 // ---- The track's options on the timeline.
 const enc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-window.gfxSet=function(id,k,v,live){let t=graphicTracks.find(t=>t.id===id);if(!t)return;t[k]=v;selGfx=id;if(live)draw();else{renderGraphicTracks();draw()}};
+window.gfxSet=function(id,k,v,live){let t=graphicTracks.find(t=>t.id===id);if(!t)return;t[k]=v;let gp=byId(t.gfx);if(gp&&gp.fix&&gp.fix(t,k))live=false;selGfx=id;if(live)draw();else{renderGraphicTracks();draw()}};
 window.gfxPlace=function(id,x,y){let t=graphicTracks.find(t=>t.id===id);if(!t)return;let p=byId(t.gfx);if(p.id==='lower'){x=x===50?30:x===85?60:8}t.x=x;t.y=y;selGfx=id;renderGraphicTracks();draw()};
 function panel(t){let p=byId(t.gfx),id=t.id,fonts=typeof TEXT_FONTS!=='undefined'?TEXT_FONTS:[{family:'system-ui',label:'System'}],hasText=p.f.some(f=>!f.num&&!f.opts);
   let f=p.f.map(x=>x.opts?`<label>${enc(x.label)}<select onchange="gfxSet('${id}','${x.k}',this.value)">${x.opts.map(([v,n])=>`<option value="${enc(v)}"${t[x.k]===v?' selected':''}>${enc(n)}</option>`).join('')}</select></label>`
@@ -187,7 +188,7 @@ function panel(t){let p=byId(t.gfx),id=t.id,fonts=typeof TEXT_FONTS!=='undefined
   <label>${sizeLabel} <small>${Math.round((t.scale||1)*100)}%</small><input type="range" min=".4" max="2.5" step=".05" value="${t.scale||1}" oninput="this.previousElementSibling.textContent=Math.round(this.value*100)+'%';gfxSet('${id}','scale',+this.value,true)"></label>
   ${p.full&&!p.xy?'':`<label>Across ←→ <small>${Math.round(t.x)}%</small><input type="range" min="0" max="100" step="1" value="${t.x}" oninput="this.previousElementSibling.textContent=this.value+'%';gfxSet('${id}','x',+this.value,true)"></label><label>Up ↑↓ <small>${Math.round(t.y)}%</small><input type="range" min="0" max="100" step="1" value="${t.y}" oninput="this.previousElementSibling.textContent=this.value+'%';gfxSet('${id}','y',+this.value,true)"></label>`}
   ${p.full?'':`<label>Tilt <small>${t.rotation||0}°</small><input type="range" min="-45" max="45" step="1" value="${t.rotation||0}" oninput="this.previousElementSibling.textContent=this.value+'°';gfxSet('${id}','rotation',+this.value,true)"></label>`}
-  ${pos}<label>Start (s)<input type="number" min="0" step=".1" value="${t.offset}" onchange="editGraphic('${id}','offset',+this.value)"></label><label>Duration (s)<input type="number" min=".1" step=".1" value="${t.length}" onchange="editGraphic('${id}','length',+this.value)"></label></div></div>`}
+  ${p.extra?p.extra(t):''}${pos}<label>Start (s)<input type="number" min="0" step=".1" value="${t.offset}" onchange="editGraphic('${id}','offset',+this.value)"></label><label>Duration (s)<input type="number" min=".1" step=".1" value="${t.length}" onchange="editGraphic('${id}','length',+this.value)"></label></div></div>`}
 const renderBefore=renderGraphicTracks;renderGraphicTracks=function(){renderBefore();for(const t of graphicTracks){if(!isGfx(t))continue;let box=document.querySelector(`#graphicTracks .strip-row[data-trackid="${t.id}"] .strip-options`);if(box)box.innerHTML=panel(t)}};
 
 // ---- "✨ Graphics" button in the timeline bar, next to the effects track.
