@@ -208,7 +208,6 @@ const css=`#veStart[hidden],#veStart [hidden]{display:none!important}
 #veStart .vs-paths button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:inherit!important;cursor:pointer;transition:background .2s}
 #veStart .vs-paths button:hover,#veStart .vs-paths button:focus-visible{background:var(--ts-hover,#f5f5f5)!important;outline:none}
 #veStart .vs-pi{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid var(--ts-border-strong,#d4d4d4);font-size:15px;font-weight:700;letter-spacing:-.04em;background:var(--ts-bg,#fafafa)}
-#veStart .vs-paths li:first-child .vs-pi{background:linear-gradient(135deg,#ff3ea5,#ffb04a);border-color:transparent;color:#fff}
 #veStart .vs-pt{flex:1;min-width:0}#veStart .vs-pt b{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
 #veStart .vs-pt small{display:block;font-size:12.5px;color:var(--ts-muted,#737373);margin-top:2px;font-weight:500}
 #veStart .vs-pa{flex:none;font-size:22px;line-height:1;opacity:.35;transition:transform .2s,opacity .2s}
@@ -285,7 +284,7 @@ function build(){
   <h1>Make a short video</h1>
   <div class="vs-lead"><p class="vs-intro">To get started, pick one of the three paths:</p>
   <ol class="vs-paths">
-  <li><button type="button" data-path="quick"><span class="vs-pi" aria-hidden="true">⚡</span><span class="vs-pt"><b>Pick a quick video maker template</b><small>Let a maker build it for you</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
+  <li><button type="button" data-path="quick"><span class="vs-pi" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"/></svg></span><span class="vs-pt"><b>Pick a quick video maker template</b><small>Let a maker build it for you</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
   <li class="vs-or" aria-hidden="true"><span>or</span></li>
   <li><button type="button" data-path="steps"><span class="vs-pi" aria-hidden="true">1·2·3</span><span class="vs-pt"><b>Follow the 1-2-3 steps</b><small>Choose a shape, add clips, add a template</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
   <li class="vs-or" aria-hidden="true"><span>or</span></li>
