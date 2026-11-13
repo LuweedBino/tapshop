@@ -202,9 +202,23 @@ const css=`#veStart[hidden],#veStart [hidden]{display:none!important}
 #veStart .vs-top{display:flex;align-items:center;gap:10px;margin-bottom:18px}
 #veStart .vs-top .sp{flex:1}
 #veStart h1{font-size:clamp(26px,5vw,38px);line-height:1.1;margin:6px 0 6px;letter-spacing:-.03em}
-#veStart .vs-lead{color:var(--ts-muted,#737373);font-size:15px;margin:0 0 22px;max-width:560px;line-height:1.5}
+#veStart .vs-lead{margin:0 0 22px;max-width:620px}
+#veStart .vs-intro{color:var(--ts-muted,#737373);font-size:15px;margin:2px 0 14px;line-height:1.5;letter-spacing:.005em}
+#veStart .vs-paths{list-style:none;margin:0;padding:0;border:1px solid var(--ts-border,#e5e5e5);border-radius:18px;background:var(--ts-surface,#fff);overflow:hidden}
+#veStart .vs-paths button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:inherit!important;cursor:pointer;transition:background .2s}
+#veStart .vs-paths button:hover,#veStart .vs-paths button:focus-visible{background:var(--ts-hover,#f5f5f5)!important;outline:none}
+#veStart .vs-pi{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid var(--ts-border-strong,#d4d4d4);font-size:15px;font-weight:700;letter-spacing:-.04em;background:var(--ts-bg,#fafafa)}
+#veStart .vs-paths li:first-child .vs-pi{background:linear-gradient(135deg,#ff3ea5,#ffb04a);border-color:transparent;color:#fff}
+#veStart .vs-pt{flex:1;min-width:0}#veStart .vs-pt b{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
+#veStart .vs-pt small{display:block;font-size:12.5px;color:var(--ts-muted,#737373);margin-top:2px;font-weight:500}
+#veStart .vs-pa{flex:none;font-size:22px;line-height:1;opacity:.35;transition:transform .2s,opacity .2s}
+#veStart .vs-paths button:hover .vs-pa{transform:translateX(3px);opacity:.7}
+#veStart .vs-or{display:flex;align-items:center;gap:12px;padding:0 16px;height:0;position:relative}
+#veStart .vs-or::before,#veStart .vs-or::after{content:'';flex:1;border-top:1px solid var(--ts-border,#e5e5e5)}
+#veStart .vs-or span{font-size:10px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--ts-muted,#737373);background:var(--ts-surface,#fff);padding:0 8px;line-height:1;transform:translateY(0)}
 #veStart h2{font-size:17px;margin:28px 0 4px;letter-spacing:-.01em}
 #veStart .vs-step{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--ts-primary,#171717);color:var(--ts-on-primary,#fff);font-size:12px;margin-right:8px;vertical-align:2px}
+#veStart .vs-flash{animation:vs-flash 1.4s ease}@keyframes vs-flash{0%,100%{box-shadow:none}25%{box-shadow:0 0 0 4px #ff3ea555;border-radius:16px}}
 #veStart .vs-help{color:var(--ts-muted,#737373);font-size:13px;margin:0 0 12px}
 #veStart .vs-plats{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 #veStart .vs-plat{display:flex;align-items:center;gap:12px;text-align:left;padding:12px;min-height:64px}
@@ -269,7 +283,14 @@ function build(){
   el.innerHTML=`<div class="vs-wrap">
   <div class="vs-top"><button type="button" onclick="location.href='index.html'">← Studio</button><span class="sp"></span><button type="button" id="vsBlank" title="Skip this and start from scratch">Video Editor</button></div>
   <h1>Make a short video</h1>
-  <p class="vs-lead">Pick where it's going, add your clips and photos, and choose a template if you'd like a head start. You can change anything later. Or skip all this and tap <b>Video Editor</b> at the top right to create from scratch.</p>
+  <div class="vs-lead"><p class="vs-intro">To get started, pick one of the three paths:</p>
+  <ol class="vs-paths">
+  <li><button type="button" data-path="quick"><span class="vs-pi" aria-hidden="true">⚡</span><span class="vs-pt"><b>Pick a quick video maker template</b><small>Let a maker build it for you</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
+  <li class="vs-or" aria-hidden="true"><span>or</span></li>
+  <li><button type="button" data-path="steps"><span class="vs-pi" aria-hidden="true">1·2·3</span><span class="vs-pt"><b>Follow the 1-2-3 steps</b><small>Choose a shape, add clips, add a template</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
+  <li class="vs-or" aria-hidden="true"><span>or</span></li>
+  <li><button type="button" data-path="blank"><span class="vs-pi" aria-hidden="true">✎</span><span class="vs-pt"><b>Skip all this and tap Video Editor</b><small>At the top right, to create from scratch</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
+  </ol></div>
   <h2><span class="vs-step">1</span>Where will you post it?</h2><p class="vs-help">This sets the shape of your video.</p>
   <div class="vs-plats" id="vsPlats"></div>
   <h2><span class="vs-step">2</span>Add your videos and photos</h2><p class="vs-help">They go on the timeline in this order: videos first, then photos (${PHOTO_SECONDS} seconds each).</p>
@@ -306,6 +327,12 @@ function build(){
   $$('vsVault').onclick=()=>{if(typeof VaultPicker==='undefined'){toast('Media Vault is only available inside TapShop.');return}VaultPicker.open({title:'Add from your Media Vault',kinds:['video','image'],onPick:async it=>{try{toast('Loading '+it.name+'…');addFiles([await VaultPicker.file(it)])}catch(e){toast(e.message)}}})};
   $$('vsFiles').onclick=e=>{let b=e.target.closest('.x');if(!b)return;let i=+b.dataset.i,[gone]=pending.splice(i,1);if(gone?.url)URL.revokeObjectURL(gone.url);sync()};
   $$('vsBlank').onclick=()=>{applyAspect();close()};
+  // The three paths in the intro: jump to the quick makers, jump to step 1, or open the editor.
+  el.querySelector('.vs-paths').onclick=e=>{let b=e.target.closest('[data-path]');if(!b)return;let p=b.dataset.path;
+    if(p==='blank'){$$('vsBlank').click();return}
+    let to=p==='quick'?document.getElementById('vsQuick'):$$('vsPlats')?.previousElementSibling?.previousElementSibling;
+    to?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
+    if(to){to.classList.remove('vs-flash');void to.offsetWidth;to.classList.add('vs-flash')}};
   $$('vsDemo').onclick=async()=>{if(hasWork()&&window.veNewProject)await veNewProject();applyAspect();close();loadDemo()};
   $$('vsVaultProject').onclick=async()=>{await importPending();openVaultPicker(['project'])};
   $$('vsFileProject').onclick=async()=>{await importPending();$('restore').click()};
