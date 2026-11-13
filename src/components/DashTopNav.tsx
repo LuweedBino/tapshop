@@ -5,13 +5,29 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { DashNav } from "@/components/DashNav";
 
+// Pixie dust around the logo: tiny glowing specks (and a few tiny stars) that twinkle left → right with the
+// shine, back right → left, then all burst outwards. Fixed pseudo-random spots, so server and browser match.
+const DUST = Array.from({ length: 24 }, (_, i) => {
+  const r = (n: number) => { const x = Math.sin(i * 12.9898 + n * 78.233) * 43758.5453; return x - Math.floor(x); };
+  const x = (i + r(1) * 0.8) / 24, star = i % 4 === 1, size = star ? 6 + r(2) * 3 : 2.5 + r(2) * 2.5;
+  const ang = r(4) * Math.PI * 2, dist = 10 + r(5) * 14;
+  return {
+    star,
+    style: {
+      left: `${(x * 104 - 2).toFixed(1)}%`, top: `${(r(3) * 130 - 15).toFixed(1)}%`, "--s": `${size.toFixed(1)}px`,
+      "--a": `${(0.04 + x * 0.42).toFixed(2)}s`, "--b": `${(0.56 + (1 - x) * 0.42).toFixed(2)}s`, "--c": `${(1.05 + r(6) * 0.15).toFixed(2)}s`,
+      "--dx": `${(Math.cos(ang) * dist).toFixed(1)}px`, "--dy": `${(Math.sin(ang) * dist - 4).toFixed(1)}px`,
+    } as React.CSSProperties,
+  };
+});
+
 // One flowing sequence, each step starting while the last one settles:
 // buttons glide open, glide shut, a breeze ripples out of the toggle, then sweeps across the logo.
 const SHOW_MS = 1300;
 const BREEZE_AFTER_FOLD = 260;
 const BREEZE_MS = 900;
 const POP_AFTER_BREEZE = 380;
-const POP_MS = 1750;
+const POP_MS = 2100;
 
 // Phone header: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
 // which fold away. Tapping the logo or the toggle shows them. On every page load the buttons glide open and
@@ -109,11 +125,11 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
           >
             TapShop
           </Link>
-          <span aria-hidden="true" className="dash-spark" style={{ top: "-7px", left: "22%" }}>✦</span>
-          <span aria-hidden="true" className="dash-spark" style={{ bottom: "-6px", left: "58%" }}>✧</span>
-          <span aria-hidden="true" className="dash-spark" style={{ top: "26%", right: "-9px" }}>✦</span>
-          <span aria-hidden="true" className="dash-spark dash-spark-x" style={{ top: "-9px", right: "8%" }}>✦</span>
-          <span aria-hidden="true" className="dash-spark dash-spark-x" style={{ bottom: "-7px", left: "6%" }}>✦</span>
+          {DUST.map((d, i) => (
+            <span key={i} aria-hidden="true" className={`dash-dust${d.star ? " star" : ""}`} style={d.style}>
+              {d.star ? "✦" : null}
+            </span>
+          ))}
           <button
             type="button"
             onClick={toggle}
