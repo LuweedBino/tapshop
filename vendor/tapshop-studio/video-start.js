@@ -207,7 +207,13 @@ const css=`#veStart[hidden],#veStart [hidden]{display:none!important}
 #veStart .vs-paths{list-style:none;margin:0;padding:0;border:1px solid var(--ts-border,#e5e5e5);border-radius:18px;background:var(--ts-surface,#fff);overflow:hidden}
 #veStart .vs-paths button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:inherit!important;cursor:pointer;transition:background .2s}
 #veStart .vs-paths button:hover,#veStart .vs-paths button:focus-visible{background:var(--ts-hover,#f5f5f5)!important;outline:none}
-#veStart .vs-pi{flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid var(--ts-border-strong,#d4d4d4);font-size:15px;font-weight:700;letter-spacing:-.04em;background:var(--ts-bg,#fafafa)}
+#veStart .vs-pi{position:relative;overflow:hidden;flex:none;display:grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid var(--ts-border-strong,#d4d4d4);font-size:15px;font-weight:700;letter-spacing:-.04em;background:var(--ts-bg,#fafafa)}
+/* A second after the start screen opens, a shimmer sweeps once from bottom-left to top-right across the three
+   path icons (bottom icon first). Its colour is the text colour: white in dark mode, black in light mode. */
+#veStart .vs-pi::after{content:'';position:absolute;inset:-60%;background:linear-gradient(45deg,transparent 40%,color-mix(in srgb,var(--ts-text,#171717) 55%,transparent) 50%,transparent 60%);transform:translate(-60%,60%);opacity:0;pointer-events:none;animation:vs-shimmer 1.1s cubic-bezier(.45,0,.25,1) var(--sd,1s) 1}
+#veStart .vs-paths li:nth-child(5) .vs-pi{--sd:1s}#veStart .vs-paths li:nth-child(3) .vs-pi{--sd:1.22s}#veStart .vs-paths li:nth-child(1) .vs-pi{--sd:1.44s}
+@keyframes vs-shimmer{0%{transform:translate(-60%,60%);opacity:1}100%{transform:translate(60%,-60%);opacity:1}}
+@media (prefers-reduced-motion:reduce){#veStart .vs-pi::after{animation:none}}
 #veStart .vs-pt{flex:1;min-width:0}#veStart .vs-pt b{display:block;font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1.3}
 #veStart .vs-pt small{display:block;font-size:12.5px;color:var(--ts-muted,#737373);margin-top:2px;font-weight:500}
 #veStart .vs-pa{flex:none;font-size:22px;line-height:1;opacity:.35;transition:transform .2s,opacity .2s}
