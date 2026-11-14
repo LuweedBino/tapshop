@@ -1,12 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { login, signup, type FormState } from "@/app/actions/auth";
 import { Submit } from "./Submit";
 
 export function AuthForm({ mode }: { mode: "login" | "signup" }) {
   const [state, action] = useActionState<FormState, FormData>(mode === "login" ? login : signup, undefined);
+  // Each new sign-in gets the dashboard's "page buttons stay open for a while" welcome again (DashTopNav).
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("tapshop-nav-welcome");
+    } catch {}
+  }, []);
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5 py-12">
       <Link href="/" className="mb-8 text-xl font-black tracking-tight">TapShop</Link>

@@ -28,6 +28,8 @@ const BREEZE_AFTER_FOLD = 260;
 const BREEZE_MS = 900;
 const POP_AFTER_BREEZE = 380;
 const POP_MS = 1100;
+const WELCOME_MS = 5 * 60 * 1000;
+const WELCOME_KEY = "tapshop-nav-welcome";
 
 // Phone header: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
 // which fold away. Tapping the logo or the toggle shows them. On every page load the buttons glide open and
@@ -73,7 +75,16 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
       ids.push(window.setTimeout(fn, ms));
     };
     const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const foldAt = 50 + SHOW_MS;
+    // The first dashboard page after signing in (this browser session) keeps the buttons open for
+    // WELCOME_MS, so new visitors see everything. Tapping a page button or the toggle ends that early.
+    let welcome = false;
+    try {
+      if (!sessionStorage.getItem(WELCOME_KEY)) {
+        sessionStorage.setItem(WELCOME_KEY, "1");
+        welcome = true;
+      }
+    } catch {}
+    const foldAt = welcome ? WELCOME_MS : 50 + SHOW_MS;
     const breezeAt = foldAt + BREEZE_AFTER_FOLD;
     const popAt = breezeAt + POP_AFTER_BREEZE;
     later(() => setOpen(true), 50);
