@@ -30,6 +30,11 @@ const POP_AFTER_BREEZE = 380;
 const POP_MS = 1100;
 const WELCOME_MS = 5 * 60 * 1000;
 const WELCOME_KEY = "tapshop-nav-welcome";
+// Every 30 s on phones (while the page buttons are folded) a gold shine sweeps the logo, then its label
+// rolls like a slot machine to "Tap here for menu" for 5 s and rolls back.
+const HINT_EVERY_MS = 30_000;
+const HINT_SHINE_MS = 1000;
+const HINT_HOLD_MS = 5000;
 
 // Phone header: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
 // which fold away. Tapping the logo or the toggle shows them. On every page load the buttons glide open and
@@ -45,6 +50,13 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
   // The toggle's arrow always turns counter-clockwise, half a turn each time the buttons open or close.
   const [spin, setSpin] = useState(0);
   const lastOpen = useRef(false);
+  const [gold, setGold] = useState(false);
+  const [hint, setHint] = useState(false);
+  const [labelW, setLabelW] = useState<[number, number] | null>(null);
+  const labelA = useRef<HTMLSpanElement>(null);
+  const labelB = useRef<HTMLSpanElement>(null);
+  const openRef = useRef(open);
+  openRef.current = open;
   const [phone, setPhone] = useState(true);
   const timers = useRef<number[]>([]);
 
@@ -102,6 +114,33 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
     };
   }, [path]);
 
+  // Measure both labels so the logo can grow and shrink smoothly between them.
+  useEffect(() => {
+    const measure = () => {
+      if (labelA.current && labelB.current) setLabelW([labelA.current.scrollWidth, labelB.current.scrollWidth]);
+    };
+    measure();
+    document.fonts?.ready.then(measure);
+  }, []);
+
+  useEffect(() => {
+    if (!phone || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const ids: number[] = [];
+    const every = window.setInterval(() => {
+      if (openRef.current || document.hidden) return;
+      setGold(true);
+      ids.push(window.setTimeout(() => setGold(false), HINT_SHINE_MS));
+      ids.push(window.setTimeout(() => setHint(true), HINT_SHINE_MS - 100));
+      ids.push(window.setTimeout(() => setHint(false), HINT_SHINE_MS - 100 + HINT_HOLD_MS));
+    }, HINT_EVERY_MS);
+    return () => {
+      clearInterval(every);
+      ids.forEach(clearTimeout);
+      setGold(false);
+      setHint(false);
+    };
+  }, [phone]);
+
   function toggle() {
     stopIntro();
     setOpen((o) => !o);
@@ -124,7 +163,8 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
         <div className={`relative ${pop === "tap" ? "dash-pop" : pop === "glint" ? "dash-glint" : ""}`}>
           <Link
             href="/dashboard"
-            className="dash-logo"
+            className={`dash-logo${gold ? " dash-gold" : ""}`}
+            aria-label={phone ? "TapShop, tap for the menu" : "TapShop"}
             onClick={(e) => {
               // On phones the logo is the big button for the page buttons.
               if (phone) {
@@ -134,7 +174,16 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
               sparkle();
             }}
           >
-            TapShop
+            <span
+              className={`dash-slot${hint ? " alt" : ""}`}
+              style={{ width: labelW ? `${hint ? labelW[1] : labelW[0]}px` : "4.15em" }}
+              aria-hidden="true"
+            >
+              <span className="dash-slot-reel">
+                <span ref={labelA}>TapShop</span>
+                <span ref={labelB} className="dash-slot-alt">Tap here for menu</span>
+              </span>
+            </span>
           </Link>
           {DUST.map((d, i) => (
             <span key={i} aria-hidden="true" className={`dash-dust${d.star ? " star" : ""}`} style={d.style}>
