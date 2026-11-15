@@ -15,7 +15,8 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+// Long scripts with Gemini 3 can take over a minute; the reply streams, so the connection stays busy.
+export const maxDuration = 300;
 
 // Google retires models often and new API keys can't use older ones, so try these in order and
 // move on when one answers 404. GEMINI_MODEL (optional) goes first.
@@ -256,12 +257,13 @@ export async function POST(req: Request) {
 
   // Some API keys and regions reject the JSON schema with a 400; the same request without it
   // still returns JSON, and normalizeScript() checks its shape either way.
-  // Sampling is left at the model's defaults (Gemini 3 is tuned for them). Thinking is LOW: the
-  // default level could run past Vercel's 60 s limit, which cut the reply off with no JSON.
-  // Every call shares one deadline, so we always answer in time with a readable error.
-  const deadline = Date.now() + 50_000;
+  // Sampling is left at the model's defaults (Gemini 3 is tuned for them); thinking is LOW for speed.
+  // The answer streams back as NDJSON: "progress" lines while Gemini writes (and every few seconds
+  // while it thinks, so phones and proxies don't drop a quiet connection), then one "result" line
+  // shaped like GenerateScriptResponse. Validation errors above stay plain JSON.
+  const deadline = Date.now() + 280_000;
   const call = (model: string, withSchema: boolean) =>
-    ai.models.generateContent({
+    ai.models.generateContentStream({
       model,
       contents: buildPrompt(input),
       config: {
@@ -284,49 +286,76 @@ export async function POST(req: Request) {
     }
   };
 
-  try {
-    let response: Awaited<ReturnType<typeof call>> | undefined;
-    let lastErr: unknown;
-    for (const model of MODELS) {
+  const enc = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let chars = 0;
+      const send = (o: object) => controller.enqueue(enc.encode(JSON.stringify(o) + "\n"));
+      const result = (r: GenerateScriptResponse) => send({ type: "result", ...r });
+      send({ type: "progress", chars });
+      const beat = setInterval(() => send({ type: "progress", chars }), 4_000);
       try {
-        response = await tryModel(model);
-        break;
-      } catch (err) {
-        lastErr = err;
-        if ((err as { status?: number })?.status !== 404) throw err;
-        console.warn(`[generate-script] ${model} not available, trying the next model.`);
+        let gen: Awaited<ReturnType<typeof call>> | undefined;
+        let lastErr: unknown;
+        for (const model of MODELS) {
+          try {
+            gen = await tryModel(model);
+            break;
+          } catch (err) {
+            lastErr = err;
+            if ((err as { status?: number })?.status !== 404) throw err;
+            console.warn(`[generate-script] ${model} not available, trying the next model.`);
+          }
+        }
+        if (!gen) throw lastErr;
+
+        let text = "";
+        let finishReason: string | undefined;
+        let sentAt = 0;
+        for await (const chunk of gen) {
+          text += chunk.text ?? "";
+          chars = text.length;
+          finishReason = chunk.candidates?.[0]?.finishReason ?? finishReason;
+          if (Date.now() - sentAt > 600) {
+            send({ type: "progress", chars });
+            sentAt = Date.now();
+          }
+        }
+
+        if (!text) {
+          console.error("[generate-script] Empty response. finishReason:", finishReason);
+          return result({ ok: false, error: finishReason === "SAFETY"
+            ? "The AI declined this request. Try rewording the product details."
+            : "The AI returned an empty response. Please try again." });
+        }
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+        } catch {
+          console.error("[generate-script] Non-JSON response:", finishReason, text.slice(0, 500));
+          return result({ ok: false, error: "The AI returned an unexpected format. Please try again." });
+        }
+        const script = normalizeScript(parsed, input.durationSeconds);
+        result(script ? { ok: true, script } : { ok: false, error: "The AI returned an incomplete script. Please try again." });
+      } catch (err: unknown) {
+        const e = err as { status?: number; name?: string; message?: string };
+        console.error("[generate-script] Gemini error:", e?.status, e?.name, e?.message);
+        const timedOut = e?.name === "TimeoutError" || e?.name === "AbortError" || Date.now() >= deadline;
+        result({ ok: false, error: timedOut ? "The AI took too long this time. Please try again, or pick a shorter length." : explainGeminiError(err) });
+      } finally {
+        clearInterval(beat);
+        controller.close();
       }
-    }
-    if (!response) throw lastErr;
+    },
+  });
 
-    const text = response.text;
-    if (!text) {
-      const reason = response.candidates?.[0]?.finishReason;
-      console.error("[generate-script] Empty response. finishReason:", reason);
-      return fail(502, reason === "SAFETY"
-        ? "The AI declined this request. Try rewording the product details."
-        : "The AI returned an empty response. Please try again.");
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
-    } catch {
-      console.error("[generate-script] Non-JSON response:", text.slice(0, 500));
-      return fail(502, "The AI returned an unexpected format. Please try again.");
-    }
-
-    const script = normalizeScript(parsed, input.durationSeconds);
-    if (!script) return fail(502, "The AI returned an incomplete script. Please try again.");
-
-    return NextResponse.json<GenerateScriptResponse>({ ok: true, script }, { status: 200 });
-  } catch (err: unknown) {
-    const e = err as { status?: number; name?: string; message?: string };
-    console.error("[generate-script] Gemini error:", e?.status, e?.name, e?.message);
-    if (e?.name === "TimeoutError" || e?.name === "AbortError" || Date.now() >= deadline)
-      return fail(504, "The AI took too long this time. Please try again, or pick a shorter length.");
-    return fail(e?.status === 429 ? 429 : 502, explainGeminiError(err));
-  }
+  return new Response(stream, {
+    headers: {
+      "content-type": "application/x-ndjson; charset=utf-8",
+      "cache-control": "no-store, no-transform",
+      "x-accel-buffering": "no",
+    },
+  });
 }
 
 function isKeyError(err: unknown) {

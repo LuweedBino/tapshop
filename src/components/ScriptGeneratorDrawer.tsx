@@ -60,6 +60,38 @@ function scriptToPlainText(script: GeneratedUGCScript): string {
   return lines.join("\n").trim();
 }
 
+// Rough size of a finished script's JSON, only used to turn streamed characters into a percentage.
+function expectedChars(seconds: number) {
+  return 900 + seconds * 60;
+}
+
+// Reads the route's NDJSON stream: "progress" lines, then one "result" line. Null if it ends early.
+async function readStream(res: Response, onProgress: (chars: number) => void): Promise<GenerateScriptResponse | null> {
+  const reader = res.body?.getReader();
+  if (!reader) return null;
+  const dec = new TextDecoder();
+  let buf = "";
+  let result: GenerateScriptResponse | null = null;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (value) buf += dec.decode(value, { stream: true });
+    let nl: number;
+    while ((nl = buf.indexOf("\n")) >= 0) {
+      const line = buf.slice(0, nl).trim();
+      buf = buf.slice(nl + 1);
+      if (!line) continue;
+      try {
+        const ev = JSON.parse(line) as { type?: string; chars?: number } & GenerateScriptResponse;
+        if (ev.type === "progress" && typeof ev.chars === "number") onProgress(ev.chars);
+        else if (ev.type === "result") result = ev;
+      } catch {
+        // A broken line is skipped; a missing result is reported below.
+      }
+    }
+    if (done) return result;
+  }
+}
+
 export default function ScriptGeneratorDrawer({
   open,
   onClose,
@@ -69,6 +101,7 @@ export default function ScriptGeneratorDrawer({
 }: ScriptGeneratorDrawerProps) {
   const [form, setForm] = useState<GenerateScriptRequest>({ ...DEFAULT_FORM, ...initialValues });
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [script, setScript] = useState<GeneratedUGCScript | null>(null);
@@ -134,6 +167,7 @@ export default function ScriptGeneratorDrawer({
     abortRef.current = controller;
 
     setLoading(true);
+    setProgress(null);
     setError(null);
     setFieldErrors({});
 
@@ -144,13 +178,17 @@ export default function ScriptGeneratorDrawer({
         body: JSON.stringify({ ...form, targetAudience: form.targetAudience?.trim() || undefined }),
         signal: controller.signal,
       });
-      const data = (await res.json().catch(() => null)) as GenerateScriptResponse | null;
+      const data = res.headers.get("content-type")?.includes("ndjson")
+        ? await readStream(res, (chars) => setProgress(Math.min(95, Math.round((chars / expectedChars(form.durationSeconds)) * 100))))
+        : ((await res.json().catch(() => null)) as GenerateScriptResponse | null);
       // No JSON means the server was cut off (Vercel's time limit) or crashed, not a bad connection.
       if (!data) {
         setError(
           res.status === 504 || res.status === 408
             ? "The AI took too long this time. Please try again, or pick a shorter length."
-            : `The server had a problem (error ${res.status}). Please try again.`,
+            : res.ok
+              ? "The connection dropped before the script finished. Please try again."
+              : `The server had a problem (error ${res.status}). Please try again.`,
         );
         return;
       }
@@ -165,7 +203,10 @@ export default function ScriptGeneratorDrawer({
       if ((e as Error).name === "AbortError") return;
       setError("Network error. Check your connection and try again.");
     } finally {
-      if (abortRef.current === controller) setLoading(false);
+      if (abortRef.current === controller) {
+        setLoading(false);
+        setProgress(null);
+      }
     }
   }, [form]);
 
@@ -352,7 +393,7 @@ export default function ScriptGeneratorDrawer({
             >
               {loading ? (
                 <>
-                  <Spinner /> Writing your script…
+                  <Spinner /> {progress ? `Writing your script… ${progress}%` : "Thinking…"}
                 </>
               ) : script ? (
                 <>
