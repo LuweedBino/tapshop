@@ -13,40 +13,68 @@ const fmt=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0');
 const plan=s=>s.durationSeconds>0?s.durationSeconds:Math.max(2,s.voiceoverLine.split(/\s+/).length/2.5);
 
 const css=document.createElement('style');
-css.textContent=`#voDialog{width:min(640px,94vw)}
-.vo-prompter{position:relative;max-height:min(46vh,380px);overflow:auto;padding:12px;border-radius:12px;background:#0b0b10;color:#fff;line-height:1.35;margin:10px 0}
-.vo-line{padding:10px 12px;border-radius:10px;opacity:.45;transition:opacity .2s,background .2s;cursor:pointer}
+css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
+#voDialog[open]{display:flex;flex-direction:column;gap:8px;overflow:hidden;max-height:min(92vh,92dvh)}
+.vo-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.vo-head h2{margin:0;font-size:20px}
+.vo-x{flex:none;width:40px;height:40px;padding:0;border-radius:50%;font-size:22px;line-height:1}
+.vo-prompter{height:min(46vh,380px);min-height:120px;overflow:auto;padding:10px;border-radius:12px;background:#0b0b10;color:#fff;line-height:1.3}
+.vo-line{padding:8px 12px;border-radius:10px;opacity:.45;transition:opacity .2s,background .2s;cursor:pointer}
 .vo-line small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
 .vo-line p{margin:0;font-weight:600}
 .vo-line.on{opacity:1;background:#ff5b8322;box-shadow:inset 3px 0 0 #ff5b83}
 .vo-line.done{opacity:.3}
 .vo-empty{font-size:15px!important;opacity:.75;margin:0}
+.vo-set summary{cursor:pointer;font-size:14px;font-weight:600}
+.vo-set summary span{font-weight:400;opacity:.7}
+.vo-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin:8px 0 4px}
+.vo-grid label{display:flex;flex-direction:column;gap:2px;font-size:13px}
+.vo-grid input{width:100%}
+.vo-check{display:flex!important;align-items:center;gap:8px;font-size:14px;margin:6px 0}
+.vo-check input{width:20px;height:20px;flex:none}
+#voSpeedWrap.off{opacity:.4}
+#voEditWrap{margin-top:6px}
 #voEdit{width:100%;margin:6px 0}
-#voDialog .vo-opts{flex-wrap:wrap;gap:6px 14px;align-items:center}
-.vo-check{display:flex!important;align-items:center;gap:6px}
-#voDialog .vo-btns{flex-wrap:wrap;gap:8px}
+#voAudio{width:100%;height:40px}
+.vo-status{margin:0;font-size:13px;min-height:1.2em;opacity:.8}
+.vo-bar{display:flex;gap:8px}
+.vo-bar button{flex:1 1 0;min-width:0;min-height:48px;font-size:16px;font-weight:700}
+.vo-bar button[hidden]{display:none}
 #voRec.vo-live{background:#e5484d;border-color:#e5484d;color:#fff;animation:voPulse 1.2s infinite}
 @keyframes voPulse{50%{box-shadow:0 0 0 6px #e5484d33}}
 @media (prefers-reduced-motion:reduce){#voRec.vo-live{animation:none}}
-#voAudio{width:100%}`;
+@media (max-width:700px){
+  #voDialog[open]{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;margin:0;inset:0;border-radius:0;border:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+  .vo-prompter{flex:1 1 auto;height:auto}
+}`;
 document.head.appendChild(css);
 
 const dlg=document.createElement('dialog');dlg.id='voDialog';dlg.className='closable';dlg.setAttribute('aria-labelledby','voTitle');
-dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button>
-<h2 id="voTitle">🎙️ Voiceover</h2>
-<p class="sub">Read the highlighted line out loud. It moves on by itself, or tap <b>Next scene</b> (→ key on a keyboard).</p>
+// One screen on phones: the script scrolls, everything else stays put, and the buttons sit at the bottom.
+dlg.innerHTML=`<div class="vo-head"><h2 id="voTitle">🎙️ Voiceover</h2><button type="button" class="vo-x" aria-label="Close" title="Close">×</button></div>
 <div id="voPrompter" class="vo-prompter" aria-live="polite"></div>
-<details id="voEditWrap"><summary>✏️ Edit script</summary><textarea id="voEdit" rows="6" placeholder="Type what you'll say, one line per scene"></textarea><button type="button" id="voApply">Use these lines</button></details>
-<div class="row vo-opts"><label>Text size <input id="voSize" type="range" min="18" max="44" value="28"></label>
-<label class="vo-check"><input type="checkbox" id="voAuto" checked> Move to the next line by itself</label>
+<details id="voSet" class="vo-set"><summary>⚙️ Prompter settings <span id="voSetSum"></span></summary>
+<div class="vo-grid"><label>Text size<input id="voSize" type="range" min="18" max="48" value="28"></label>
+<label id="voSpeedWrap">Speed: <b id="voSpeedV">1.0×</b><input id="voSpeed" type="range" min="0.5" max="2" step="0.1" value="1"></label></div>
+<label class="vo-check"><input type="checkbox" id="voManual"> Only move when I tap Next scene</label>
+<details id="voEditWrap"><summary>✏️ Edit script</summary><textarea id="voEdit" rows="5" placeholder="Type what you'll say, one line per scene"></textarea><button type="button" id="voApply">Use these lines</button></details></details>
+<div id="voTake" hidden><audio id="voAudio" controls></audio>
 <label class="vo-check" id="voTextWrap"><input type="checkbox" id="voText" checked> Put each scene's on-screen text on the timeline</label></div>
-<div id="voTake" hidden><audio id="voAudio" controls></audio></div>
-<p id="voStatus" class="sub" role="status"></p>
-<div class="row vo-btns"><button type="button" id="voNext" hidden>Next scene ▸</button><button type="button" class="primary" id="voRec">● Start recording</button><button type="button" id="voRetake" hidden>↺ Retake</button><button type="button" class="primary" id="voUse" hidden>✓ Add to timeline</button></div>`;
+<p id="voStatus" class="vo-status" role="status"></p>
+<div class="vo-bar"><button type="button" id="voNext" hidden>Next scene ▸</button><button type="button" class="primary" id="voRec">● Record</button><button type="button" id="voRetake" hidden>↺ Retake</button><button type="button" class="primary" id="voUse" hidden>✓ Add to timeline</button></div>`;
 document.body.appendChild(dlg);
 const q=id=>dlg.querySelector('#'+id);
 const prompter=q('voPrompter'),recBtn=q('voRec'),nextBtn=q('voNext'),retakeBtn=q('voRetake'),useBtn=q('voUse'),audio=q('voAudio');
 const status=s=>q('voStatus').textContent=s;
+const speed=()=>+q('voSpeed').value||1;
+const manual=()=>q('voManual').checked;
+const PREFS='tapshop-vo-prefs';
+try{const p=JSON.parse(localStorage.getItem(PREFS)||'{}');if(p.size)q('voSize').value=p.size;if(p.speed)q('voSpeed').value=p.speed;q('voManual').checked=!!p.manual}catch{}
+function prefs(){q('voSpeedV').textContent=speed().toFixed(1)+'×';q('voSpeedWrap').classList.toggle('off',manual());q('voSpeed').disabled=manual();
+  q('voSetSum').textContent='· '+(manual()?'tap Next to move':speed().toFixed(1)+'× speed');
+  try{localStorage.setItem(PREFS,JSON.stringify({size:q('voSize').value,speed:q('voSpeed').value,manual:manual()}))}catch{}}
+const small=()=>window.matchMedia('(max-width:700px)').matches;
+if(!small())q('voSet').open=true;
 
 function paint(){
   if(!S.scenes.length)prompter.innerHTML='<p class="vo-empty">No script yet. Open ✏️ Edit script and type what you want to say, one line per scene, or make one with ✨ AI Script Writer above the Studio.</p>';
@@ -60,7 +88,7 @@ function setScenes(scenes){S.scenes=scenes;S.idx=0;S.marks=[];q('voEdit').value=
 
 function clearTake(){if(S.url)URL.revokeObjectURL(S.url);S.url='';S.take=null;audio.removeAttribute('src');q('voTake').hidden=true;useBtn.hidden=retakeBtn.hidden=true;useBtn.disabled=false;recBtn.hidden=false}
 function stopStream(){S.stream?.getTracks().forEach(t=>t.stop());S.stream=null}
-function idle(){clearInterval(S.timer);recBtn.disabled=false;recBtn.textContent='● Start recording';recBtn.classList.remove('vo-live');nextBtn.hidden=true}
+function idle(){clearInterval(S.timer);recBtn.disabled=false;recBtn.textContent='● Record';recBtn.classList.remove('vo-live');nextBtn.hidden=true}
 
 async function start(){
   if(typeof exporting!=='undefined'&&exporting)return;
@@ -69,7 +97,7 @@ async function start(){
   clearTake();S.discard=false;recBtn.disabled=true;
   try{S.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}
   catch{recBtn.disabled=false;status('Allow the microphone to record. Look for the 🔒 or microphone icon next to the web address.');return}
-  S.idx=0;S.marks=[];paint();
+  S.idx=0;S.marks=[];if(small())q('voSet').open=false;paint();
   for(let n=3;n>0;n--){status('Starting in '+n+'…');await wait(1000);if(!S.stream||S.discard){idle();return}}
   const type=['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(t=>MediaRecorder.isTypeSupported?.(t));
   S.chunks=[];
@@ -79,7 +107,7 @@ async function start(){
   S.rec.start(250);S.t0=performance.now();S.marks=[0];
   recBtn.disabled=false;recBtn.textContent='■ Stop';recBtn.classList.add('vo-live');nextBtn.hidden=S.scenes.length<2;
   S.timer=setInterval(()=>{const t=now();status('● Recording '+fmt(t));
-    if(q('voAuto').checked&&S.idx<S.scenes.length-1&&t-S.marks[S.idx]>=plan(S.scenes[S.idx]))advance()},150);
+    if(!manual()&&S.idx<S.scenes.length-1&&t-S.marks[S.idx]>=plan(S.scenes[S.idx])/speed())advance()},150);
 }
 const now=()=>(performance.now()-S.t0)/1000;
 function advance(to){if(!S.rec||S.idx>=S.scenes.length-1)return;const i=to??S.idx+1;if(i<=S.idx)return;S.idx=i;S.marks[i]=now();paint()}
@@ -98,7 +126,7 @@ async function finish(){
     S.take=new File([wav(buf)],'TapShop voiceover.wav',{type:'audio/wav'});
     S.url=URL.createObjectURL(S.take);audio.src=S.url;
     q('voTake').hidden=false;recBtn.hidden=true;useBtn.hidden=retakeBtn.hidden=false;
-    status(`Take ready (${fmt(S.takeDur)}). Listen back, then add it or retake it.`);
+    status(`Take ready (${S.takeDur<60?S.takeDur.toFixed(1)+' s':fmt(S.takeDur)}). Listen back, then add it or retake it.`);
   }catch{status("That take didn't catch any sound. Check your microphone and try again.")}
 }
 
@@ -142,19 +170,22 @@ recBtn.onclick=()=>S.rec?stop():start();
 nextBtn.onclick=()=>advance();
 retakeBtn.onclick=()=>{clearTake();S.idx=0;S.marks=[];paint();start()};
 useBtn.onclick=use;
-q('voSize').oninput=paint;
+q('voSize').oninput=()=>{prefs();paint()};
+q('voSpeed').oninput=prefs;
+q('voManual').onchange=prefs;
+prefs();
 q('voApply').onclick=()=>{if(S.rec)return;const lines=q('voEdit').value.split('\n').map(l=>l.trim()).filter(Boolean).slice(0,40);
   setScenes(lines.map((l,i)=>({...(S.scenes[i]||{sectionType:'Scene '+(i+1),durationSeconds:0,onScreenText:''}),voiceoverLine:l})));q('voEditWrap').open=false};
 prompter.onclick=e=>{const el=e.target.closest('.vo-line');if(!el)return;const i=+el.dataset.i;if(S.rec)advance(i);else{S.idx=i;paint()}};
 dlg.addEventListener('keydown',e=>{if(S.rec&&(e.key==='ArrowRight'||e.key==='ArrowDown')){e.preventDefault();advance()}});
-dlg.querySelector('.dialog-x').onclick=()=>dlg.close();
+dlg.querySelector('.vo-x').onclick=()=>dlg.close();
 dlg.addEventListener('close',()=>{if(S.rec||S.stream){S.discard=true;stop()}clearTake();status('')});
 
 window.veVoiceover=function(script){
   if(typeof exporting!=='undefined'&&exporting)return;
   if(script)setScenes(script.scenes);else paint();
   if(!dlg.open)dlg.showModal();
-  status(S.scenes.length?'Tap ● Start recording when you\'re ready. You get a 3-second countdown.':'');
+  status(S.scenes.length?'Tap ● Record when you\'re ready. You get a 3-second countdown.':'');
 };
 
 // Timeline bar button, next to 🔊 Sound FX (video-toolbar.js sorts it into a section).
