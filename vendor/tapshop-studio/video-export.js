@@ -42,7 +42,9 @@ function stretch(ch,speed){
   return out.subarray(0,n);
 }
 
-async function addSound(off,opened,file,from,to,speed,gain,when){
+// shape (optional): T => volume multiplier at timeline time T (fades and auto-ducking, veTrackGain), written as a volume curve.
+// dest (optional): where it goes, e.g. a sound-style chain (video-fx.js); otherwise the limiter.
+async function addSound(off,opened,file,from,to,speed,gain,when,shape,dest){
   let track=(await opened(file)).audio;
   if(!track||gain<=0||to<=from)return false;
   if(!(await track.canDecode()))throw Error('Audio can’t be decoded here.');
@@ -55,15 +57,21 @@ async function addSound(off,opened,file,from,to,speed,gain,when){
   if(speed!==1)data=data.map(ch=>stretch(ch,speed));
   if(!data[0].length)return false;
   let buf=off.createBuffer(count,data[0].length,rate);data.forEach((ch,c)=>buf.copyToChannel(ch,c));
-  let src=off.createBufferSource(),amp=off.createGain();src.buffer=buf;amp.gain.value=gain;src.connect(amp);amp.connect(off.destination);src.start(when);
+  let src=off.createBufferSource(),amp=off.createGain();src.buffer=buf;amp.gain.value=gain;src.connect(amp);amp.connect(dest||off._out||off.destination);src.start(when);
+  if(shape){const dur=buf.duration,n=Math.max(2,Math.ceil(dur*200)),curve=new Float32Array(n);for(let i=0;i<n;i++)curve[i]=gain*shape(when+i*dur/(n-1));amp.gain.setValueCurveAtTime(curve,when,dur)}
   return true;
 }
 
 async function mixSound(opened,seconds){
-  let off=new OfflineAudioContext(2,Math.ceil(seconds*RATE),RATE),any=false,start=0;
-  for(let c of clips){any=await addSound(off,opened,asset(c).file,c.in,c.out,c.speed,c.volume??1,start)||any;start+=duration(c)}
-  for(let t of extraTracks){if(t.file&&!t.muted)any=await addSound(off,opened,t.file,t.start,t.end,t.speed,t.volume,t.offset)||any}
-  if(musicFile)any=await addSound(off,opened,musicFile,0,Math.min(seconds,music.duration||seconds),1,music.volume,0)||any;
+  let off=new OfflineAudioContext(2,Math.ceil(seconds*RATE),RATE),any=false;off._out=veLimiter(off,off.destination);
+  // Sound styles as in the preview: main clips → their style → whole-video style ← each track's style; then the limiter.
+  await window.veFxReady?.();const fx=(id,to)=>{const g=off.createGain();if(window.veFxChain)veFxChain(off,id,g,[to]);else g.connect(to);return g};
+  const master=fx(window.veAudioFx?.master||'none',off._out),main=fx(window.veAudioFx?.main||'none',master);
+  // Each main clip at its own place on the timeline (startOf), so gaps between clips stay silent, as in the preview.
+  for(let [i,c] of clips.entries()){any=await addSound(off,opened,asset(c).cleanFile||asset(c).file,c.in,c.out,c.speed,c.volume??1,startOf(i),null,main)||any}
+  if(extraTracks.some(t=>t.duck&&t.type==='audio'&&!t.muted))await window.veSpeechReady?.();
+  for(let t of extraTracks){if(t.file&&!t.muted)any=await addSound(off,opened,t.file,t.start,t.end,t.speed,t.volume,t.offset,(t.fadeIn>0||t.fadeOut>0||(t.duck&&t.type==='audio'))?T=>veTrackGain(t,T):null,fx(t.fx||'none',master))||any}
+  if(musicFile)any=await addSound(off,opened,musicFile,0,Math.min(seconds,music.duration||seconds),1,music.volume,0,null,master)||any;
   return any?off.startRendering():null;
 }
 
@@ -86,11 +94,10 @@ window.veFastExport=async function(){
   try{
     say('Getting your video ready…');
     await loadLibrary();
-    let h=+$('resolution').value,[aw,ah]=$('aspect').value.split(':').map(Number),w=Math.round(h*aw/ah);
-    w-=w%2;h-=h%2; // video formats need even sizes
-    let bitrate=h>=1080?8000000:5000000,seconds=total(),frames=Math.ceil(seconds*FPS);
-    let codec=await Mediabunny.getFirstEncodableVideoCodec(['avc','vp9','vp8'],{width:w,height:h,bitrate});
-    if(!codec)throw Error('This device can’t encode video here.');
+    let [w,h]=exportSize(),bitrate=Math.min(w,h)>=1080?10000000:6000000,seconds=total(),frames=Math.ceil(seconds*FPS);
+    let codec=await Mediabunny.getFirstEncodableVideoCodec(['avc'],{width:w,height:h,bitrate});
+    // Only H.264 + AAC MP4s work on every social app; without them the real-time recorder tries next.
+    if(!codec)throw Error('This device can’t make H.264 video here.');
     let mp4=codec==='avc',kind=mp4?'video/mp4':'video/webm';
     opened=opener();
     runs=planRuns(frames);
@@ -98,7 +105,7 @@ window.veFastExport=async function(){
 
     say('Mixing the sound…');
     let mix=await mixSound(opened,seconds),audioCodec=null;
-    if(mix){audioCodec=await Mediabunny.getFirstEncodableAudioCodec(mp4?['aac','opus']:['opus'],{numberOfChannels:2,sampleRate:RATE,bitrate:192000});if(!audioCodec)throw Error('This device can’t encode the sound here.')}
+    if(mix){audioCodec=await Mediabunny.getFirstEncodableAudioCodec(['aac'],{numberOfChannels:2,sampleRate:RATE,bitrate:192000});if(!audioCodec)throw Error('This device can’t encode the sound here.')}
 
     let target=new Mediabunny.BufferTarget();
     // fastStart puts the file's index first, so it can start playing before it has fully downloaded.
@@ -129,7 +136,8 @@ window.veFastExport=async function(){
     await output.finalize();output=null;
     done();
     download(new Blob([target.buffer],{type:kind}),($('projectName').value||'TapShop video')+(mp4?'.mp4':'.webm'));
-    say('Export complete. Your download is ready.');
+    say('Saved! Your MP4 is ready to post anywhere.');
+    window.veSavedClose?.();
     return true;
   }catch(e){
     let stopped=cancelled;

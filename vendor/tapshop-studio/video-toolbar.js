@@ -27,8 +27,8 @@ html .timebar button.tb-btn:disabled{opacity:.4;cursor:default}html .timebar but
 @media (pointer:coarse){.timebar{scroll-snap-type:x proximity}.tb-sec{scroll-snap-align:start}}`;document.head.appendChild(st);
 
 const SECTIONS=[
- ['add','Add',b=>/^(📹|🎵|🔤|🔶|🌈)/.test(label(b))||/openVideoDialog|addTrack\(|addGraphicTrack\(/.test(act(b))],
- ['create','Create',b=>/Graphics|Reviews|Captions|Brand|Smart tools/.test(label(b))],
+ ['add','Add',b=>/^(📹|🎵|🔊|🔤|🔶|🌈)/.test(label(b))||/openVideoDialog|addTrack\(|addGraphicTrack\(/.test(act(b))],
+ ['create','Create',b=>/Graphics|Review|Captions|Brand|Smart tools/.test(label(b))],
  ['edit','Edit',b=>/Undo|Redo|Split|Duplicate|Delete/.test(label(b))||/moveClip|undo\(|redo\(|splitClip|duplicateClip|removeClip/.test(act(b))],
 ];
 const secs={};
@@ -40,6 +40,7 @@ function sort(){
     if(el.id==='clipCount'||el.classList.contains('timeline-zoom')){secs.view.appendChild(el);continue}
     if(el.tagName!=='BUTTON'){secs.view.appendChild(el);continue}
     let s=SECTIONS.find(([,,test])=>test(el));secs[s?s[0]:'create'].appendChild(el)}
+  {let c=[...secs.create.children],rv=c.find(b=>/Review/.test(label(b))),cap=c.find(b=>/Captions/.test(label(b)));if(rv&&cap&&rv.nextElementSibling!==cap)rv.after(cap)}
   for(const k of ['add','create','edit','view'])if(secs[k].parentElement.parentElement!==bar)bar.appendChild(secs[k].parentElement);
   let z=secs.view.querySelector('.timeline-zoom');if(z&&!z.previousElementSibling?.classList.contains('tb-zoomlab')){let l=document.createElement('span');l.className='tb-zoomlab';l.textContent='🔍 Zoom';l.setAttribute('aria-hidden','true');z.before(l);z.setAttribute('aria-label','Zoom the timeline')}
 }
@@ -71,4 +72,18 @@ const queueNames=()=>{if(!nameQ)nameQ=requestAnimationFrame(names)};
 if(tl){new MutationObserver(ms=>{if(ms.some(m=>[...m.addedNodes].some(x=>x.nodeType===1&&!x.matches('.strip-name>span'))))queueNames()}).observe(tl,{childList:true,subtree:true});
   queueNames();addEventListener('resize',queueNames);if(document.fonts)document.fonts.ready.then(queueNames)}
 
+
+// The first time the editor shows, the toolbar glides to its far end and back, so people see every tool.
+// Skipped when everything already fits, when the device asks for less motion, and as soon as the person touches it.
+{let done=false,stop=false;
+  const glide=(to,ms)=>new Promise(res=>{let from=bar.scrollLeft,t0=performance.now();const f=now=>{if(stop)return res();let k=Math.min(1,(now-t0)/ms),e=k<.5?2*k*k:1-Math.pow(-2*k+2,2)/2;bar.scrollLeft=from+(to-from)*e;k<1?requestAnimationFrame(f):res()};requestAnimationFrame(f)});
+  const peek=async()=>{if(done)return;let start=document.getElementById('veStart');if(start&&!start.hidden)return;if(!bar.offsetParent)return;done=true;
+    if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    await new Promise(r=>setTimeout(r,700));let far=bar.scrollWidth-bar.clientWidth;if(far<8||stop)return;
+    for(const ev of ['pointerdown','wheel','touchstart'])bar.addEventListener(ev,()=>stop=true,{once:true,passive:true});
+    bar.style.scrollSnapType='none'; // snapping would make the glide jump between sections
+    await glide(far,Math.min(2600,900+far*1.6));if(!stop){await new Promise(r=>setTimeout(r,450));await glide(0,Math.min(2200,800+far*1.3))}
+    bar.style.scrollSnapType=''};
+  let start=document.getElementById('veStart');if(start)new MutationObserver(peek).observe(start,{attributes:true,attributeFilter:['hidden']});
+  if(document.readyState==='complete')setTimeout(peek,300);else addEventListener('load',()=>setTimeout(peek,300))}
 })();

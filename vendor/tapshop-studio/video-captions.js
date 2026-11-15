@@ -93,7 +93,7 @@ const color=(id,key,v,label)=>`<label>${label}<input type="color" value="${v}" o
 const select=(id,key,v,label,opts,num)=>`<label>${label}<select onchange="capSet('${id}','${key}',${num?'+':''}this.value)">${opts.map(([k,l])=>`<option value="${esc(k)}" ${String(k)===String(v)?'selected':''}>${esc(l)}</option>`).join('')}</select></label>`;
 const toggle=(id,key,v,label)=>`<label>${label}<button type="button" class="graphic-toggle" aria-pressed="${!!v}" onclick="capSet('${id}','${key}',${!v})">${v?'On':'Off'}</button></label>`;
 function panel(t){let st=style(t),id=t.id;
-  return `<div class="cap-panel"><div class="cap-head"><b>Captions</b><span class="sub">${t.words.length} words · tap a style, then fine-tune</span><button type="button" onclick="editGraphic('${id}','hidden',${!t.hidden})">${t.hidden?'Show':'Hide'}</button><button type="button" onclick="capSaveStyle('${id}')">★ Save my style</button><button type="button" onclick="openCaptions()">Redo captions</button><button type="button" onclick="removeGraphic('${id}')">Delete captions</button></div>
+  return `<div class="cap-panel"><div class="cap-head"><b>Captions</b><span class="sub">${t.words.length} words · tap a style, then fine-tune</span><button type="button" onclick="editGraphic('${id}','hidden',${!t.hidden})">${t.hidden?'Show':'Hide'}</button><button type="button" onclick="capSaveStyle('${id}')">★ Save my style</button><button type="button" class="cap-redo" onclick="capRedo('${id}')">🔄 Redo captions</button><button type="button" onclick="removeGraphic('${id}')">Delete captions</button></div>
   <p class="cap-group">Styles</p><div class="cap-presets">${(list=>list.map(([k,p])=>`<span class="cap-pwrap"><button type="button" class="cap-preset ${st.preset===k?'on':''}" onclick="capPreset('${id}','${k}')"><img alt="" src="${previewCanvas(k)}"><span>${esc(p.label)}</span></button>${k.startsWith('my:')?`<button type="button" class="cap-pdel" aria-label="Delete ${esc(p.label)}" title="Delete this style" onclick="capDeleteStyle('${k}',event)">×</button>`:''}</span>`).join(''))(Object.entries(PRESETS))}</div>
   ${myPresets().length?`<p class="cap-group">★ My saved styles</p><div class="cap-presets">${(list=>list.map(([k,p])=>`<span class="cap-pwrap"><button type="button" class="cap-preset ${st.preset===k?'on':''}" onclick="capPreset('${id}','${k}')"><img alt="" src="${previewCanvas(k)}"><span>${esc(p.label)}</span></button>${k.startsWith('my:')?`<button type="button" class="cap-pdel" aria-label="Delete ${esc(p.label)}" title="Delete this style" onclick="capDeleteStyle('${k}',event)">×</button>`:''}</span>`).join(''))(myPresets())}</div>`:`<p class="sub cap-mytip">Tip: style your captions the way you like, then tap ★ Save my style to keep it here.</p>`}
   <div class="extra-track-fields cap-fields">
@@ -113,7 +113,7 @@ function panel(t){let st=style(t),id=t.id;
   ${select(id,'shadow',st.shadow,'Shadow',[['none','None'],['soft','Soft'],['glow','Glow (highlight colour)']])}
   ${toggle(id,'caps',st.caps,'ALL CAPS')}${toggle(id,'bold',st.bold,'Bold')}${toggle(id,'italic',st.italic,'Italic')}${toggle(id,'emph',st.emph,'Grow spoken word')}
   </div>
-  <div class="cap-sync"><span class="sub">Timing</span><button type="button" onclick="capShift('${id}',-.1)">◀ 0.1s earlier</button><button type="button" onclick="capShift('${id}',.1)">0.1s later ▶</button></div>
+  <div class="cap-sync"><span class="sub">Timing</span><button type="button" onclick="capShift('${id}',-.1)">◀ 0.1s earlier</button><button type="button" onclick="capShift('${id}',.1)">0.1s later ▶</button><button type="button" class="cap-redo" onclick="capRedo('${id}')">🔄 Redo captions</button></div>
   <p class="sub cap-wordhelp">Fix words below. Tap a word to jump to it; clear a word to remove it.</p>
   <div class="cap-words">${t.words.map((w,i)=>`<input type="text" value="${esc(w.w)}" size="${Math.max(2,String(w.w).length)}" title="${(t.offset+w.s).toFixed(1)}s" aria-label="Word ${i+1}" onfocus="capSeek('${id}',${i})" onchange="capWord('${id}',${i},this.value)">`).join('')}</div></div>`}
 const renderNoCaptions=renderGraphicTracks;renderGraphicTracks=function(){renderNoCaptions();for(let t of graphicTracks){if(!isCap(t))continue;let box=document.querySelector(`#graphicTracks .strip-row[data-trackid="${t.id}"] .strip-options`);if(box)box.innerHTML=panel(t)}};
@@ -162,7 +162,7 @@ function toWords(r,dur){let words=[];
   let segs=r.mode==='segment'&&r.chunks.length?r.chunks:[{text:r.text||words.map(w=>w.w).join(' '),ts:[0,dur]}],out=[];
   for(let sg of segs){let ws=String(sg.text).trim().split(/\s+/).filter(Boolean);if(!ws.length)continue;let [s,e]=sg.ts||[0,dur];s=Number.isFinite(s)?s:0;e=Number.isFinite(e)&&e>s?e:Math.min(dur,s+ws.length*.35);
     let total=ws.reduce((n,w)=>n+w.length+1,0),at=s;for(let w of ws){let len=(e-s)*(w.length+1)/total;out.push({w,s:at,e:at+len});at+=len}}
-  return out}
+  out.est=true;return out}
 
 // ---------- dialog ----------
 let chosen='pop';
@@ -192,25 +192,103 @@ function setBusy(on){let d=document.getElementById('capDialog');if(!d)return;d.q
 window.openCaptions=function(){if(exporting)return;pause();if(!clips.length){toast('Add a video first, then make captions.');return}let d=dialog();fillStyles();d.querySelector('#capErr').textContent='';setBusy(false);
   let old=graphicTracks.find(isCap);d.querySelector('#capGo').textContent=old?'Replace captions':'Create captions';d.showModal()};
 
-async function run(){let d=dialog(),status=d.querySelector('#capStatus'),prog=d.querySelector('#capProg'),err=d.querySelector('#capErr');err.textContent='';
-  let lang=d.querySelector('#capLang').value,q=d.querySelector('#capModel').value;try{localStorage.setItem('tapshop-captions',JSON.stringify({style:chosen,lang,model:q}))}catch{}
-  busy=true;cancelled=false;setBusy(true);let files={},say=(s,v)=>{status.textContent=s;if(v==null)prog.removeAttribute('value');else prog.value=v};
-  say('Starting the speech engine…');let all=[],list=clips.map((c,i)=>({c,i,start:startOf(i)}));
-  try{for(let k=0;k<list.length;k++){let {c,i,start}=list[k];if(cancelled)return;
+// Listens to every clip on the main timeline and returns its words placed on the timeline (null if cancelled).
+async function listenAll(lang,q,say){let files={},all=[],list=clips.map((c,i)=>({c,i,start:startOf(i)}));
+  say('Starting the speech engine…');
+  for(let k=0;k<list.length;k++){let {c,i,start}=list[k];if(cancelled)return;
       say(`Getting the sound from clip ${k+1} of ${list.length}…`);let audio;try{audio=await clipAudio(c)}catch(x){toast(x.message);continue}
       if(audio.length<1600)continue;let parts=pieces(audio);
       for(let pi=0;pi<parts.length;pi++){let part=parts[pi],dur=part.audio.length/16000,where=`clip ${k+1} of ${list.length}`+(parts.length>1?`, part ${pi+1} of ${parts.length}`:'');if(dur<.1)continue;
       let r=await ask({key:q,models:MODELS[q],gpu:'gpu' in navigator,language:lang,audio:part.audio},m=>{if(m.type==='dl'){files[m.file]=[m.loaded,m.total];let l=0,t=0;for(let [a,b] of Object.values(files)){l+=a;t+=b}say(`Downloading the speech engine (first time only)… ${Math.round(l/t*100)}%`,l/t)}else say(`Listening to ${where}… (this can take a minute)`)});
       if(cancelled)return;say(`Listening to ${where}… (this can take a minute)`);
       for(let w of toWords(r,dur)){let s=start+(part.at+Math.min(w.s,dur))/c.speed,e=start+(part.at+Math.min(w.e,dur))/c.speed;if(s<start+duration(c)-.02)all.push({w:w.w,s:Math.round(s*100)/100,e:Math.round(Math.min(e,start+duration(c))*100)/100})}}}
-    if(cancelled)return;
+  return cancelled?null:all.sort((a,b)=>a.s-b.s)}
+// Puts the words on the timeline as the one Captions track, replacing an old one (its style is kept when the preset matches).
+function placeCaptions(all,preset){snapshot();let old=graphicTracks.find(isCap),keepStyle=old&&old.style?.preset===preset?old.style:null;graphicTracks=graphicTracks.filter(t=>!isCap(t));
+  let t={id:uid(),type:'captions',name:'Captions',offset:0,length:Math.max(total(),all.at(-1).e+.6),hidden:false,words:all,style:keepStyle||presetStyle(preset)};
+  graphicTracks.push(t);renderGraphicTracks();draw();return t}
+async function run(){let d=dialog(),status=d.querySelector('#capStatus'),prog=d.querySelector('#capProg'),err=d.querySelector('#capErr');err.textContent='';
+  let lang=d.querySelector('#capLang').value,q=d.querySelector('#capModel').value;try{localStorage.setItem('tapshop-captions',JSON.stringify({style:chosen,lang,model:q}))}catch{}
+  busy=true;cancelled=false;setBusy(true);let say=(s,v)=>{status.textContent=s;if(v==null)prog.removeAttribute('value');else prog.value=v};
+  try{let all=await listenAll(lang,q,say);
+    if(!all)return;
     if(!all.length){err.textContent='We couldn’t hear any words. Check the video has speech and the right language is picked.';return}
-    all.sort((a,b)=>a.s-b.s);snapshot();let old=graphicTracks.find(isCap),keepStyle=old&&old.style?.preset===chosen?old.style:null;graphicTracks=graphicTracks.filter(t=>!isCap(t));
-    let t={id:uid(),type:'captions',name:'Captions',offset:0,length:Math.max(total(),all.at(-1).e+.6),hidden:false,words:all,style:keepStyle||presetStyle(chosen)};
-    graphicTracks.push(t);expandedStrip=t.id;renderGraphicTracks();draw();d.close();toast(`Captions added — ${all.length} words. Tap the Captions strip to style or fix them.`);
+    let t=placeCaptions(all,chosen);expandedStrip=t.id;renderGraphicTracks();d.close();toast(`Captions added — ${all.length} words. Tap the Captions strip to style or fix them.`);
     requestAnimationFrame(()=>document.querySelector(`#graphicTracks .strip-row[data-trackid="${t.id}"]`)?.scrollIntoView({block:'nearest',behavior:'smooth'}))}
   catch(x){if(!cancelled){err.textContent='Captions didn’t work: '+(x.message||x)+'. Check your internet connection for the first download, then try again.';worker?.terminate();worker=null}}
   finally{busy=false;setBusy(false)}}
+
+// Captions without the dialog, for makers like the B-roll builder: uses the last settings from the Captions
+// dialog (or Pop, English, Fast). say(text) reports progress. Resolves to the number of words added (0 = none heard).
+const lastSettings=()=>{let s={};try{s=JSON.parse(localStorage.getItem('tapshop-captions')||'{}')}catch{}
+  return {preset:hasPreset(s.style)?s.style:'pop',lang:s.lang!=null?s.lang:'english',q:MODELS[s.model]?s.model:'fast'}};
+window.veAutoCaptions=async function(say=()=>{}){if(busy||exporting||!clips.length)return 0;
+  let {preset,lang,q}=lastSettings();
+  busy=true;cancelled=false;try{let all=await listenAll(lang,q,t=>say(t));if(!all||!all.length)return 0;placeCaptions(all,preset);return all.length}
+  catch(x){worker?.terminate();worker=null;throw x}finally{busy=false}};
+
+// Words in one stretch of a video file ({assetId, in, out}, seconds), with times in the file's own seconds.
+// [] when it has no sound; the array's .est is true when only sentence timing was available. Throws if the engine can't run.
+window.veClipWords=async function(c,say=()=>{}){if(busy)throw Error('Captions are busy.');let {lang,q}=lastSettings(),files={};
+  busy=true;cancelled=false;try{let audio;try{audio=await clipAudio({speed:1,...c})}catch{return []}if(audio.length<1600)return [];
+    let out=[];out.est=false;
+    for(let part of pieces(audio)){let dur=part.audio.length/16000;if(dur<.1)continue;
+      let r=await ask({key:q,models:MODELS[q],gpu:'gpu' in navigator,language:lang,audio:part.audio},m=>{if(m.type==='dl'){files[m.file]=[m.loaded,m.total];let l=0,t=0;for(let [a,b] of Object.values(files)){l+=a;t+=b}say(`Downloading the speech engine (first time only)… ${Math.round(l/t*100)}%`)}});
+      let ws=toWords(r,dur);if(ws.est)out.est=true;for(let w of ws)out.push({w:w.w,s:c.in+part.at+Math.min(w.s,dur),e:c.in+part.at+Math.min(w.e,dur)})}
+    return out}
+  catch(x){worker?.terminate();worker=null;throw x}finally{busy=false}};
+// ---------- cloud AI (Groq, through api/words.js) ----------
+// For the B-roll builder: the talking clips' sound is joined into one 16 kHz WAV (with a second of silence
+// between clips, at most ~2 minutes per request), Groq writes down every word with its time, then Groq's text
+// AI marks fumbles and retakes (w.drop). One build counts as one use of the person's daily limit.
+// Resolves to {words: [[{w,s,e,drop?}] per clip, file seconds], left}. Throws (err.code: off, limit, auth, net…)
+// so the caller can fall back to veClipWords.
+const ISO={english:'en',spanish:'es',french:'fr',portuguese:'pt',german:'de',italian:'it',tagalog:'tl',hindi:'hi',japanese:'ja',korean:'ko',chinese:'zh',arabic:'ar'};
+function wav(f){const n=f.length,b=new ArrayBuffer(44+n*2),v=new DataView(b),s=(o,t)=>{for(let i=0;i<t.length;i++)v.setUint8(o+i,t.charCodeAt(i))};
+  s(0,'RIFF');v.setUint32(4,36+n*2,true);s(8,'WAVE');s(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,16000,true);v.setUint32(28,32000,true);v.setUint16(32,2,true);v.setUint16(34,16,true);s(36,'data');v.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){let x=Math.max(-1,Math.min(1,f[i]));v.setInt16(44+i*2,x<0?x*32768:x*32767,true)}return new Blob([b],{type:'audio/wav'})}
+const cloudErr=(m,code)=>Object.assign(Error(m),{code});
+async function cloudPost(body,type,build,lang){let h={'content-type':type,'x-build':build,'x-lang':lang||''};
+  if(window.TapAuth?.on){let s=null;try{s=await TapAuth.session()}catch{}if(!s)throw cloudErr('Not signed in.','auth');h.authorization='Bearer '+s.access_token}
+  let r;try{r=await fetch((window.TAPSHOP_AI||{}).endpoint||'/api/words',{method:'POST',headers:h,body})}catch{throw cloudErr('Couldn’t reach the cloud AI.','net')}
+  let j={};try{j=await r.json()}catch{}if(!r.ok)throw cloudErr(j.error||'Cloud AI error '+r.status,j.code||'http');return j}
+window.veCloudOn=()=>!!(window.TAPSHOP_AI||{}).cloud&&/^https?:/.test(location.protocol);
+window.veCloudWords=async function(list,say=()=>{}){if(!veCloudOn())throw cloudErr('Cloud AI is off.','off');
+  const SR=16000,GAP=SR,MAX=120*SR,build=(crypto.randomUUID?.()||String(Date.now())+Math.random().toString(36).slice(2)),lang=ISO[lastSettings().lang]||'';
+  const batches=[];let cur=null;
+  for(let k=0;k<list.length;k++){say(`Getting the sound from clip ${k+1} of ${list.length}…`);let a=null;try{a=await clipAudio({speed:1,...list[k]})}catch{}if(!a||a.length<1600)continue;
+    for(let from=0;from<a.length;from+=MAX){let piece=a.subarray(from,Math.min(a.length,from+MAX));if(piece.length<1600)continue;
+      if(!cur||cur.len+GAP+piece.length>MAX){cur={len:0,items:[]};batches.push(cur)}if(cur.items.length)cur.len+=GAP;cur.items.push({k,from:from/SR,at:cur.len,a:piece});cur.len+=piece.length}}
+  const words=list.map(()=>[]);let left=null;
+  for(let i=0;i<batches.length;i++){const B=batches[i],f=new Float32Array(B.len);for(const it of B.items)f.set(it.a,it.at);
+    say(batches.length>1?`Cloud AI is listening (part ${i+1} of ${batches.length})…`:'Cloud AI is listening…');
+    const j=await cloudPost(wav(f),'audio/wav',build,lang);if(j.left!=null)left=j.left;
+    for(const w of j.words||[]){const mid=(w.s+w.e)/2*SR,it=B.items.find(x=>mid>=x.at-SR/4&&mid<=x.at+x.a.length+SR/4);if(!it)continue;
+      const c=list[it.k],off=c.in+it.from-it.at/SR;words[it.k].push({w:w.w,s:Math.max(c.in,w.s+off),e:Math.min(c.out,w.e+off)})}}
+  words.forEach(ws=>{ws.est=false;ws.sort((a,b)=>a.s-b.s)});
+  // Mistakes: one list of every word (a clip break is marked with "|" so takes in different clips aren't mixed up).
+  const flat=[];words.forEach(ws=>{if(flat.length&&ws.length)flat.push(null);ws.forEach(w=>flat.push(w))});
+  if(flat.filter(Boolean).length>=6){say('Cloud AI is looking for mistakes…');try{const j=await cloudPost(JSON.stringify({words:flat.map(w=>w?w.w:'|')}),'application/json',build,lang);for(const i of j.drop||[])if(flat[i])flat[i].drop=true}catch(e){console.warn('Mistake finder skipped:',e)}}
+  return {words,left}};
+// 🔄 Redo captions: listens to the timeline as it is now (after deleting, moving or trimming clips) and makes
+// fresh captions in the same style. Cloud AI first when it's on (one use of the daily limit), else on this device.
+const FILL=/^(u+m+|u+h+|uhm+|e+r+m*|a+h+|h+m+|m+h*m+)$/i;
+window.capRedo=async function(id){if(busy||exporting||!clips.length)return;pause();const old=graphicTracks.find(t=>t.id===id)||graphicTracks.find(isCap),keep=old?.style;
+  const btns=()=>document.querySelectorAll('.cap-redo'),say=s=>btns().forEach(b=>{b.textContent=s;b.disabled=true});busy=true;cancelled=false;let all=null,how='';
+  try{let cloudOk=veCloudOn();try{cloudOk=cloudOk&&localStorage.getItem('tapshop-broll-cloud')!=='off'}catch{}
+    if(cloudOk){try{busy=false;const r=await veCloudWords(clips.map(c=>({assetId:c.assetId,in:c.in,out:c.out})),say);busy=true;all=[];
+        clips.forEach((c,i)=>{const st=startOf(i),sp=c.speed||1;for(const w of r.words[i]||[]){if(FILL.test(String(w.w).replace(/[^a-z]/gi,''))||w.e<=c.in||w.s>=c.out)continue;
+          all.push({w:w.w,s:Math.round((st+(Math.max(c.in,w.s)-c.in)/sp)*100)/100,e:Math.round((st+(Math.min(c.out,w.e)-c.in)/sp)*100)/100})}});
+        all.sort((a,b)=>a.s-b.s);how=r.left!=null?` Cloud AI videos left today: ${r.left}.`:''}
+      catch(e){busy=true;console.warn('Cloud AI skipped:',e);all=null;if(e.code==='limit')how=' '+e.message}}
+    if(!all){const {lang,q}=lastSettings();all=await listenAll(lang,q,say);if(all)all=all.filter(w=>!FILL.test(String(w.w).replace(/[^a-z]/gi,'')))}
+    if(!all)return;if(!all.length){toast('We couldn’t hear any words in this video.');return}
+    const t=placeCaptions(all,keep?.preset||lastSettings().preset);if(keep)t.style={...keep};expandedStrip=t.id;renderGraphicTracks();draw();
+    toast(`Fresh captions: ${all.length} words.${how}`)}
+  catch(e){worker?.terminate();worker=null;toast('Couldn’t redo the captions: '+(e.message||e))}
+  finally{busy=false;btns().forEach(b=>{b.textContent='🔄 Redo captions';b.disabled=false})}};
+// Adds ready-made timeline words as the Captions track, in the last style used. Returns the number of words.
+window.vePlaceCaptions=function(words){if(!words?.length)return 0;placeCaptions([...words].sort((a,b)=>a.s-b.s),lastSettings().preset);return words.length};
 
 // ---------- styles and toolbar ----------
 let css=document.createElement('style');css.textContent=`.duration-strip[data-kind="captions"]{background:linear-gradient(#c2557a,#8a3354);border-color:#f19bbb}
@@ -232,4 +310,39 @@ let css=document.createElement('style');css.textContent=`.duration-strip[data-ki
 .cap-group{margin:4px 0 0;font-size:13px;font-weight:700}.cap-mytip{margin:0}`;document.head.appendChild(css);
 let btn=document.createElement('button');btn.type='button';btn.textContent='✨ Captions';btn.title='Auto captions';btn.onclick=()=>openCaptions();
 let smart=[...document.querySelectorAll('.timebar button')].find(b=>/Smart tools/.test(b.textContent));(smart||document.querySelector('.timebar button'))?.after(btn);
+})();
+
+// ---- Speech windows for auto-ducking: [{start, end}] in timeline seconds where someone is talking.
+// From the Captions track's words when there are any; otherwise (and for clips the captions don't cover) from the sound itself:
+// loudness (RMS) in 50 ms steps, above a level worked out per file. Words closer than 0.4 s join into one block, then each block
+// gets 0.15 s before and 0.35 s after, so music dips once per sentence instead of pumping on every word.
+// Speech comes from main clips, video layers, and audio tracks that don't duck themselves (a voiceover you added, say).
+(()=>{
+const STEP=.05,cache=new Map();let dirty=true,last=[];
+// Loudness per 50 ms for one file (decoded at 16 kHz, cached). Returns the numbers, or a promise while it's working, or 'none'.
+function loudness(file){if(!file)return 'none';let r=cache.get(file);if(r)return r;
+  r=(async()=>{try{const buf=await new OfflineAudioContext(1,1,16000).decodeAudioData(await file.arrayBuffer()),SR=buf.sampleRate,hop=Math.round(SR*STEP),n=Math.floor(buf.length/hop),chs=[...Array(buf.numberOfChannels)].map((_,c)=>buf.getChannelData(c)),out=new Float32Array(n);
+      for(let i=0;i<n;i++){let s=0;for(let k=i*hop;k<(i+1)*hop;k++){let v=0;for(const d of chs)v+=d[k];v/=chs.length;s+=v*v}out[i]=Math.sqrt(s/hop)}
+      const sorted=Float32Array.from(out).sort(),floor=sorted[Math.floor(n*.15)]||0,loud=sorted[Math.floor(n*.95)]||0;out.thr=Math.max(floor*2.5,loud*.18,.008);cache.set(file,out);dirty=true;return out}
+    catch{cache.set(file,'none');dirty=true;return 'none'}})();
+  cache.set(file,r);return r}
+const speaking=(r,from,to,at,speed,push)=>{for(let f=Math.max(0,Math.floor(from/STEP));f<Math.min(r.length,Math.ceil(to/STEP));f++)if(r[f]>r.thr){const T=at+(f*STEP-from)/speed;push({start:T,end:T+STEP/speed})}};
+function join(ws,gap){ws.sort((a,b)=>a.start-b.start);const out=[];for(const w of ws){const p=out.at(-1);if(p&&w.start-p.end<gap)p.end=Math.max(p.end,w.end);else out.push({start:w.start,end:w.end})}return out}
+function build(){const raw=[],pending=[],push=w=>raw.push(w);
+  const caps=graphicTracks.filter(t=>t.type==='captions'&&Array.isArray(t.words)&&!t.hidden),said=[];
+  for(const t of caps)for(const w of t.words)if(w.e>w.s)said.push({start:t.offset+w.s,end:t.offset+w.e});
+  raw.push(...said);
+  // Main clips the captions don't cover: listen to their sound.
+  clips.forEach((c,i)=>{if((c.volume??1)<=0)return;const a=asset(c),S=startOf(i),E=S+duration(c);if(said.some(w=>w.end>S&&w.start<E))return;
+    const r=loudness(a?.cleanFile||a?.file);if(r instanceof Promise)pending.push(r);else if(r!=='none')speaking(r,c.in,c.out,S,c.speed||1,push)});
+  // Video layers, and audio tracks that aren't music or sound effects (no duck, no beat, not tied to a strip).
+  for(const t of extraTracks){if(!t.media||t.muted||t.volume<=0)continue;if(!(t.type==='video'||(t.type==='audio'&&!t.duck&&!t.bpm&&!t.sfxFor&&t.lane!=='sfx')))continue;
+    const r=loudness(t.file);if(r instanceof Promise)pending.push(r);else if(r!=='none')speaking(r,t.start,t.end,t.offset,t.speed||1,push)}
+  const blocks=join(raw,.4).map(w=>({start:Math.max(0,w.start-.15),end:w.end+.35}));
+  return {windows:join(blocks,0),pending}}
+window.veSpeechWindows=function(){if(!dirty)return last;const b=build();last=b.windows;if(!b.pending.length)dirty=false;return last};
+// For the export: wait until every file has been listened to, then give the final windows.
+window.veSpeechReady=async function(){for(let k=0;k<4;k++){const b=build();if(!b.pending.length){last=b.windows;dirty=false;return last}await Promise.all(b.pending)}return veSpeechWindows()};
+// Anything on the timeline changing redraws the strips: work the windows out again next time they're needed.
+{const base=decorateStrips;decorateStrips=function(){dirty=true;return base.apply(this,arguments)}}
 })();

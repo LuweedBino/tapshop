@@ -13,7 +13,7 @@ async function store(name,mode='readonly'){return (await db()).transaction(name,
 
 let projId=null,lastSig='',saving=false,warned=false;
 const plain=t=>{let o={};for(let [k,v] of Object.entries(t))if(!['media','node','gain','url','file'].includes(k)&&(v==null||typeof v!=='object'||Array.isArray(v)))o[k]=v;o.hasFile=!!t.file;return o};
-const capture=()=>({clips,selected,graphic:graphicTracks,extra:extraTracks.map(plain),aspect:$('aspect').value,name:$('projectName').value});
+const capture=()=>({clips,selected,graphic:graphicTracks,extra:extraTracks.map(plain),aspect:$('aspect').value,name:$('projectName').value,audioFx:window.veAudioFx?{...veAudioFx,bypass:false}:undefined});
 const empty=()=>!clips.length&&!graphicTracks.length&&!extraTracks.length;
 function thumb(){try{let h=180,w=Math.round(h*canvas.width/canvas.height),c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(canvas,0,0,w,h);return c.toDataURL('image/jpeg',.6)}catch{return null}}
 
@@ -46,10 +46,12 @@ async function fill(rec,files){let st=rec.state,id=rec.id;
   $('aspect').value=st.aspect||'16:9';setAspect();$('projectName').value=st.name||rec.name;
   // Re-load each video under its saved id so the saved clips point at it unchanged.
   for(let aid of new Set(st.clips.map(c=>c.assetId))){let f=files[id+':a:'+aid];if(!f)continue;try{let a=await loadAsset(f);a.id=aid}catch(e){toast(e.message)}}
-  clips=st.clips.filter(c=>assets.some(a=>a.id===c.assetId));selected=Math.min(st.selected??0,clips.length-1);graphicTracks=st.graphic||[];
+  clips=st.clips.filter(c=>assets.some(a=>a.id===c.assetId));selected=Math.min(st.selected??0,clips.length-1);graphicTracks=st.graphic||[];if(window.veAudioFx)Object.assign(veAudioFx,{main:'none',master:'none',bypass:false},st.audioFx||{});
   for(let s of st.extra||[]){addTrack(s.type);let t=extraTracks.at(-1),f=s.hasFile&&Object.entries(files).find(([k])=>k.startsWith(id+':x:'+s.id+':'))?.[1];
-    if(f){targetTrack=t.id;await loadTrackMedia(f)}let {hasFile,...keep}=s;Object.assign(t,keep)}
-  history.length=0;try{redoStack.length=0;syncUndoButtons()}catch{}render();renderTracks();renderGraphicTracks();await seekTimeline(0)}
+    if(f){targetTrack=t.id;await loadTrackMedia(f)}let {hasFile,...keep}=s;Object.assign(t,keep);
+    // Videos saved before fades and ducking existed keep sounding as they did.
+    for(const x of ['fadeIn','fadeOut','duck','duckAmt'])if(!(x in keep))delete t[x]}
+  history.length=0;try{redoStack.length=0;syncUndoButtons()}catch{}render();renderTracks();renderGraphicTracks();await seekTimeline(0);window.veRecleanSound?.()}
 
 // ---------- Projects in the Media Vault ----------
 // One file holding the project and every clip it uses, so it reopens anywhere: MAGIC, the header's
@@ -93,11 +95,11 @@ async function act(a,id){let rec=await req((await store('projects')).get(id));if
 document.addEventListener('click',e=>{if(menu&&!e.target.closest('.vs-menu')&&!e.target.closest('[data-more]'))closeMenu()});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu()});
 function mount(){let start=document.getElementById('veStart');if(!start||document.getElementById('vsRecent'))return;
-  let head=[...start.querySelectorAll('h2')].find(h=>/where you left off/i.test(h.textContent));if(!head)return;
-  head.textContent='Open a saved project file';
+  // (Recent videos goes right after the start screen's three paths; it doesn't wait for any heading.)
+  let head=[...start.querySelectorAll('h2')].find(h=>/where you left off/i.test(h.textContent));if(head)head.textContent='Open a saved project file';
   // Recent videos go at the top, above step 1, and stay hidden until there is one.
   let sec=document.createElement('section');sec.id='vsRecentSec';sec.hidden=true;sec.innerHTML='<h2>Recent videos</h2><p class="vs-help">Saved automatically on this device as you edit.</p>';
-  let box=document.createElement('div');box.id='vsRecent';box.className='vs-recent';sec.appendChild(box);start.querySelector('.vs-lead').after(sec);
+  let box=document.createElement('div');box.id='vsRecent';box.className='vs-recent';sec.appendChild(box);const lead=start.querySelector('.vs-lead');lead?lead.after(sec):start.prepend(sec);
   box.onclick=async e=>{let more=e.target.closest('[data-more]');if(more){e.stopPropagation();openMenu(more,more.dataset.more);return}
     let card=e.target.closest('.vs-rec');if(!card)return;document.getElementById('veStart').hidden=true;try{await open(card.dataset.id)}catch(x){toast('Couldn’t open that video: '+(x.message||x))}};
   box.onkeydown=e=>{if(e.key==='Enter')e.target.closest('.vs-rec')?.click()};
@@ -118,8 +120,8 @@ mount();
 // Refresh the list whenever the start screen is shown again (⌂ Start).
 let startEl=document.getElementById('veStart');if(startEl)new MutationObserver(()=>{if(!startEl.hidden)refresh()}).observe(startEl,{attributes:true,attributeFilter:['hidden']});
 // The Studio's Projects page sends a project here as video.html#recent=<id> or #vault=<id>.
-(()=>{let h=new URLSearchParams(location.hash.slice(1)),recent=h.get('recent'),vault=h.get('vault');if(!recent&&!vault)return;window.history.replaceState(null,'',location.pathname);
-  document.getElementById('veStart').hidden=true;if(recent)open(recent).catch(e=>toast('Couldn’t open that video: '+(e.message||e)));else importVaultItem({id:vault,name:h.get('name')||'Project.tapshop.json',kind:'project',contentType:''})})();
+(()=>{let h=new URLSearchParams(location.hash.slice(1)),recent=h.get('recent'),vault=h.get('vault');if(!recent)return;window.history.replaceState(null,'',location.pathname);
+  document.getElementById('veStart').hidden=true;open(recent).catch(e=>toast('Couldn’t open that video: '+(e.message||e)))})();
 setInterval(()=>save(),EVERY);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')save()});
 window.addEventListener('pagehide',()=>save());

@@ -40,7 +40,7 @@ const relabel=(b,t)=>{if(b)b.textContent=t};
 const open=by('openProjectChoice'),save=by('openSaveChoice'),reset=by('resetPanelLayout');
 const vault=document.getElementById('vaultProject'),sell=document.getElementById('sellVideo'),exp=by('openExport');
 relabel(open,'📂 Open');relabel(save,'💾 Save');relabel(reset,'↺ Reset layout');
-relabel(vault,'⛁ Save to Vault');relabel(sell,'🏷️ Sell this');relabel(exp,'⬇ Export');
+relabel(vault,'⛁ Save to Vault');relabel(sell,'🏷️ Sell this');relabel(exp,'💾 Save video');if(exp)exp.title='Make your video and save it to this device';
 if(open)open.title='Open a saved project';if(save)save.title='Save this project with its clips';
 
 // The name field: a labelled box with a pencil, so it reads as "type your video's name here".
