@@ -185,10 +185,79 @@ const TEMPLATES=[
     {text:'Link in bio',y:82,h:.045,color:K,box:W,anim:'bounce',at:D=>[1.5,Math.max(.5,D-1.5)]}]}];
 const CATS=[['all','All'],['hooks','Hooks'],['product','Product'],['reviews','Reviews'],['howto','How-to'],['lifestyle','Lifestyle'],['promo','Promo']];
 let tplCat='all';
-const TIPS=[['⚡','Hook them fast','Put your best moment or a bold line in the first 2–3 seconds.'],
+// Quick tips: every feature of the site, plus pointers for better short videos. Shown in a strip that
+// scrolls by itself (slowly, looping; it stops while you touch or hover it, and for reduced motion).
+const TIPS=[
+  ['⚡','Hook them fast','Put your best moment or a bold line in the first 2–3 seconds.'],
+  ['🎞️','B-roll Video Maker','Drop in raw clips. It picks the story, music and best moments, then builds the whole video.'],
+  ['⭐','Reviews Video Maker','Paste screenshots of real reviews. They animate in with a rating and “Link in bio”.'],
+  ['⏱','Shorter wins','Cut the slow parts. Most short videos work best under a minute.'],
+  ['✨','Sort my clips','In the B-roll maker, tap ✨ Sort my clips so each clip lands in the part of the story it fits.'],
+  ['👀','Show it early','Show the product or the result in the very first shot. People decide in a second.'],
+  ['✂️','Cut the “um”s','“Cut pauses and ums” trims long pauses and filler words from talking clips for you.'],
+  ['🗑️','Bad takes vanish','Clips that only say “um”, “ok” or “let me start over” are left out automatically.'],
+  ['🗣','Talk to one person','Say “you”, not “you guys”. It feels like a chat with a friend, not an ad.'],
+  ['🔇','Clean up the sound','Removes fan and AC hum and the click when you start or stop recording. Also in ✦ Smart tools.'],
+  ['💬','Add captions','Lots of people watch with the sound off. ✨ Captions writes every word, timed to your voice.'],
   ['⬇','Mind the edges','App buttons cover the bottom and right side. Keep words near the middle.'],
-  ['💬','Add captions','Lots of people watch with the sound off.'],
-  ['⏱','Shorter wins','Cut the slow parts. Most short videos work best under a minute.']];
+  ['★','Save your caption style','Style your captions once, tap ★ Save my style, and reuse it on every video.'],
+  ['🔄','Redo captions','Changed your clips? Tap the Captions strip → 🔄 Redo captions. It re-listens and keeps your style.'],
+  ['🔢','Use numbers','“3 reasons”, “in 10 seconds”: numbers in a hook make people stay to the end.'],
+  ['🎵','Free music','78 styles, each with its own tune, made on your device and free to use anywhere. Tap ▶ to listen.'],
+  ['🔊','Sound effects','Tap 🔊 Sound FX for 12 free sounds: swoosh, pop, cha-ching, shutter, sparkle, bass drop and more. Move the playhead first; Add drops it right there.'],
+  ['🎞️','Makers add sounds too','The B-roll and Reviews makers now pick creator music and add sound effects as words and reviews pop in. Turn it off with one tick box.'],
+  ['🫧','Sounds on text and stickers','Double-tap a text box or sticker and pick a 🔊 Sound effect. It plays the moment it appears and moves with it.'],
+  ['🎚️','Pro sound styles','Tap 🎚️ Sound for Podcast voice, Warm lo-fi, Punchy promo or Crisp clean on your clips or the whole video. Each music track has one too. Compare turns them off to hear the difference.'],
+  ['〰️','See your sound','Audio strips show waveforms, so you can spot beats, quiet parts and drops. While playing, a little 🎙️ bar on the music shows it dipping under your voice.'],
+  ['🎙️','Music ducks under your voice','Music tracks get quieter by themselves while someone talks, and come back up after. Change how much with Duck strength, or switch it off.'],
+  ['🥁','Snap to the beat','Free music and songs you upload show pink beat marks on the timeline (we find your song’s tempo on your device). Drag clips, text or stickers near one and they snap right onto the beat. Hold Shift to place freely.'],
+  ['🔍','Find music fast','In 🎵 Free music, type a vibe like “cozy coffee” (typos are fine), tap a filter like ⚡ 2-second hooks, or pick a pace. ≈ shows similar tracks, ☆ saves favorites.'],
+  ['⭐','Sales and story music','10 tracks for honest reviews, gift guides, testimonials, small business, travel, BookTok and more. “Link in bio finale” ends on a bright final chord.'],
+  ['💻','Tech and style music','15 tracks for dupes, packing, perfume, gaming setups, app demos, Notion tours, drop tests, side hustles, scam warnings and more.'],
+  ['🏡','Lifestyle music','15 tracks for desk setups, cozy nights, recipes, restocks, pets, coffee, plants, sneakers, GRWM, jewelry and hair. All leave room for your voice.'],
+  ['🛍️','Music made for creators','10 tracks for hooks, unboxings, reviews, sales, hauls and more. They leave room in the middle so your voice stays clear.'],
+  ['✨','Before & after music','“Before & after reveal” starts quiet and muffled, then drops into a bright beat. Put your big reveal right on the drop.'],
+  ['🎶','Music on any track','Tap 🎵 Audio, then 🎵 Free music, or ＋ Add media for a song of your own.'],
+  ['💡','Light from the front','Face a window. Soft daylight on your face beats any filter.'],
+  ['🎬','Gentle zooms','Slow zooms keep still shots alive. Change any clip in its Movement menu.'],
+  ['👆','Tap to pick a strip','Tap a strip on the timeline to pick it (pink outline), then drag it left or right to move it in time.'],
+  ['↕️','Drag up or down','Drag a strip up or down to put it on another row, or between rows for a new layer of its own. Empty rows disappear.'],
+  ['✌️','Double-tap to edit','Double-tap a strip to open its editing menu. Double-tap again to close it.'],
+  ['🎬','Clips become layers','Drag a main video clip up off its row and it becomes a picture-in-picture layer. Drag it back down to undo.'],
+  ['✏️','Edit right on the preview','Double-tap text, a sticker or a video on the preview: its editing menu pops up. Tap ✓ Apply, or anywhere else, to close it.'],
+  ['✋','Move anything','Tap text, a sticker or a video on the preview, then drag it wherever you want it on the screen.'],
+  ['📐','Resize anything','On the preview, pull a corner to make it bigger or smaller. Text and shapes also have side handles to stretch them wider or taller.'],
+  ['🧲','Delete closes the gap','Delete a clip and its text, captions and music slide over to fill the space.'],
+  ['🎤','Get close to the mic','Film within arm’s length of your phone, or use earbuds, for clear sound.'],
+  ['↶','Undo anything','Made a mistake? ↶ Undo brings back clips, text, captions and music.'],
+  ['✂','Split a clip','Move the playhead where you want the cut, then tap ✂ Split.'],
+  ['📏','Film upright','Hold your phone vertically for TikTok, Reels and Shorts. No black bars.'],
+  ['↔️','Resize your video','Tap a video on the preview, then drag it to move it or pull a corner to resize it. Double-tap puts it back.'],
+  ['🔍','Giant text zooms','Make text huge, even bigger than the video, then pick the “Giant → normal” animation for a big zoom-out reveal.'],
+  ['🔤','Text on screen','Add titles and labels with 🔤 Text. Drag them on the preview, pull the corners to resize.'],
+  ['🔶','Shapes & stickers','Arrows, bubbles and badges point eyes right where you want them.'],
+  ['✋','Keep it steady','Lean on something or use both hands. Shaky shots get scrolled past.'],
+  ['🌈','Effects','Vignette, film grain, glow, cinema bars and more, in 🌈 Effects.'],
+  ['📹','Picture in picture','Add a video layer on top of your main video, like a reaction bubble. Shrink it and tuck it in a corner.'],
+  ['🎯','One video, one idea','Pick one message per video. Save the rest for the next one.'],
+  ['📐','Pick the right shape','Choose where you’ll post first (TikTok, Reels, YouTube…) so it’s the right size.'],
+  ['📷','Use your camera','Record straight into the editor with 📷 Use camera, on a phone or a laptop.'],
+  ['✂️','New shot every 2–3 s','Quick cuts keep eyes on the screen. The B-roll maker cuts on the beat for you.'],
+  ['⏩','Speed it up','Clip inspector → Playback speed for slow-mo moments or a fast-forward montage.'],
+  ['🎨','Color looks','Vivid, Warm film, Cinematic and more in each clip’s Color look menu.'],
+  ['👉','Tell them what to do','End with one clear ask: “Link in bio”, “Follow for part 2” or “Comment your pick”.'],
+  ['📝','Templates','Step 3 has ready-made hooks, product and promo layouts. Tap one, then add your clips.'],
+  ['🔁','Loop it','End on a shot that flows back into the start, so people watch it twice.'],
+  ['🕘','Recent videos','Everything saves automatically on this device. Reopen any video from Recent videos.'],
+  ['😊','Real reactions win','A genuine face and honest words sell better than a perfect script.'],
+  ['💾','Save video','Saves a 1080p MP4 that TikTok, Instagram, Facebook and YouTube all accept.'],
+  ['📱','Stay on the page','While your video saves, keep this page open and your screen awake.'],
+  ['🧪','Test your hooks','Post the same video with two different openings. Keep the one that wins.'],
+  ['🌙','Light or dark','Switch the look any time with the toggle at the top right.'],
+  ['🏷️','Mark your ads','Paid or gifted? Add #ad or use the app’s paid-partnership label.'],
+  ['📅','Post often','A steady posting schedule beats one perfect video.'],
+    ['🎧','Trending sounds','Add a trending sound in TikTok or Instagram on top of your video before you post.'],
+  ['🔒','Private by default','Your clips are edited on your own device. They only leave it when you save them to your Vault.']];
 const PHOTO_SECONDS=3;
 let platform='tiktok',template=null,pending=[];
 try{let p=localStorage.getItem('tapshop-video-platform');if(PLATFORMS.some(x=>x.id===p))platform=p}catch{}
@@ -200,9 +269,12 @@ const css=`#veStart[hidden],#veStart [hidden]{display:none!important}
 #veStart{position:fixed;inset:0;z-index:40;overflow:auto;background:var(--ts-bg,#fafafa);color:var(--ts-text,#171717);-webkit-overflow-scrolling:touch}
 #veStart .vs-wrap{max-width:1040px;margin:0 auto;padding:16px 16px 120px}
 #veStart .vs-top{display:flex;align-items:center;gap:10px;margin-bottom:18px}
-#veStart .vs-top .sp{flex:1}
+#veStart .vs-top .sp{flex:1}#veStart .vs-acct{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;border:1px solid var(--ts-border,#8a7aa855);text-decoration:none;font-size:16px}#veStart .vs-acct[hidden]{display:none}#veStart .vs-top .theme-toggle{min-height:36px;padding:0 12px}@media(max-width:420px){#veStart .vs-top{gap:6px}#veStart .vs-top .theme-label{display:none}}
+#veStart .vs-brand{font-weight:800;font-size:19px;letter-spacing:-.02em}#veStart .vs-brand em{font-style:normal;color:#ff4f8b;margin-left:1px}
 #veStart h1{font-size:clamp(26px,5vw,38px);line-height:1.1;margin:6px 0 6px;letter-spacing:-.03em}
-#veStart .vs-lead{margin:0 0 22px;max-width:620px}
+#veStart .vs-lead{margin:0 0 22px;max-width:none}
+#veStart .vs-lead,#veStart #vsRecentSec,#veStart .vs-tipsec{border:3px solid #ff3ea566;border-radius:18px;padding:12px 14px 14px}html.ts-dark #veStart .vs-lead,html.ts-dark #veStart #vsRecentSec,html.ts-dark #veStart .vs-tipsec{border-color:#ff3ea5b3}
+#veStart #vsRecentSec,#veStart .vs-tipsec{margin:18px 0 6px}#veStart .vs-tipsec .vs-qh h2{margin-top:4px}#veStart #vsRecentSec>h2:first-child{margin-top:4px}
 #veStart .vs-intro{color:var(--ts-muted,#737373);font-size:15px;margin:2px 0 14px;line-height:1.5;letter-spacing:.005em}
 #veStart .vs-paths{list-style:none;margin:0;padding:0;border:1px solid var(--ts-border,#e5e5e5);border-radius:18px;background:var(--ts-surface,#fff);overflow:hidden}
 #veStart .vs-paths button{display:flex;align-items:center;gap:14px;width:100%;text-align:left;padding:14px 16px!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;color:inherit!important;cursor:pointer;transition:background .2s}
@@ -234,7 +306,7 @@ const css=`#veStart[hidden],#veStart [hidden]{display:none!important}
 #veStart .vs-plat small{display:block;font-weight:500;font-size:11px;opacity:.7;margin-top:2px;color:inherit!important}
 html body #veStart .vs-plat[aria-pressed="true"]{position:relative;background:var(--ts-primary,#171717)!important;color:var(--ts-on-primary,#fff)!important;border-color:var(--ts-primary,#171717)!important;box-shadow:0 0 0 3px #ff3ea5!important}
 #veStart .vs-plat[aria-pressed="true"]::after{content:'✓';position:absolute;top:-8px;right:-8px;width:20px;height:20px;box-shadow:0 0 0 2px var(--ts-bg,#fafafa);border-radius:50%;background:#ff3ea5;color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center}
-#veStart .vs-quick{display:grid;gap:10px;margin:0 0 6px}#veStart .vs-quick .vs-reviews{margin:0}
+#veStart .vs-quick{display:grid;gap:10px;margin:0 0 6px}.vs-quick .vs-qh h2{margin-top:8px}#veStart .vs-quick{border:3px solid #ff3ea566;border-radius:18px;padding:4px 14px 14px;margin:14px 0 6px}html.ts-dark #veStart .vs-quick{border-color:#ff3ea5b3}#veStart .vs-steps,#veStart .vs-quick{scroll-margin-top:12px}#veStart .vs-steps{border:3px solid #ff3ea566;border-radius:18px;padding:4px 14px 16px;margin:18px 0 6px}html.ts-dark #veStart .vs-steps{border-color:#ff3ea5b3}#veStart .vs-steps .vs-qh h2{margin-top:8px}#veStart .vs-steps .vs-qh .vs-help{margin:0 0 2px}#veStart .vs-steps .vs-qh+h2{margin-top:18px}#veStart .vs-steps .vs-tpls{margin:0 -14px;padding-left:14px;padding-right:14px;scroll-padding-left:14px}.vs-quick .vs-qh .vs-help{margin:0 0 2px}#veStart .vs-quick .vs-reviews{margin:0}
 #veStart .vs-drop{border:2px dashed var(--ts-border-strong,#d4d4d4);border-radius:16px;background:var(--ts-surface,#fff);padding:22px 16px;text-align:center}
 #veStart .vs-drop.over{border-color:var(--ts-primary,#171717);background:var(--ts-soft,#f5f5f5)}
 #veStart .vs-drop .big{font-size:30px;line-height:1}
@@ -251,7 +323,7 @@ html body #veStart .vs-plat[aria-pressed="true"]{position:relative;background:va
 #veStart .vs-file .x{position:absolute;top:4px;right:4px;width:26px;height:26px;padding:0;border-radius:50%;font-size:15px;line-height:1;display:grid;place-items:center}
 #veStart .vs-file small{display:block;font-size:11px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* Two rows that scroll sideways together, as one strip. */
-#veStart .vs-tpls{display:grid;grid-template-rows:repeat(2,auto);grid-auto-flow:column;grid-auto-columns:160px;gap:12px;margin:0 -16px;padding:2px 16px 10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scroll-padding-left:16px;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin}#veStart .vs-tpl{scroll-snap-align:start}
+#veStart .vs-tpls{display:grid;grid-template-rows:auto;grid-auto-flow:column;grid-auto-columns:160px;gap:12px;margin:0 -16px;padding:2px 16px 10px;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x proximity;scroll-padding-left:16px;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin}#veStart .vs-tpl{scroll-snap-align:start}
 #veStart .vs-tpl{cursor:pointer;border:1px solid var(--ts-border,#e5e5e5);border-radius:16px;background:var(--ts-surface,#fff);padding:8px;outline:none;transition:border-color .15s}
 #veStart .vs-tpl:hover{border-color:var(--ts-border-strong,#d4d4d4)}
 #veStart .vs-tpl:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--ts-primary,#171717) 25%,transparent)}
@@ -266,9 +338,10 @@ html body #veStart .vs-plat[aria-pressed="true"]{position:relative;background:va
 #veStart .vs-cats button{flex:none;padding:8px 14px;border-radius:999px!important;font-size:13px}
 #veStart .vs-cats button span{opacity:.55;font-weight:500;margin-left:2px}
 #veStart .vs-more{display:flex;flex-wrap:wrap;gap:8px}
-#veStart .vs-tips{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
-#veStart .vs-tip{border:1px solid var(--ts-border,#e5e5e5);border-radius:16px;background:var(--ts-surface,#fff);padding:14px}
-#veStart .vs-tip b{display:block;font-size:14px;margin:6px 0 4px}
+#veStart .vs-tips{display:flex;gap:10px;overflow-x:auto;overscroll-behavior-x:contain;padding:2px 2px 8px;scrollbar-width:thin;-webkit-overflow-scrolling:touch;outline:none}
+#veStart .vs-tips::-webkit-scrollbar{height:6px}#veStart .vs-tips::-webkit-scrollbar-thumb{background:#ff3ea566;border-radius:9px}
+#veStart .vs-tip{flex:0 0 230px;border:1px solid var(--ts-border,#e5e5e5);border-radius:16px;background:var(--ts-surface,#fff);padding:14px}
+#veStart .vs-tip>span{font-size:22px;line-height:1}#veStart .vs-tip b{display:block;font-size:14px;margin:6px 0 4px}
 #veStart .vs-tip p{margin:0;font-size:13px;line-height:1.45;color:var(--ts-muted,#737373)}
 #veStart .vs-go{position:fixed;left:0;right:0;bottom:0;z-index:41;background:color-mix(in srgb,var(--ts-surface,#fff) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid var(--ts-border,#e5e5e5);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
 #veStart .vs-go .in{max-width:1040px;margin:0 auto;display:flex;align-items:center;gap:12px}
@@ -288,7 +361,7 @@ function build(){
   let style=document.createElement('style');style.textContent=css;document.head.appendChild(style);
   let el=document.createElement('div');el.id='veStart';el.setAttribute('role','region');el.setAttribute('aria-label','Start a new video');
   el.innerHTML=`<div class="vs-wrap">
-  <div class="vs-top"><button type="button" onclick="location.href='index.html'">← Studio</button><span class="sp"></span><button type="button" id="vsBlank" title="Skip this and start from scratch">Video Editor</button></div>
+  <div class="vs-top"><button type="button" onclick="location.href='index.html'">← Studio</button><span class="sp"></span><button type="button" class="theme-toggle" id="vsTheme" role="switch" aria-checked="true" aria-label="Dark mode"><span class="theme-symbol" aria-hidden="true">☀</span><span class="theme-label">Dark mode</span><span class="theme-track" aria-hidden="true"><span></span></span></button><button type="button" id="vsBlank" title="Skip this and start from scratch">Video Editor</button></div>
   <h1>Make a short video</h1>
   <div class="vs-lead"><p class="vs-intro">To get started, pick one of the three paths:</p>
   <ol class="vs-paths">
@@ -296,26 +369,28 @@ function build(){
   <li class="vs-or" aria-hidden="true"><span>or</span></li>
   <li><button type="button" data-path="steps"><span class="vs-pi" aria-hidden="true">1·2·3</span><span class="vs-pt"><b>Follow the 1-2-3 steps</b><small>Choose a shape, add clips, add a template</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
   <li class="vs-or" aria-hidden="true"><span>or</span></li>
-  <li><button type="button" data-path="blank"><span class="vs-pi" aria-hidden="true">✎</span><span class="vs-pt"><b>Skip all this and tap Video Editor</b><small>At the top right, to create from scratch</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
+  <li><button type="button" data-path="blank"><span class="vs-pi" aria-hidden="true">✎</span><span class="vs-pt"><b>Want to create from scratch?</b><small>Skip all this and tap HERE or the Video Editor button at the top right</small></span><span class="vs-pa" aria-hidden="true">›</span></button></li>
   </ol><button type="button" class="vs-recentlink" id="vsRecentLink" hidden>or continue with a recent video <span aria-hidden="true">›</span></button></div>
+  <section class="vs-steps" id="vsSteps" aria-label="1-2-3 Steps"><div class="vs-qh"><h2>1-2-3 Steps</h2><p class="vs-help">Choose a size format or social media platform, add your clips, and add a template if you like.</p></div>
   <h2><span class="vs-step">1</span>Where will you post it?</h2><p class="vs-help">This sets the shape of your video.</p>
   <div class="vs-plats" id="vsPlats"></div>
   <h2><span class="vs-step">2</span>Add your videos and photos</h2><p class="vs-help">They go on the timeline in this order: videos first, then photos (${PHOTO_SECONDS} seconds each).</p>
-  <div class="vs-drop" id="vsDrop"><div class="big" aria-hidden="true">＋</div><p>Drop files here, or choose them</p><div class="vs-row"><button type="button" class="primary" id="vsPick">Choose from device</button><button type="button" id="vsCamera">📷 Use camera</button><button type="button" id="vsVault">⛁ From Media Vault</button></div>
+  <div class="vs-drop" id="vsDrop"><div class="big" aria-hidden="true">＋</div><p>Drop files here, or choose them</p><div class="vs-row"><button type="button" class="primary" id="vsPick">Choose from device</button><button type="button" id="vsCamera">📷 Use camera</button></div>
   <input type="file" id="vsInput" accept="video/*,image/*" multiple hidden></div>
   <div class="vs-files" id="vsFiles" hidden></div>
   <button type="button" id="vsCamSave" hidden></button>
   <h2><span class="vs-step">3</span>Pick a template <span style="font-weight:500;color:var(--ts-muted,#737373);font-size:13px">(optional)</span></h2><p class="vs-help">Ready-made text and timing for short videos. Tap again to unselect.</p>
   <div class="vs-cats" id="vsCats" role="group" aria-label="Template type"></div>
   <div class="vs-tpls" id="vsTpls"></div>
-  <h2>Pick up where you left off</h2><p class="vs-help">Saved projects need their original videos, so add those in step 2 first.</p>
-  <div class="vs-more"><button type="button" id="vsVaultProject">⛁ Saved project from Vault</button><button type="button" id="vsFileProject">Open project file</button><button type="button" id="vsDemo">▶ Try a sample video</button></div>
-  <h2>Quick tips</h2>
-  <div class="vs-tips">${TIPS.map(([i,t,p])=>`<div class="vs-tip"><span aria-hidden="true">${i}</span><b>${esc(t)}</b><p>${esc(p)}</p></div>`).join('')}</div>
+  </section>
+  <section class="vs-tipsec" aria-label="Quick tips"><div class="vs-qh"><h2>Quick tips</h2><p class="vs-help">${TIPS.length} tips on every feature, plus ideas for better videos. Swipe through, or just watch them go by.</p></div>
+  <div class="vs-tips" id="vsTips" tabindex="0" aria-label="Quick tips, scrolls sideways">${TIPS.map(([i,t,p])=>`<div class="vs-tip"><span aria-hidden="true">${i}</span><b>${esc(t)}</b><p>${esc(p)}</p></div>`).join('')}</div></section>
   </div>
   <div class="vs-go"><div class="in"><div class="sum" id="vsSum" aria-live="polite"></div><button type="button" class="primary" id="vsGo">Start editing →</button></div></div>`;
   document.body.appendChild(el);
   const $$=id=>document.getElementById(id);
+  // Light/dark switch at the top right, kept in step with the editor's own switch.
+  {let t=$$('vsTheme'),sync=()=>{let dark=!document.body.classList.contains('light');t.setAttribute('aria-checked',String(dark));t.querySelector('.theme-label').textContent=dark?'Dark mode':'Light mode';t.querySelector('.theme-symbol').textContent=dark?'☀':'☾';t.title=dark?'Switch to light mode':'Switch to dark mode'};t.onclick=()=>theme();sync();new MutationObserver(sync).observe(document.body,{attributes:true,attributeFilter:['class']})}
   $$('vsPlats').innerHTML=PLATFORMS.map(p=>`<button type="button" class="vs-plat" data-id="${p.id}" aria-pressed="false">${shapeBox(p.aspect)}<span><b>${esc(p.name)}</b><small>${esc(p.sub)}</small></span></button>`).join('');
   $$('vsPlats').onclick=e=>{let b=e.target.closest('.vs-plat');if(!b)return;platform=b.dataset.id;try{localStorage.setItem('tapshop-video-platform',platform)}catch{}sync()};
   $$('vsCats').innerHTML=CATS.map(([id,label])=>`<button type="button" data-cat="${id}">${label} <span>${id==='all'?TEMPLATES.length:TEMPLATES.filter(t=>t.cat===id).length}</span></button>`).join('');
@@ -331,7 +406,7 @@ function build(){
   let drop=$$('vsDrop');
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');addFiles(e.dataTransfer.files)};
-  $$('vsVault').onclick=()=>{if(typeof VaultPicker==='undefined'){toast('Media Vault is only available inside TapShop.');return}VaultPicker.open({title:'Add from your Media Vault',kinds:['video','image'],onPick:async it=>{try{toast('Loading '+it.name+'…');addFiles([await VaultPicker.file(it)])}catch(e){toast(e.message)}}})};
+  if($$('vsVault'))$$('vsVault').onclick=()=>{if(typeof VaultPicker==='undefined'){toast('Media Vault is only available inside TapShop.');return}VaultPicker.open({title:'Add from your Media Vault',kinds:['video','image'],onPick:async it=>{try{toast('Loading '+it.name+'…');addFiles([await VaultPicker.file(it)])}catch(e){toast(e.message)}}})};
   $$('vsFiles').onclick=e=>{let b=e.target.closest('.x');if(!b)return;let i=+b.dataset.i,[gone]=pending.splice(i,1);if(gone?.url)URL.revokeObjectURL(gone.url);sync()};
   $$('vsBlank').onclick=()=>{applyAspect();close()};
   // The three paths in the intro: jump to the quick makers, jump to step 1, or open the editor.
@@ -340,12 +415,20 @@ function build(){
    link.onclick=()=>{let to=document.getElementById('vsRecentSec');to?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});if(to){to.classList.remove('vs-flash');void to.offsetWidth;to.classList.add('vs-flash')}}}
   el.querySelector('.vs-paths').onclick=e=>{let b=e.target.closest('[data-path]');if(!b)return;let p=b.dataset.path;
     if(p==='blank'){$$('vsBlank').click();return}
-    let to=p==='quick'?document.getElementById('vsQuick'):$$('vsPlats')?.previousElementSibling?.previousElementSibling;
+    let to=p==='quick'?document.getElementById('vsQuick'):$$('vsSteps');
     to?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'});
     if(to){to.classList.remove('vs-flash');void to.offsetWidth;to.classList.add('vs-flash')}};
-  $$('vsDemo').onclick=async()=>{if(hasWork()&&window.veNewProject)await veNewProject();applyAspect();close();loadDemo()};
-  $$('vsVaultProject').onclick=async()=>{await importPending();openVaultPicker(['project'])};
-  $$('vsFileProject').onclick=async()=>{await importPending();$('restore').click()};
+  // Quick tips glide sideways by themselves (about 24 px a second), looping through a copy of the cards.
+  // Any touch, hover, wheel or keyboard focus pauses it; it carries on 4 s after. Off for reduced motion.
+  {const box=$$('vsTips');if(box&&!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    box.insertAdjacentHTML('beforeend',box.innerHTML.replace(/class="vs-tip"/g,'class="vs-tip" aria-hidden="true"'));
+    let pauseUntil=0,last=0,pos=0,hover=false;const hold=()=>{pauseUntil=performance.now()+4000;pos=box.scrollLeft};
+    ['pointerdown','touchstart','wheel','focusin'].forEach(ev=>box.addEventListener(ev,hold,{passive:true}));box.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')hover=true});box.addEventListener('pointerleave',()=>{hover=false;hold()});
+    box.addEventListener('scroll',()=>{if(performance.now()<pauseUntil){const half=box.scrollWidth/2;if(box.scrollLeft>=half)box.scrollLeft-=half;pos=box.scrollLeft}},{passive:true});
+    const step=t=>{const dt=Math.min(100,t-(last||t));last=t;const vs=document.getElementById('veStart'),on=!!vs&&vs.getClientRects().length>0&&!document.hidden;
+      if(on&&!hover&&t>=pauseUntil&&box.scrollWidth>box.clientWidth){pos+=dt*.024;const half=box.scrollWidth/2;if(pos>=half)pos-=half;box.scrollLeft=pos}requestAnimationFrame(step)};requestAnimationFrame(step)}}
+  if($$('vsVaultProject'))$$('vsVaultProject').onclick=async()=>{await importPending();openVaultPicker(['project'])};
+  if($$('vsFileProject'))$$('vsFileProject').onclick=async()=>{await importPending();$('restore').click()};
   $$('vsGo').onclick=start;
   sync();
 }

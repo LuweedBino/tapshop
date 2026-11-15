@@ -84,13 +84,15 @@ function list(){let box=dlg.querySelector('.rv-list');if(!box)return;box.innerHT
     d.onclick=e=>{let a=e.target.dataset.a;if(!a)return;if(a==='x')work.imgs.splice(i,1);else{let j=i+(a==='l'?-1:1);if(j<0||j>=work.imgs.length)return;[work.imgs[i],work.imgs[j]]=[work.imgs[j],work.imgs[i]]}list()};d.querySelectorAll('select').forEach(s=>s.onchange=()=>{r[s.dataset.k]=s.value});box.appendChild(d)});
   let go=dlg.querySelector('#rvGo');if(go){go.disabled=!work.imgs.length;go.textContent=(editing?'Update':'Make my review video')+(work.imgs.length?' ('+work.imgs.length+')':'')}}
 function render(){
-  dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>⭐ Review showcase</h2><p class="sub">Show off what other people say about the product. Paste or add screenshots of their reviews, pick a style, and it animates them for you.</p>
+  dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>⭐ Reviews Video Maker</h2><p class="sub">Show off what other people say about the product. Paste or add screenshots of their reviews, pick a style, and it animates them for you.</p>
   <div id="rvDrop"><b>📋 Paste screenshots here</b><span class="sub">Copy a screenshot, then press Ctrl+V (⌘V), or tap “Paste”. You can also drop pictures here.</span><div class="rv-btns"><button type="button" class="primary" id="rvPaste">📋 Paste</button><button type="button" id="rvChoose">🖼 Choose pictures</button>${typeof VaultPicker!=='undefined'&&VaultPicker.inTapShop?'<button type="button" id="rvVault">⛁ From Media Vault</button>':''}</div><input type="file" id="rvFiles" accept="image/*" multiple hidden></div>
   <div class="rv-list"></div><p class="sub" style="margin:0">Use ← → to change the order. Each review can have its own animation and extra.</p>
   <h3 style="margin:14px 0 4px">Style</h3><div class="rv-layouts">${LAYOUTS.map(([k,n])=>`<button type="button" data-l="${k}" class="${work.layout===k?'on':''}"><canvas width="200" height="250"></canvas>${enc(n)}</button>`).join('')}</div>
   <div class="rv-grid"><label>Animation<select data-k="anim">${opts(ANIMS,work.anim)}</select></label><label>Extra on each review<select data-k="badge">${opts(BADGES,work.badge)}</select></label><label>Behind the reviews<select data-k="bg">${opts(BGS,work.bg)}</select></label>
   <label>Seconds per review <small>${work.per}s</small><input type="range" min=".8" max="6" step=".1" value="${work.per}" data-k="per"></label><label>Opening line (leave empty for none)<input type="text" value="${enc(work.t1)}" data-k="t1"></label><label>Ending line (leave empty for none)<input type="text" value="${enc(work.t2)}" data-k="t2"></label>
-  <label>Accent colour<input type="color" value="${work.c1}" data-k="c1"></label><label>Background colour<input type="color" value="${work.c3}" data-k="c3"></label><label>Confetti at the end<select data-k="confetti">${opts([['yes','Yes'],['no','No']],work.confetti)}</select></label></div>
+  <label>Accent colour<input type="color" value="${work.c1}" data-k="c1"></label><label>Background colour<input type="color" value="${work.c3}" data-k="c3"></label><label>Confetti at the end<select data-k="confetti">${opts([['yes','Yes'],['no','No']],work.confetti)}</select></label>
+  <label>Sound effects<select data-k="sfx">${opts([['yes','Yes · pops and a sparkle'],['no','No']],work.sfx||'yes')}</select></label>
+  <label>Music<select data-k="music">${opts([['','No music'],...(window.veMusicGroups?veMusicGroups():[]).flatMap(([l,ks])=>ks.filter(k=>veMoods[k]).map(k=>[k,l.split(' ')[0]+' '+veMoods[k].name]))],work.music||'')}</select></label></div>
   <div class="row"><button type="button" id="rvCancel">Cancel</button><button type="button" class="primary" id="rvGo">Make my review video</button></div>`;
   dlg.querySelector('.dialog-x').onclick=dlg.querySelector('#rvCancel').onclick=()=>dlg.close();
   let fi=dlg.querySelector('#rvFiles');dlg.querySelector('#rvChoose').onclick=()=>fi.click();fi.onchange=()=>{add([...fi.files]);fi.value=''};
@@ -106,9 +108,17 @@ dlg.addEventListener('paste',e=>{let f=[...(e.clipboardData?.files||[])].filter(
 document.addEventListener('paste',e=>{if(dlg.open&&!dlg.contains(e.target)){let f=[...(e.clipboardData?.files||[])].filter(f=>f.type.startsWith('image/'));if(f.length){e.preventDefault();add(f)}}});
 dlg.addEventListener('close',()=>cancelAnimationFrame(raf));
 function build(){if(!work.imgs.length)return toast('Add at least one review first.');if(typeof snapshot==='function')snapshot();
-  let t=editing||{id:uid(),offset:Math.max(0,Math.round(playhead*10)/10),hidden:false};Object.assign(t,work,{id:t.id,offset:t.offset,hidden:t.hidden,type:'gfx',gfx:'reviews'});t.length=lengthOf(t);dlg.close();veGfxInsert(t);toast(editing?'Review video updated.':'Review video added. Press ▶ to watch it.')}
+  let t=editing||{id:uid(),offset:Math.max(0,Math.round(playhead*10)/10),hidden:false};Object.assign(t,work,{id:t.id,offset:t.offset,hidden:t.hidden,type:'gfx',gfx:'reviews'});t.length=lengthOf(t);dlg.close();veGfxInsert(t);toast(editing?'Review video updated.':'Review video added. Press ▶ to watch it.');sounds(t)}
+// Sounds tied to the review video (they move with it and go when it's deleted): a whoosh on the opening line, a pop as each review lands,
+// a sparkle (with confetti) or a tap on the ending line, and music as long as the video. Remade when the review video is updated.
+async function sounds(t){if(typeof extraTracks==='undefined')return;for(const x of extraTracks.filter(x=>x.sfxFor===t.id))deleteTrack(x.id);
+  const i0=intro(t),n=(t.imgs||[]).length,per=+t.per||2.2,step=t.layout==='wall'?Math.min(per,.7):per;
+  if(t.music&&window.veMakeBeat&&veMoods?.[t.music]){try{const f=await veMakeBeat(t.length,t.music,{bare:1});addTrack('audio');const m=extraTracks.at(-1);Object.assign(m,{name:'🎵 '+veMoods[t.music].name+' beat',offset:t.offset,sfxFor:t.id,sfxAt:0,volume:.6},window.veMusicTrackMeta?veMusicTrackMeta(t.music):{});targetTrack=m.id;await loadTrackMedia(f);if(!m.media)deleteTrack(m.id)}catch{}}
+  if(t.sfx!=='no'&&window.TapSFX){const list=[];if(t.t1)list.push(['whoosh',0]);for(let i=0;i<n;i++)list.push(['pop',i0+i*step+.05]);if(t.t2)list.push([t.confetti!=='no'?'sparkle':'click',i0+n*per+.1]);
+    for(const [k,at] of list)try{await TapSFX.add(k,{at:t.offset+at,rel:at,forId:t.id,noSnap:1,quiet:1})}catch{}}
+  renderTracks();renderGraphicTracks()}
 
-veGfxAdd([],[{id:'reviews',pack:'review',name:'⭐ Review showcase (your screenshots)',full:true,xy:true,len:9,x:50,y:52,pv:1,open,
+veGfxAdd([],[{id:'reviews',pack:'review',name:'⭐ Reviews Video Maker (your screenshots)',full:true,xy:true,len:9,x:50,y:52,pv:1,open,
   tags:'testimonials screenshots customer reviews paste social proof affiliate',
   f:[T('t1','Opening line','Don’t take my word for it 👇'),T('t2','Ending line','Link in bio to get yours'),S('layout','Style','one',LAYOUTS),S('anim','Animation','pop',ANIMS),S('badge','Extra on each review','stars',BADGES),S('bg','Behind the reviews','dim',BGS),N('per','Seconds per review',2.2,.8,8),S('confetti','Confetti at the end','yes',[['yes','Yes'],['no','No']]),S('frame','White frame','white',[['white','Yes'],['none','No']])],
   col:['Accent (stars, hook)','Badge','Background colour'],c:['#ffc107','#22c55e','#1f1b2e'],
@@ -121,10 +131,10 @@ window.rvEdit=id=>{let t=graphicTracks.find(t=>t.id===id);if(t)open(t)};
 // The generic defaults don't know about the list of pictures.
 const baseDefaults=veGfxDefaults;window.veGfxDefaults=id=>{let t=baseDefaults(id);if(t&&id==='reviews'){t.imgs=[];t.frame='white'}return t};
 // A toolbar button too, since this is the main thing affiliates will reach for.
-let g=[...document.querySelectorAll('.timebar button')].find(b=>/Graphics/.test(b.textContent));let btn=document.createElement('button');btn.type='button';btn.textContent='⭐ Reviews';btn.title='Turn screenshots of reviews into an animated video';btn.onclick=()=>open(null);if(g)g.after(btn);else document.querySelector('.timebar')?.appendChild(btn);
+let g=[...document.querySelectorAll('.timebar button')].find(b=>/Graphics/.test(b.textContent));let btn=document.createElement('button');btn.type='button';btn.textContent='⭐ Reviews Video';btn.title='Turn screenshots of reviews into an animated video';btn.onclick=()=>open(null);if(g)g.after(btn);else document.querySelector('.timebar')?.appendChild(btn);
 window.openReviews=()=>open(null);
 // Also offer it on the start screen, above the templates: it applies the chosen platform first.
-function startButton(){let cats=document.getElementById('vsCats');if(!cats||document.getElementById('vsReviews'))return;let b=document.createElement('button');b.type='button';b.id='vsReviews';b.className='vs-reviews';b.innerHTML='<b>⭐ Make a review video from screenshots</b><span>Paste screenshots of other people’s reviews and they’re animated for you — great for affiliate videos.</span>';
+function startButton(){let cats=document.getElementById('vsCats');if(!cats||document.getElementById('vsReviews'))return;let b=document.createElement('button');b.type='button';b.id='vsReviews';b.className='vs-reviews';b.innerHTML='<b>⭐ Reviews Video Maker</b><span>Paste screenshots of other people’s reviews and they’re animated for you. Use it as a whole video, or add it over one of your clips as extra proof. Great for affiliate videos.</span>';
   b.onclick=()=>{let go=document.getElementById('vsGo');if(go)go.click();let el=document.getElementById('veStart');if(el)el.hidden=true;setTimeout(()=>open(null),60)};cats.before(b)}
 new MutationObserver(startButton).observe(document.body,{childList:true,subtree:true});startButton();
 })();
