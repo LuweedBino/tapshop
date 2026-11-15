@@ -145,7 +145,15 @@ export default function ScriptGeneratorDrawer({
         signal: controller.signal,
       });
       const data = (await res.json().catch(() => null)) as GenerateScriptResponse | null;
-      if (!data) throw new Error("Unexpected server response.");
+      // No JSON means the server was cut off (Vercel's time limit) or crashed, not a bad connection.
+      if (!data) {
+        setError(
+          res.status === 504 || res.status === 408
+            ? "The AI took too long this time. Please try again, or pick a shorter length."
+            : `The server had a problem (error ${res.status}). Please try again.`,
+        );
+        return;
+      }
       if (!data.ok) {
         setError(data.error);
         if (data.fieldErrors) setFieldErrors(data.fieldErrors);

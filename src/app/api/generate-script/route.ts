@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI, Type, type Schema } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, Type, type Schema } from "@google/genai";
 import { getCreator } from "@/lib/auth";
 import { env } from "@/lib/env";
 import {
@@ -256,7 +256,10 @@ export async function POST(req: Request) {
 
   // Some API keys and regions reject the JSON schema with a 400; the same request without it
   // still returns JSON, and normalizeScript() checks its shape either way.
-  // Sampling and thinking are left at the model's defaults: Gemini 3 models are tuned for them.
+  // Sampling is left at the model's defaults (Gemini 3 is tuned for them). Thinking is LOW: the
+  // default level could run past Vercel's 60 s limit, which cut the reply off with no JSON.
+  // Every call shares one deadline, so we always answer in time with a readable error.
+  const deadline = Date.now() + 50_000;
   const call = (model: string, withSchema: boolean) =>
     ai.models.generateContent({
       model,
@@ -265,7 +268,9 @@ export async function POST(req: Request) {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
         ...(withSchema ? { responseSchema: RESPONSE_SCHEMA } : {}),
-        maxOutputTokens: 16384,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        maxOutputTokens: 8192,
+        abortSignal: AbortSignal.timeout(Math.max(1_000, deadline - Date.now())),
       },
     });
 
@@ -316,8 +321,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json<GenerateScriptResponse>({ ok: true, script }, { status: 200 });
   } catch (err: unknown) {
-    const e = err as { status?: number; message?: string };
-    console.error("[generate-script] Gemini error:", e?.status, e?.message);
+    const e = err as { status?: number; name?: string; message?: string };
+    console.error("[generate-script] Gemini error:", e?.status, e?.name, e?.message);
+    if (e?.name === "TimeoutError" || e?.name === "AbortError" || Date.now() >= deadline)
+      return fail(504, "The AI took too long this time. Please try again, or pick a shorter length.");
     return fail(e?.status === 429 ? 429 : 502, explainGeminiError(err));
   }
 }
