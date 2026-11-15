@@ -74,7 +74,7 @@ const RESPONSE_SCHEMA: Schema = {
         type: Type.OBJECT,
         properties: {
           sceneNumber: { type: Type.INTEGER },
-          sectionType: { type: Type.STRING, format: "enum", enum: [...SECTION_TYPES] },
+          sectionType: { type: Type.STRING, enum: [...SECTION_TYPES] },
           durationSeconds: { type: Type.INTEGER },
           visualDirection: { type: Type.STRING },
           voiceoverLine: { type: Type.STRING },
@@ -252,20 +252,33 @@ export async function POST(req: Request) {
     return fail(500, "Script generator is not configured. Please try again later.");
   }
 
-  try {
-    const response = await ai.models.generateContent({
+  // Some API keys and regions reject the JSON schema with a 400; the same request without it
+  // still returns JSON, and normalizeScript() checks its shape either way.
+  const call = (withSchema: boolean) =>
+    ai.models.generateContent({
       model: MODEL,
       contents: buildPrompt(input),
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
-        responseSchema: RESPONSE_SCHEMA,
+        ...(withSchema ? { responseSchema: RESPONSE_SCHEMA } : {}),
         temperature: 0.9,
         topP: 0.95,
-        maxOutputTokens: 4096,
-        abortSignal: AbortSignal.timeout(50_000),
+        maxOutputTokens: 8192,
+        // Thinking adds delay and eats the output budget; this job doesn't need it.
+        thinkingConfig: { thinkingBudget: 0 },
       },
     });
+
+  try {
+    let response;
+    try {
+      response = await call(true);
+    } catch (err) {
+      if ((err as { status?: number })?.status !== 400 || isKeyError(err)) throw err;
+      console.warn("[generate-script] Retrying without responseSchema:", (err as Error)?.message);
+      response = await call(false);
+    }
 
     const text = response.text;
     if (!text) {
@@ -278,7 +291,7 @@ export async function POST(req: Request) {
 
     let parsed: unknown;
     try {
-      parsed = JSON.parse(text);
+      parsed = JSON.parse(text.replace(/^```(?:json)?\s*|\s*```$/g, ""));
     } catch {
       console.error("[generate-script] Non-JSON response:", text.slice(0, 500));
       return fail(502, "The AI returned an unexpected format. Please try again.");
@@ -289,12 +302,28 @@ export async function POST(req: Request) {
 
     return NextResponse.json<GenerateScriptResponse>({ ok: true, script }, { status: 200 });
   } catch (err: unknown) {
-    const e = err as { status?: number; name?: string; message?: string };
+    const e = err as { status?: number; message?: string };
     console.error("[generate-script] Gemini error:", e?.status, e?.message);
-    if (e?.name === "TimeoutError" || e?.name === "AbortError") return fail(504, "The AI took too long. Please try again.");
-    if (e?.status === 429) return fail(429, "Too many requests right now. Wait a moment and try again.");
-    return fail(502, "Couldn't generate a script right now. Please try again.");
+    return fail(e?.status === 429 ? 429 : 502, explainGeminiError(err));
   }
+}
+
+function isKeyError(err: unknown) {
+  return /api[_ ]?key/i.test((err as Error)?.message ?? "");
+}
+
+// Turns Gemini's error into a plain sentence, so a bad key or quota problem says so on screen.
+function explainGeminiError(err: unknown): string {
+  const e = err as { status?: number; message?: string };
+  const msg = e?.message ?? "";
+  if (isKeyError(err)) return "Gemini says the API key isn't valid. Check GEMINI_API_KEY in Vercel, then redeploy.";
+  if (e?.status === 403) return "Gemini refused the API key (no permission). Make a new key at aistudio.google.com/apikey.";
+  if (e?.status === 404) return `The ${MODEL} model isn't available for this API key.`;
+  if (e?.status === 429) return "Gemini's usage limit was hit. Wait a minute and try again, or check your quota in Google AI Studio.";
+  if (/location|region|not supported/i.test(msg)) return "Gemini isn't available from this server's region.";
+  if (e?.status && e.status >= 500) return "Gemini is having trouble right now. Please try again in a minute.";
+  const detail = msg.match(/"message"\s*:\s*"([^"]+)"/)?.[1] ?? msg;
+  return detail ? `Couldn't generate a script: ${detail.slice(0, 160)}` : "Couldn't generate a script right now. Please try again.";
 }
 
 export function GET() {
