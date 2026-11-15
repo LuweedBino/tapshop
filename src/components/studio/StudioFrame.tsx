@@ -230,7 +230,20 @@ export function StudioFrame({ products, vault, folders, handle, hasPayments }: {
       {using && <UseInStudio item={using} designs={designs} onChoose={choose} onClose={() => setUsing(null)} />}
       {selling && <SellThis item={selling} handle={handle} hasPayments={hasPayments} onClose={() => setSelling(null)} />}
       {image && <SaveToTapShop image={image} products={products} onClose={() => setImage(null)} />}
-      <ScriptGeneratorDrawer open={scriptOpen} onClose={() => setScriptOpen(false)} />
+      <ScriptGeneratorDrawer
+        open={scriptOpen}
+        onClose={() => setScriptOpen(false)}
+        onSendToVoiceover={(text, scenes) => {
+          setScriptOpen(false);
+          setView("studio");
+          sendTo("video", {
+            type: "tapshop:voiceover-script",
+            version: 1,
+            text,
+            scenes: scenes.map((s) => ({ sectionType: s.sectionType, durationSeconds: s.durationSeconds, voiceoverLine: s.voiceoverLine, onScreenText: s.onScreenText })),
+          });
+        }}
+      />
     </>
   );
 }
