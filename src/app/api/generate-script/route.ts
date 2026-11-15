@@ -17,7 +17,9 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const MODEL = "gemini-2.5-flash";
+// Google retires models often and new API keys can't use older ones, so try these in order and
+// move on when one answers 404. GEMINI_MODEL (optional) goes first.
+const MODELS = [...new Set([env.geminiModel, "gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"].filter(Boolean))];
 const MAX_FIELD_LENGTH = { productName: 120, keyBenefits: 1500, targetAudience: 400 } as const;
 
 // ---------------------------------------------------------------------------
@@ -254,31 +256,43 @@ export async function POST(req: Request) {
 
   // Some API keys and regions reject the JSON schema with a 400; the same request without it
   // still returns JSON, and normalizeScript() checks its shape either way.
-  const call = (withSchema: boolean) =>
+  // Sampling and thinking are left at the model's defaults: Gemini 3 models are tuned for them.
+  const call = (model: string, withSchema: boolean) =>
     ai.models.generateContent({
-      model: MODEL,
+      model,
       contents: buildPrompt(input),
       config: {
         systemInstruction: SYSTEM_INSTRUCTION,
         responseMimeType: "application/json",
         ...(withSchema ? { responseSchema: RESPONSE_SCHEMA } : {}),
-        temperature: 0.9,
-        topP: 0.95,
-        maxOutputTokens: 8192,
-        // Thinking adds delay and eats the output budget; this job doesn't need it.
-        thinkingConfig: { thinkingBudget: 0 },
+        maxOutputTokens: 16384,
       },
     });
 
-  try {
-    let response;
+  const tryModel = async (model: string) => {
     try {
-      response = await call(true);
+      return await call(model, true);
     } catch (err) {
       if ((err as { status?: number })?.status !== 400 || isKeyError(err)) throw err;
-      console.warn("[generate-script] Retrying without responseSchema:", (err as Error)?.message);
-      response = await call(false);
+      console.warn(`[generate-script] ${model}: retrying without responseSchema:`, (err as Error)?.message);
+      return await call(model, false);
     }
+  };
+
+  try {
+    let response: Awaited<ReturnType<typeof call>> | undefined;
+    let lastErr: unknown;
+    for (const model of MODELS) {
+      try {
+        response = await tryModel(model);
+        break;
+      } catch (err) {
+        lastErr = err;
+        if ((err as { status?: number })?.status !== 404) throw err;
+        console.warn(`[generate-script] ${model} not available, trying the next model.`);
+      }
+    }
+    if (!response) throw lastErr;
 
     const text = response.text;
     if (!text) {
@@ -318,7 +332,7 @@ function explainGeminiError(err: unknown): string {
   const msg = e?.message ?? "";
   if (isKeyError(err)) return "Gemini says the API key isn't valid. Check GEMINI_API_KEY in Vercel, then redeploy.";
   if (e?.status === 403) return "Gemini refused the API key (no permission). Make a new key at aistudio.google.com/apikey.";
-  if (e?.status === 404) return `The ${MODEL} model isn't available for this API key.`;
+  if (e?.status === 404) return `None of these Gemini models are available for this API key: ${MODELS.join(", ")}. Set GEMINI_MODEL in Vercel to one that is.`;
   if (e?.status === 429) return "Gemini's usage limit was hit. Wait a minute and try again, or check your quota in Google AI Studio.";
   if (/location|region|not supported/i.test(msg)) return "Gemini isn't available from this server's region.";
   if (e?.status && e.status >= 500) return "Gemini is having trouble right now. Please try again in a minute.";

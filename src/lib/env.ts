@@ -14,6 +14,8 @@ export const env = {
   adminEmails: (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean),
   // Google Gemini key for the Studio's AI Script Writer (/api/generate-script).
   geminiApiKey: process.env.GEMINI_API_KEY ?? "",
+  // Optional: a Gemini model id to try before the built-in list.
+  geminiModel: process.env.GEMINI_MODEL ?? "",
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "TapShop <onboarding@resend.dev>",
   s3: {
