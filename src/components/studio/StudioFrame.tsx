@@ -195,18 +195,6 @@ export function StudioFrame({ products, vault, folders, handle, hasPayments }: {
 
   return (
     <>
-      {view === "studio" && (
-        <div className="mb-2 flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => sendTo("video", { type: "tapshop:open-agent", version: 1 })}
-            title="Your footage, your voice. AI helps put it together."
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#C59B57] bg-[#C59B57] px-3.5 py-1.5 text-sm font-semibold text-[#0F1115] shadow-sm transition hover:bg-[#D4AE6E] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C59B57]"
-          >
-            🪄 Build My Video With AI
-          </button>
-        </div>
-      )}
       <iframe
         ref={frame}
         title="TapShop Studio"
