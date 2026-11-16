@@ -1,4 +1,4 @@
-// Sound effects: 23 short one-shot sounds made on the device (no audio files), for cuts, text pop-ups and ads.
+// Sound effects: 50 short one-shot sounds made on the device (no audio files), for cuts, text pop-ups and ads.
 // Each effect is a function (ctx, out, t) that builds its sound on any audio context (live or offline), starting at time t,
 // and returns how long it lasts. Everything goes through a limiter (veLimiter in video.js) so nothing clips.
 // TapSFX.play(key) plays one now, TapSFX.file(key) makes a WAV, TapSFX.add(key) puts it on the timeline at the playhead.
@@ -93,7 +93,87 @@ const FX={
   zap(ctx,out,t){const o=osc(ctx,'sawtooth',2400,t,.25),f=ctx.createBiquadFilter(),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(150,t+.22);f.type='lowpass';f.frequency.setValueAtTime(6000,t);f.frequency.exponentialRampToValueAtTime(800,t+.22);env(g,t,.35,.002,.22);o.connect(f);f.connect(g);g.connect(out);return .25},
   // 23. A very short, airy flick to the side.
   swipe(ctx,out,t){const s=src(ctx,t,.15),f=ctx.createBiquadFilter(),g=ctx.createGain(),p=pan(ctx,-.4,out);f.type='bandpass';f.Q.value=1.5;f.frequency.setValueAtTime(3000,t);f.frequency.exponentialRampToValueAtTime(9000,t+.12);env(g,t,.7,.03,.11);
-    if(p.pan)p.pan.linearRampToValueAtTime(.5,t+.13);s.connect(f);f.connect(g);g.connect(p);return .15}};
+    if(p.pan)p.pan.linearRampToValueAtTime(.5,t+.13);s.connect(f);f.connect(g);g.connect(p);return .15},
+  // ---- 24–50 ----
+  // A crowd clapping: many tiny filtered noise claps, swelling in and dying away.
+  applause(ctx,out,t){const D=1.5;for(let i=0;i<70;i++){const u=t+Math.random()*D*.9,s=src(ctx,u,.03),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=900+Math.random()*1600;f.Q.value=1.2;
+    env(g,u,Math.max(.01,.3*Math.min(1,(u-t)/.15+.2)*Math.min(1,(t+D-u)/.4)),.001,.025);s.connect(f);f.connect(g);g.connect(pan(ctx,Math.random()*1.6-.8,out))}return D},
+  // A snare roll getting louder, then a hit.
+  drumroll(ctx,out,t){const D=1.1;for(let u=t;u<t+D;u+=.045){const s=src(ctx,u,.05),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=1900;f.Q.value=.7;env(g,u,.12+.4*(u-t)/D,.001,.045);s.connect(f);f.connect(g);g.connect(out)}
+    const u=t+D,s=src(ctx,u,.45),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='highpass';f.frequency.value=3000;env(g,u,.7,.002,.42);s.connect(f);f.connect(g);g.connect(out);
+    const o=osc(ctx,'sine',130,u,.3),og=ctx.createGain();o.frequency.exponentialRampToValueAtTime(60,u+.25);env(og,u,.8,.002,.28);o.connect(og);og.connect(out);return D+.45},
+  // Ba-dum-tss: two toms and a cymbal.
+  rimshot(ctx,out,t){[[0,170],[.17,120]].forEach(([dt,f])=>{const u=t+dt,o=osc(ctx,'sine',f,u,.22),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(f*.6,u+.18);env(g,u,.85,.003,.2);o.connect(g);g.connect(out)});
+    const u=t+.42,s=src(ctx,u,.6),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='highpass';f.frequency.value=6000;env(g,u,.55,.002,.58);s.connect(f);f.connect(g);g.connect(out);return 1.05},
+  // A soft, heavy thud.
+  thud(ctx,out,t){const o=osc(ctx,'sine',95,t,.32),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(40,t+.25);env(g,t,1,.002,.3);o.connect(g);g.connect(out);
+    const s=src(ctx,t,.06),f=ctx.createBiquadFilter(),sg=ctx.createGain();f.type='lowpass';f.frequency.value=700;env(sg,t,.45,.001,.05);s.connect(f);f.connect(sg);sg.connect(out);return .32},
+  // Wind chimes: a few high bells, scattered.
+  chime(ctx,out,t){[2093,2637,3136,2349,2794,3520].forEach((f,i)=>bell(ctx,pan(ctx,i%2?.5:-.5,out),t+i*.11+(i%3)*.02,f,1,[[1,.18,.9],[2.76,.05,.4]]));return 1.5},
+  // A video-game level up: a quick square arpeggio and a held top note.
+  levelup(ctx,out,t){const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=4000;lp.connect(out);[523,659,784,1047,1319].forEach((f,i)=>{const u=t+i*.06,o=osc(ctx,'square',f,u,.12),g=ctx.createGain();env(g,u,.16,.002,.1);o.connect(g);g.connect(lp)});
+    const u=t+.3,o=osc(ctx,'square',1568,u,.45),g=ctx.createGain();env(g,u,.16,.003,.42);o.connect(g);g.connect(lp);return .75},
+  // Sad trombone: three falling notes and a long wobbly one.
+  wahwah(ctx,out,t){[[392,0,.32],[370,.36,.32],[349,.72,.32],[330,1.08,.75]].forEach(([fr,dt,d],i)=>{const u=t+dt,o=osc(ctx,'sawtooth',fr,u,d),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.Q.value=3;
+    f.frequency.setValueAtTime(300,u);f.frequency.linearRampToValueAtTime(1400,u+d*.4);f.frequency.linearRampToValueAtTime(400,u+d);
+    if(i===3){const l=osc(ctx,'sine',6,u,d),lg=ctx.createGain();lg.gain.value=9;l.connect(lg);lg.connect(o.frequency)}g.gain.setValueAtTime(0.0001,u);g.gain.exponentialRampToValueAtTime(.3,u+.03);g.gain.setValueAtTime(.3,u+d-.08);g.gain.exponentialRampToValueAtTime(0.0001,u+d);o.connect(f);f.connect(g);g.connect(out)});return 1.85},
+  // A two-tone alarm.
+  alarm(ctx,out,t){const o=osc(ctx,'square',880,t,.85),f=ctx.createBiquadFilter(),g=ctx.createGain();for(let i=0;i<4;i++)o.frequency.setValueAtTime(i%2?660:880,t+i*.2);f.type='lowpass';f.frequency.value=3000;
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(.14,t+.01);g.gain.setValueAtTime(.14,t+.75);g.gain.exponentialRampToValueAtTime(0.0001,t+.85);o.connect(f);f.connect(g);g.connect(out);return .85},
+  // A handful of bubbles rising.
+  bubbles(ctx,out,t){[[0,420],[.07,610],[.15,380],[.21,720],[.3,520],[.38,860],[.47,470],[.55,940]].forEach(([dt,f],i)=>{const u=t+dt,o=osc(ctx,'sine',f,u,.07),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(f*2,u+.05);env(g,u,.4,.003,.05);o.connect(g);g.connect(pan(ctx,i%2?.4:-.4,out))});return .65},
+  // A splash of water.
+  splash(ctx,out,t){const s=src(ctx,t,.65,true),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.frequency.setValueAtTime(4000,t);f.frequency.exponentialRampToValueAtTime(700,t+.55);env(g,t,.9,.006,.6);s.connect(f);f.connect(g);g.connect(out);
+    [.12,.2,.31].forEach((dt,i)=>{const u=t+dt,o=osc(ctx,'sine',500+i*170,u,.06),og=ctx.createGain();o.frequency.exponentialRampToValueAtTime((500+i*170)*1.8,u+.05);env(og,u,.18,.003,.05);o.connect(og);og.connect(out)});return .7},
+  // Knock knock knock on a wooden door.
+  knock(ctx,out,t){[0,.16,.32].forEach(dt=>{const u=t+dt,s=src(ctx,u,.06),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=650;f.Q.value=3;env(g,u,1.4,.001,.05);s.connect(f);f.connect(g);g.connect(out);
+    const o=osc(ctx,'sine',190,u,.1),og=ctx.createGain();o.frequency.exponentialRampToValueAtTime(120,u+.08);env(og,u,.55,.002,.08);o.connect(og);og.connect(out)});return .45},
+  // A short riser for quick cuts.
+  riseup(ctx,out,t){const d=.6,n=src(ctx,t,d),f=ctx.createBiquadFilter(),g=ctx.createGain(),o=osc(ctx,'sawtooth',300,t,d),of=ctx.createBiquadFilter(),og=ctx.createGain();f.type='bandpass';f.Q.value=1.3;f.frequency.setValueAtTime(600,t);f.frequency.exponentialRampToValueAtTime(9000,t+d);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(.6,t+d-.02);g.gain.linearRampToValueAtTime(0,t+d);n.connect(f);f.connect(g);g.connect(out);
+    o.frequency.exponentialRampToValueAtTime(1800,t+d);of.type='lowpass';of.frequency.value=3000;og.gain.setValueAtTime(0.0001,t);og.gain.exponentialRampToValueAtTime(.12,t+d-.02);og.gain.linearRampToValueAtTime(0,t+d);o.connect(of);of.connect(og);og.connect(out);return d},
+  // Power down: a tone sinking and dulling.
+  powerdown(ctx,out,t){const o=osc(ctx,'sawtooth',900,t,.85),f=ctx.createBiquadFilter(),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(50,t+.8);f.type='lowpass';f.frequency.setValueAtTime(3000,t);f.frequency.exponentialRampToValueAtTime(250,t+.8);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(.3,t+.01);g.gain.setValueAtTime(.3,t+.55);g.gain.exponentialRampToValueAtTime(0.0001,t+.85);o.connect(f);f.connect(g);g.connect(out);return .85},
+  // Power up: a fluttering square sweeping up.
+  powerup(ctx,out,t){const o=osc(ctx,'square',200,t,.55),l=osc(ctx,'square',22,t,.55),lg=ctx.createGain(),f=ctx.createBiquadFilter(),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(1600,t+.5);lg.gain.value=.5;
+    f.type='lowpass';f.frequency.value=4000;g.gain.value=.5;l.connect(lg);lg.connect(g.gain);const v=ctx.createGain();env(v,t,.3,.01,.52);o.connect(f);f.connect(g);g.connect(v);v.connect(out);return .55},
+  // Fairy dust: quick random high bells over a soft shimmer.
+  fairy(ctx,out,t){[3520,2794,4186,3136,4699,2637,3951,3322,4434,2960,5274,3729,4978,3136].forEach((f,i)=>bell(ctx,pan(ctx,((i*7)%11)/5.5-1,out),t+i*.06,f,1,[[1,.11,.3]]));
+    const s=src(ctx,t,1,true),hp=ctx.createBiquadFilter(),g=ctx.createGain();hp.type='highpass';hp.frequency.value=7000;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(.2,t+.3);g.gain.exponentialRampToValueAtTime(0.0001,t+1);s.connect(hp);hp.connect(g);g.connect(out);return 1.1},
+  // A big low gong.
+  gong(ctx,out,t){bell(ctx,out,t,110,1,[[1,.5,2.2],[1.48,.25,1.6],[2.1,.2,1.2],[2.76,.12,.9],[3.9,.06,.6]]);const s=src(ctx,t,.1),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.frequency.value=1200;env(g,t,.3,.002,.08);s.connect(f);f.connect(g);g.connect(out);return 2.3},
+  // A little shop-door bell.
+  shopbell(ctx,out,t){[[1568,0],[1976,.14],[1568,.3]].forEach(([f,dt],i)=>bell(ctx,pan(ctx,i?.3:-.3,out),t+dt,f,1,[[1,.28,.8],[2.76,.08,.35],[5.4,.03,.15]]));return 1.15},
+  // A receipt printer.
+  printer(ctx,out,t){for(let i=0;i<6;i++){const u=t+i*.1,o=osc(ctx,'square',70,u,.08),s=src(ctx,u,.08),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=1100;f.Q.value=2;g.gain.setValueAtTime(.18,u);g.gain.setValueAtTime(0,u+.075);
+    o.connect(g);s.connect(f);f.connect(g);g.connect(out)}return .62},
+  // A finger snap.
+  snap(ctx,out,t){const s=src(ctx,t,.04),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=2300;f.Q.value=2;env(g,t,1.3,.0005,.03);s.connect(f);f.connect(g);g.connect(out);
+    const o=osc(ctx,'sine',1100,t,.04),og=ctx.createGain();o.frequency.exponentialRampToValueAtTime(600,t+.03);env(og,t,.2,.001,.03);o.connect(og);og.connect(out);return .15},
+  // One hand clap.
+  clap(ctx,out,t){[[0,.8,.015],[.011,.7,.015],[.022,.6,.015],[.033,.5,.14]].forEach(([dt,v,d])=>{const u=t+dt,s=src(ctx,u,d+.01),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=1200;f.Q.value=1;env(g,u,v,.001,d);s.connect(f);f.connect(g);g.connect(out)});return .2},
+  // Ta-da: a short brassy chord, then a long one.
+  tada(ctx,out,t){[[0,.12],[.16,.8]].forEach(([dt,d])=>{const u=t+dt,f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.frequency.setValueAtTime(600,u);f.frequency.exponentialRampToValueAtTime(3500,u+.12);
+    g.gain.setValueAtTime(0.0001,u);g.gain.exponentialRampToValueAtTime(.1,u+.02);g.gain.setValueAtTime(.1,u+d*.6);g.gain.exponentialRampToValueAtTime(0.0001,u+d);f.connect(g);g.connect(out);
+    for(const fr of [523,659,784,1047])for(const dtn of [-4,4]){const o=osc(ctx,'sawtooth',fr,u,d);o.detune.value=dtn;o.connect(f)}});return 1},
+  // A tense sting: close notes swelling up, then cut.
+  tension(ctx,out,t){const d=1.2,f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='lowpass';f.frequency.setValueAtTime(700,t);f.frequency.exponentialRampToValueAtTime(2600,t+d);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(.12,t+d-.03);g.gain.linearRampToValueAtTime(0,t+d);
+    f.connect(g);g.connect(out);for(const fr of [220,233,330,349])osc(ctx,'sawtooth',fr,t,d).connect(f);return d},
+  // A whip crack.
+  whip(ctx,out,t){const s=src(ctx,t,.2),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.Q.value=1.5;f.frequency.setValueAtTime(1000,t);f.frequency.exponentialRampToValueAtTime(8000,t+.08);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(.6,t+.07);g.gain.exponentialRampToValueAtTime(0.0001,t+.18);
+    s.connect(f);f.connect(g);g.connect(out);const c=src(ctx,t+.075,.02),cf=ctx.createBiquadFilter(),cg=ctx.createGain();cf.type='highpass';cf.frequency.value=2500;env(cg,t+.075,1.2,.0005,.015);c.connect(cf);cf.connect(cg);cg.connect(out);return .2},
+  // A tiny app blip.
+  blip(ctx,out,t){[[1200,0],[1800,.05]].forEach(([f,dt])=>{const u=t+dt,o=osc(ctx,'sine',f,u,.07),g=ctx.createGain();env(g,u,.4,.002,.06);o.connect(g);g.connect(out)});return .15},
+  // A page turning.
+  pageturn(ctx,out,t){const s=src(ctx,t,.38,true),f=ctx.createBiquadFilter(),g=ctx.createGain(),p=pan(ctx,.5,out);f.type='bandpass';f.frequency.value=2500;f.Q.value=.8;g.gain.setValueAtTime(0.0001,t);
+    for(let i=1;i<14;i++)g.gain.setValueAtTime((.2+.5*Math.sin(Math.PI*i/14))*(i%2?1:.55),t+i*.025);g.gain.exponentialRampToValueAtTime(0.0001,t+.38);if(p.pan)p.pan.linearRampToValueAtTime(-.5,t+.35);s.connect(f);f.connect(g);g.connect(p);return .4},
+  // A deep 808-style bass hit.
+  bass(ctx,out,t){const o=osc(ctx,'sine',70,t,1),g=ctx.createGain(),lv=ctx.createGain(),w=drive(ctx,2,lv);lv.gain.value=.9;lv.connect(out);o.frequency.exponentialRampToValueAtTime(48,t+.3);env(g,t,1,.003,.95);o.connect(g);g.connect(w);return 1},
+  // A tape rewind.
+  rewind(ctx,out,t){const o=osc(ctx,'sawtooth',200,t,.6),l=osc(ctx,'sine',12,t,.6),lg=ctx.createGain(),f=ctx.createBiquadFilter(),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(1400,t+.55);lg.gain.value=60;l.connect(lg);lg.connect(o.frequency);
+    f.type='lowpass';f.frequency.value=2500;g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(.25,t+.05);g.gain.setValueAtTime(.25,t+.5);g.gain.exponentialRampToValueAtTime(0.0001,t+.6);o.connect(f);f.connect(g);g.connect(out);
+    const n=src(ctx,t,.6),nf=ctx.createBiquadFilter(),ng=ctx.createGain();nf.type='highpass';nf.frequency.value=3000;env(ng,t,.15,.05,.55);n.connect(nf);nf.connect(ng);ng.connect(out);return .6}};
 
 const LIST=[['swoosh','💨','Swoosh','B-roll cuts and swipes'],['pop','🫧','Bubble pop','captions and stickers popping in'],['cash','💰','Cha-ching','price drops and deals'],
   ['shutter','📸','Camera shutter','product snapshots'],['sparkle','✨','Magic sparkle','glow-ups and “after” reveals'],['drop','💥','Bass drop','big hook moments'],
@@ -102,7 +182,16 @@ const LIST=[['swoosh','💨','Swoosh','B-roll cuts and swipes'],['pop','🫧','B
   ['impact','🎬','Cinematic boom','trailers and big reveals'],['heartbeat','💓','Heartbeat','suspense and “wait for it…”'],['typing','⌨️','Typing','texts, emails and DM screenshots'],
   ['notify','🔔','Phone ping','“you got a message” moments'],['boing','🤪','Boing','funny fails and bounces'],['glitch','📺','Glitch','tech, transitions and “error” jokes'],
   ['harp','🪄','Dreamy harp','flashbacks and daydreams'],['coin','🪙','Coin','deals, savings and rewards'],['tick','⏰','Clock tick','countdowns and “limited time”'],
-  ['zap','⚡','Zap','energy, speed and power-ups'],['swipe','👉','Quick swipe','next item, next slide']];
+  ['zap','⚡','Zap','energy, speed and power-ups'],['swipe','👉','Quick swipe','next item, next slide'],
+  ['applause','👏','Applause','wins, results and “you did it”'],['drumroll','🥁','Drumroll','big reveals and “the winner is…”'],['rimshot','😂','Ba-dum-tss','jokes and puns'],
+  ['thud','🪨','Soft thud','text or products landing'],['chime','🎐','Wind chimes','calm, cozy and self-care moments'],['levelup','🎮','Level up','upgrades and new skills'],
+  ['wahwah','📯','Sad trombone','fails and “don’t do this”'],['alarm','🚨','Alarm','warnings and “stop scrolling”'],['bubbles','🧼','Bubbles','skincare, drinks and cleaning'],
+  ['splash','💦','Splash','water, drinks and refreshing moments'],['knock','🚪','Knock knock','“guess what” and surprises'],['riseup','⤴️','Short riser','quick build into a cut'],
+  ['powerdown','🔌','Power down','“it stopped working” moments'],['powerup','🔋','Power up','energy boosts and charging'],['fairy','🧚','Fairy dust','magic, glow and transformations'],
+  ['gong','🏯','Gong','dramatic announcements'],['shopbell','🛎️','Shop bell','new arrivals and “we’re open”'],['printer','🧾','Receipt print','orders, receipts and totals'],
+  ['snap','🫰','Finger snap','quick changes and outfit swaps'],['clap','🙌','Single clap','“let’s go” and starting'],['tada','🎉','Ta-da!','big reveals and results'],
+  ['tension','😬','Tension sting','cliffhangers and “but then…”'],['whip','🪢','Whip crack','fast cuts and “boom”'],['blip','📱','App blip','app taps and screen recordings'],
+  ['pageturn','📖','Page turn','books, guides and next steps'],['bass','🔊','Bass hit','heavy beat drops and big moments'],['rewind','⏪','Rewind','flashbacks and “let me explain”']];
 
 const wav=buf=>{const ch=buf.numberOfChannels,n=buf.length,v=new DataView(new ArrayBuffer(44+n*ch*2)),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
   w(0,'RIFF');v.setUint32(4,36+n*ch*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,ch,true);v.setUint32(24,buf.sampleRate,true);v.setUint32(28,buf.sampleRate*ch*2,true);v.setUint16(32,ch*2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*ch*2,true);
@@ -148,7 +237,7 @@ window.TapSFX={list:LIST,fx:FX,
     if(typeof audioCtx!=='undefined'&&audioCtx&&veSpk){ctx=audioCtx;out=veSpk}else{live=live||new (window.AudioContext||window.webkitAudioContext)();liveOut=liveOut||veLimiter(live,live.destination);ctx=live;out=liveOut}
     ctx.resume?.();const b=await this.render(key,space),s=ctx.createBufferSource(),g=ctx.createGain();g.gain.value=SFX_MIX.volume;s.buffer=b;s.connect(g);g.connect(out);s.start(ctx.currentTime+.02);return b.duration},
   _cache:new Map(),
-  async render(key,space){const k=space||defSpace(),id=key+'|'+k,hit=this._cache.get(id);if(hit)return hit;const f=FX[key],SR=44100,tail=tailOf(k),oc=new OfflineAudioContext(2,Math.ceil((1.6+tail)*SR),SR);
+  async render(key,space){const k=space||defSpace(),id=key+'|'+k,hit=this._cache.get(id);if(hit)return hit;const f=FX[key],SR=44100,tail=tailOf(k),oc=new OfflineAudioContext(2,Math.ceil((2.6+tail)*SR),SR);
     const d=f(oc,leveled(oc,backChain(oc,oc.destination,k),key),0);const b=await oc.startRendering(),n=Math.min(b.length,Math.ceil(Math.max(d+tail+.03,.15)*SR)),o=new AudioBuffer({length:n,numberOfChannels:2,sampleRate:SR});
     for(let c=0;c<2;c++){const a=b.getChannelData(c).slice(0,n),fade=Math.round(SR*.05);for(let i=0;i<fade&&i<n;i++)a[n-1-i]*=i/fade;o.copyToChannel(a,c)}
     even(o);this._cache.set(id,o);return o},
@@ -251,7 +340,7 @@ const META={
   booktok:['Storytelling',['dreamy','nostalgic','cozy'],['BookTok','Kindle setup','cozy reading'],['booktok','kindle','reading','music box','cozy','books'],'G Lydian',3],
   mistakes:['Storytelling',['authoritative','sharp','brisk'],['myth-busting','3 mistakes you’re making','tips list'],['mistakes','myth','tips','staccato','strings','facts'],'E harmonic minor',3],
   finale:['Sales & Reviews',['uplifting','resolving','confident'],['link in bio call-to-action','video ending','shop now outro'],['link in bio','cta','ending','outro','finale','shop now'],'C Ionian (ends on C)',3]};
-const LEN={swoosh:.5,pop:.15,cash:.8,shutter:.2,sparkle:1,drop:.9,click:.05,buzz:.35,ding:.6,riser:1.2,scratch:.3,whoosh:.4,impact:1.4,heartbeat:1.25,typing:.6,notify:.45,boing:.7,glitch:.4,harp:1.4,coin:.42,tick:.8,zap:.25,swipe:.15};
+const LEN={swoosh:.5,pop:.15,cash:.8,shutter:.2,sparkle:1,drop:.9,click:.05,buzz:.35,ding:.6,riser:1.2,scratch:.3,whoosh:.4,impact:1.4,heartbeat:1.25,typing:.6,notify:.45,boing:.7,glitch:.4,harp:1.4,coin:.42,tick:.8,zap:.25,swipe:.15,applause:1.5,drumroll:1.55,rimshot:1.05,thud:.32,chime:1.5,levelup:.75,wahwah:1.85,alarm:.85,bubbles:.65,splash:.7,knock:.45,riseup:.6,powerdown:.85,powerup:.55,fairy:1.1,gong:2.3,shopbell:1.15,printer:.62,snap:.15,clap:.2,tada:1,tension:1.2,whip:.2,blip:.15,pageturn:.4,bass:1,rewind:.6};
 // Moods and uses for the styles that came before the batches (so search and filters can find them too).
 const OLD={bright:[['happy','upbeat','pop'],['product demo','everyday vlog']],upbeat:[['upbeat','energetic','dance'],['hauls','fast edits']],chill:[['chill','calm','lofi'],['vlogs','aesthetic b-roll']],
   trap:[['hype','bold','urban'],['streetwear','hype edits']],rnb:[['smooth','warm','sensual'],['beauty','night routine']],acoustic:[['happy','warm','organic'],['lifestyle','family']],
