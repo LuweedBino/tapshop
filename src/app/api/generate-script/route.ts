@@ -4,7 +4,10 @@ import { getCreator } from "@/lib/auth";
 import { env } from "@/lib/env";
 import {
   DURATIONS,
+  FRAMEWORK_LABELS,
   FRAMEWORKS,
+  PLATFORMS,
+  STORY_TYPES,
   SECTION_TYPES,
   TONES,
   type GenerateScriptRequest,
@@ -42,11 +45,9 @@ STRUCTURE
 - onScreenText is a short caption overlay (max ~8 words). Use an empty string if none is needed.
 - visualDirection tells the creator exactly what to film: framing, action, b-roll, and product placement.
 
-FRAMEWORKS
-- PAS: Hook → Problem (name the pain) → Problem/agitate (why it's worse than they think) → Demo/Solution → optional Social Proof → CTA.
-- 3_REASONS: Hook ("3 reasons I'm obsessed with…") → three Demo/Solution scenes, one reason each → CTA.
-- SKEPTIC_UNBOXING: Hook (admit doubt) → unboxing/first impression as Problem or Demo → Demo/Solution (the moment it wins them over) → Social Proof (honest verdict) → CTA.
-- TIKTOK_SHOP_HOOK: Pattern-interrupt Hook → quick Demo/Solution → value/urgency framing → CTA pointing to the orange cart / TikTok Shop.
+STORY TYPES
+- The request gives the story type and its structure. Follow that structure's order of sections.
+- Use "Agitate" scenes to twist the knife on the problem (why it's worse than they think), when the structure has one.
 
 TONES
 - "Casual & Authentic": chill, friend-on-FaceTime energy.
@@ -148,6 +149,10 @@ function validateBody(
   const tone = b.tone;
   if (!TONES.includes(tone as never)) errors.tone = `tone must be one of: ${TONES.join(", ")}.`;
 
+  const platform = b.platform === undefined || b.platform === null || b.platform === "" ? undefined : b.platform;
+  if (platform !== undefined && !PLATFORMS.includes(platform as never)) errors.platform = `platform must be one of: ${PLATFORMS.join(", ")}.`;
+  if (b.textOnly !== undefined && typeof b.textOnly !== "boolean") errors.textOnly = "textOnly must be true or false.";
+
   if (Object.keys(errors).length) return { fieldErrors: errors };
 
   return {
@@ -158,9 +163,21 @@ function validateBody(
       framework: framework as GenerateScriptRequest["framework"],
       durationSeconds: durationSeconds as GenerateScriptRequest["durationSeconds"],
       tone: tone as GenerateScriptRequest["tone"],
+      platform: platform as GenerateScriptRequest["platform"],
+      textOnly: b.textOnly === true,
     },
   };
 }
+
+const PLATFORM_CTA: Record<NonNullable<GenerateScriptRequest["platform"]>, string> = {
+  tiktok: "TikTok (CTA can point to the orange cart / TikTok Shop)",
+  shorts: "YouTube Shorts (CTA: link in the description or comments)",
+  reels: "Instagram Reels (CTA: link in bio)",
+  stories: "Instagram/Facebook Stories (CTA: tap the link sticker)",
+  youtube: "YouTube video, landscape (CTA: link in the description)",
+  square: "Square social post (CTA: link in bio)",
+  feed: "Instagram/Facebook feed post (CTA: link in bio)",
+};
 
 function sceneGuidance(duration: number): string {
   if (duration === 15) return "3–4 scenes";
@@ -175,8 +192,16 @@ function buildPrompt(input: GenerateScriptRequest): string {
     `Product: ${input.productName}`,
     `Key benefits (from the brand — only claim what's here): ${input.keyBenefits}`,
     `Target audience: ${input.targetAudience || "Not specified — infer the most likely buyer from the product."}`,
-    `Framework: ${input.framework}`,
+    `Story type: ${FRAMEWORK_LABELS[input.framework].label}`,
+    `Structure: ${FRAMEWORK_LABELS[input.framework].structure}`,
+    ...(input.framework === "AUTO"
+      ? [`Story shapes to choose from:`, ...STORY_TYPES.filter((t) => t.id !== "AUTO").map((t) => `- ${t.label}: ${t.structure}`)]
+      : []),
     `Tone: ${input.tone}`,
+    ...(input.platform ? [`Platform: ${PLATFORM_CTA[input.platform]}`] : []),
+    ...(input.textOnly
+      ? [`No talking: the creator won't speak. Put the message in onScreenText (up to ~10 words per scene); keep voiceoverLine to the same words as onScreenText.`]
+      : []),
     ``,
     `Use ${sceneGuidance(input.durationSeconds)}. Scene durations must total ${input.durationSeconds} seconds.`,
     `Scene 1 is the Hook (≤3s). Final scene is the CTA.`,
