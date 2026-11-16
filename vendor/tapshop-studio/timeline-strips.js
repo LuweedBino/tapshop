@@ -358,3 +358,12 @@ html body .extra-track-fields label.duck-toggle{display:flex!important;flex-dire
 .duration-strip .duck-meter{position:absolute;top:1px;bottom:1px;display:flex;align-items:center;gap:2px;padding:0 3px;border-radius:6px;background:#0009;opacity:0;transform:translateX(-2px);transition:opacity .15s,transform .15s;pointer-events:none;z-index:2}
 .duration-strip .duck-meter.on{opacity:1;transform:none}.duration-strip .duck-meter b{font-size:9px;line-height:1;font-weight:400}
 .duration-strip .duck-meter i{position:relative;width:5px;height:100%;border-radius:2px;background:#ffffff33;overflow:hidden;display:block}.duration-strip .duck-meter u{position:absolute;left:0;right:0;bottom:0;background:#ff3ea5;transition:height .1s;text-decoration:none}`;document.head.appendChild(st)}
+
+// Double-tap or double-click the ruler, or any empty spot on the timeline, and the playhead jumps there.
+// (Strips keep their own double-tap, which opens their editing menu.)
+{const host=tracksHost,skip='.duration-strip,.strip-options,.strip-handle,.extra-track-head,button,input,select,textarea,label,a';let last=null;
+  const jump=e=>{if(exporting||e.target.closest?.(skip)&&!e.target.closest('#ruler'))return false;
+    const r=host.getBoundingClientRect();if(e.clientX-r.left+host.scrollLeft<LANE_START)return false;seekTimeline(playheadTime(e));return true};
+  host.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')return;const now=performance.now(),p={t:now,x:e.clientX,y:e.clientY};
+    if(last&&now-last.t<400&&Math.hypot(p.x-last.x,p.y-last.y)<30){last=null;jump(e)}else last=p});
+  host.addEventListener('dblclick',e=>{if(jump(e))e.preventDefault()})}
