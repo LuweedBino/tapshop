@@ -91,6 +91,10 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-sum{margin:6px 0;padding-left:18px;line-height:1.7}.ag-done{text-align:center;padding:24px 8px}.ag-done b{display:block;font-size:22px;margin-bottom:6px}
 .ag-status{margin:0;font-size:13px;min-height:1.2em;opacity:.85}
 .ag-bar{display:flex;gap:8px}.ag-bar button{flex:1 1 0;min-width:0;min-height:48px;font-size:16px;font-weight:700}.ag-bar button[hidden]{display:none}
+.ag-card.on b::after{content:' ✓';color:#ff3ea5}
+/* The editor theme paints every pressed button in its own colours; the agent's picks must stay pink in light and dark. */
+html body #agDialog .ag-card.on{background:#ff3ea51f!important;color:inherit!important;border-color:#ff3ea5!important;box-shadow:inset 0 0 0 2px #ff3ea5!important}
+html body #agDialog .ag-chips button.on,html body #agDialog .ag-steps button.on{background:#ff3ea5!important;color:#fff!important;border-color:#ff3ea5!important}
 @media (max-width:700px){#agDialog[open]{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;margin:0;inset:0;border-radius:0;border:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}}`;
 document.head.appendChild(css);
 
@@ -192,18 +196,21 @@ async function readStream(res,onProgress){const reader=res.body.getReader(),dec=
     while((nl=buf.indexOf('\n'))>=0){const line=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(!line)continue;
       try{const ev=JSON.parse(line);if(ev.type==='progress')onProgress(ev.chars||0);else if(ev.type==='result')result=ev}catch{}}
     if(done)return result}}
-async function writeScript(){if(busy)return;busy=true;paint();status('Thinking…');const b=S.brief;
-  try{const res=await fetch('/api/generate-script',{method:'POST',headers:{'Content-Type':'application/json'},
+async function writeScript(){if(busy)return;busy=true;paint();const b=S.brief,t0=Date.now(),secs=()=>Math.round((Date.now()-t0)/1000);
+  // A live counter so a slow answer never looks frozen, and a time limit so it can't wait forever.
+  let chars=0;const tick=()=>status(chars?`Writing your script… ${Math.min(95,Math.round(chars/(900+b.length*60)*100))}%`:`Thinking… ${secs()} s${secs()>30?' (almost there)':''}`);
+  const timer=setInterval(tick,1000),ctl=new AbortController(),limit=setTimeout(()=>ctl.abort(),150000);tick();
+  try{const res=await fetch('/api/generate-script',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctl.signal,
       body:JSON.stringify({productName:b.product,keyBenefits:b.benefits,targetAudience:b.audience||undefined,framework:S.story,durationSeconds:b.length,tone:b.tone,platform:b.platform,textOnly:S.scriptMode==='none'})});
     const data=(res.headers.get('content-type')||'').includes('ndjson')&&res.body
-      ?await readStream(res,ch=>status(ch?`Writing your script… ${Math.min(95,Math.round(ch/(900+b.length*60)*100))}%`:'Thinking…'))
+      ?await readStream(res,ch=>{chars=ch;tick()})
       :await res.json().catch(()=>null);
     if(!data){status(res.status===504?'The AI took too long. Please try again.':'The connection dropped before the script finished. Please try again.');return}
     if(!data.ok){status(data.error||'Couldn\'t write the script. Please try again.');return}
     const sc=data.script;S.title=sc.title||'';S.scenes=sc.scenes.map(scene);S.hookOptions=[S.scenes[0]?.say||'',...(sc.hookVariations||[])].filter(Boolean);S.hook=0;
     pickParts(true);files.clear();status('Script ready. Change any line you like, then tap Next.')}
-  catch{status('Network error. Check your connection and try again.')}
-  finally{busy=false;save();paint()}}
+  catch(e){status(e?.name==='AbortError'?'The AI took too long. Tap ✨ Write my script to try again.':'Network error. Check your connection and try again.')}
+  finally{clearInterval(timer);clearTimeout(limit);busy=false;save();paint()}}
 function useOwn(){const lines=S.ownLines.split('\n').map(l=>l.trim()).filter(Boolean).slice(0,20);if(!lines.length){status('Type at least one line.');return}
   const n=lines.length;S.scenes=lines.map((l,i)=>({type:i===0?'Hook':i===n-1&&n>1?'CTA':i===1&&n>=4?'Problem':'Demo/Solution',
     secs:Math.max(2,Math.round(l.split(/\s+/).length/2.5)),say:l,text:l.split(/\s+/).slice(0,7).join(' '),shot:'',anim:'',sfx:''}));
