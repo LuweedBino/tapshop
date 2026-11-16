@@ -55,7 +55,7 @@ const dlg=document.createElement('dialog');dlg.id='voDialog';dlg.className='clos
 // One screen on phones: the script scrolls, everything else stays put, and the buttons sit at the bottom.
 dlg.innerHTML=`<div class="vo-head"><h2 id="voTitle">🎙️ Voiceover</h2><button type="button" class="vo-x" aria-label="Close" title="Close">×</button></div>
 <div id="voPrompter" class="vo-prompter" aria-live="polite"></div>
-<details id="voSet" class="vo-set"><summary>⚙️ Prompter settings <span id="voSetSum"></span><small class="vo-set-tip">👆 Tap here to change the speed and text size, move lines only when you tap Next scene, or edit the script.</small></summary>
+<details id="voSet" class="vo-set"><summary>⚙️ Prompter settings <span id="voSetSum"></span><small class="vo-set-tip">👆 Too fast? Too small? Tap here to adjust, or edit your script.</small></summary>
 <div class="vo-grid"><label>Text size<input id="voSize" type="range" min="18" max="48" value="28"></label>
 <label id="voSpeedWrap">Speed: <b id="voSpeedV">1.0×</b><input id="voSpeed" type="range" min="0.5" max="2" step="0.1" value="1"></label></div>
 <label class="vo-check"><input type="checkbox" id="voManual"> Only move when I tap Next scene</label>
