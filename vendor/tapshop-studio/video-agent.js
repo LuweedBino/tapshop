@@ -119,7 +119,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-tag button{font-size:12px;padding:2px 8px!important;text-transform:none;letter-spacing:0}
 .ag-scene input,.ag-scene textarea,.ag-scene select{width:100%;margin-top:4px}
 .ag-scene .ag-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}.ag-scene .ag-row>label{flex:1 1 140px;font-size:12px}
-.ag-shot{font-size:13px;opacity:.85;margin:4px 0}
+.ag-shot{font-size:13px;opacity:.85;margin:4px 0}.ag-len{margin:2px 0 8px;font-size:13px;color:#ec4899}
 .ag-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid #8886;border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
 .ag-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.ag-file button{width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:13px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
@@ -179,6 +179,7 @@ footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add c
   h+=`<div class="ag-btns"><button type="button" data-act="addAll">📁 Add all my clips at once</button></div>`;
   h+=S.scenes.map((s,i)=>{const fl=files.get(i)||[];return `<div class="ag-scene${i===nextI?' next':''}"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}${i===nextI?' · next to film':''}</span></div>
     <p class="ag-shot">🎬 <b>Film:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
+    <p class="ag-len">⏱️ <b>About ${filmSecs(s)} seconds</b> ${S.voice==='talking'?'· say your line in one take, with a breath before and after':'· a little extra is fine, we trim it to fit'}</p>
     ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span><button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
     <div class="ag-btns"><button type="button" data-act="add" data-i="${i}">📁 Add clip</button><button type="button" data-act="film" data-i="${i}">📷 Film it</button></div></div>`}).join('');
   return h},
@@ -272,6 +273,10 @@ async function playMusic(){if(musicPlayer){stopMusic();return}const k=musicKey()
 function musicKey(){if(S.music!=='auto')return S.music;const st=STORIES.find(s=>s[0]===S.story);let k=st&&st[4]!=='auto'?st[4]:(S.voice==='none'?'hook':'story');
   return window.veMoods?.[k]?k:(window.veCreatorMoods?Object.keys(veCreatorMoods)[0]:Object.keys(window.veMoods||{})[0])||''}
 
+// How long to film a scene: as long as its line takes to say (about 2.5 words a second) or the planned length,
+// whichever is longer, plus 2 s to trim from. Talking to camera: the line's own length plus a breath.
+const nWords=t=>String(t||'').split(/\s+/).filter(Boolean).length;
+function filmSecs(s){const say=nWords(s.say)/2.5;return S.voice==='talking'?Math.max(2,Math.ceil(say+1)):Math.ceil(Math.max(s.secs||0,say,2)+2)}
 // ---------- building ----------
 const textSize=(s,W,H)=>{let f=.055,px=f*H,w=s.length*.6*px;if(w>W*.84)f=W*.84/(s.length*.6)/H;return Math.max(24,f*H*1280/W)};
 // Each scene's start in the voiceover, from the words heard (w.s in seconds): the script's words are matched to the
@@ -362,7 +367,7 @@ body.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||
     case 'addScene':S.scenes.push({type:'Demo/Solution',secs:3,say:'',text:'',shot:'',anim:'',sfx:''});pickParts(false);break;
     case 'footage':S.footage=v;break;
     case 'addAll':fileTarget=-1;fileIn.click();return;case 'add':fileTarget=i;fileIn.click();return;
-    case 'film':if(window.VideoCamera)VideoCamera.open(list=>addTo(i,list),toast,{only:'video'});else{fileTarget=i;fileIn.click()}return;
+    case 'film':toast(`🎬 Film about ${filmSecs(S.scenes[i]||{})} seconds for this scene.`);if(window.VideoCamera)VideoCamera.open(list=>addTo(i,list),toast,{only:'video'});else{fileTarget=i;fileIn.click()}return;
     case 'rmFile':{const l=(files.get(i)||[]).slice();l.splice(+b.dataset.j,1);files.set(i,l)}break;
     case 'voice':S.voice=v;break;case 'record':record();return;
     case 'pick':pickParts(true);S.music='auto';status('Picked for you. Change anything you like.');break;
