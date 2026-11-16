@@ -367,3 +367,15 @@ html body .extra-track-fields label.duck-toggle{display:flex!important;flex-dire
   host.addEventListener('pointerup',e=>{if(e.pointerType==='mouse')return;const now=performance.now(),p={t:now,x:e.clientX,y:e.clientY};
     if(last&&now-last.t<400&&Math.hypot(p.x-last.x,p.y-last.y)<30){last=null;jump(e)}else last=p});
   host.addEventListener('dblclick',e=>{if(jump(e))e.preventDefault()})}
+
+// Touch screens: a finger on a strip that isn't picked yet scrolls the timeline (sideways or up and down) instead of
+// dragging the strip; a tap picks it, and only then does a drag move it (its handles resize it). Mouse is unchanged.
+{const sheet=document.createElement('style');sheet.textContent=`@media (pointer:coarse){.duration-strip:not(.picked){touch-action:pan-x pan-y;cursor:pointer}}
+@media (pointer:coarse){.timeline .tracks{scrollbar-width:auto}.timeline .tracks::-webkit-scrollbar{width:10px;height:10px}.timeline .tracks::-webkit-scrollbar-thumb{background:#ff3ea580;border-radius:8px}}`;document.head.appendChild(sheet);
+  let pend=null;const isPicked=s=>pickedStrip&&pickedStrip.kind===s.dataset.model&&String(pickedStrip.id)===String(s.dataset.id);
+  tracksHost.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'||exporting)return;const s=e.target.closest('.duration-strip');if(!s||isPicked(s))return;
+    e.stopImmediatePropagation();pend={x:e.clientX,y:e.clientY,kind:s.dataset.model,id:s.dataset.id}},true);
+  tracksHost.addEventListener('pointermove',e=>{if(pend&&Math.hypot(e.clientX-pend.x,e.clientY-pend.y)>10)pend=null},true);
+  tracksHost.addEventListener('pointercancel',()=>{pend=null},true);
+  tracksHost.addEventListener('pointerup',e=>{if(!pend)return;const p=pend;pend=null;e.stopImmediatePropagation();const m=stripModel(p.kind,p.id);if(!m||exporting)return;pause();
+    const under=playhead>m.offset+.05&&playhead<m.offset+m.length-.05;tapStrip(p.kind,p.id);if(under)showSplit(p.kind,p.id);else hideSplit()},true)}
