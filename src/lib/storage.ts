@@ -5,6 +5,7 @@ import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } fro
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { get as getBlob, del as delBlob } from "@vercel/blob";
 import { env } from "./env";
+import { contentDisposition } from "./disposition";
 
 // Files live under "public/<creatorId>/..." (avatars, covers) or "private/<creatorId>/..."
 // (paid downloads). Where they are stored depends on the environment:
@@ -155,7 +156,7 @@ export async function signedDownloadUrl(key: string, downloadName?: string) {
     new GetObjectCommand({
       Bucket: env.s3.bucket,
       Key: key,
-      ResponseContentDisposition: downloadName ? `attachment; filename="${downloadName.replace(/"/g, "")}"` : undefined,
+      ResponseContentDisposition: downloadName ? contentDisposition("attachment", downloadName) : undefined,
     }),
     { expiresIn: 300 },
   );

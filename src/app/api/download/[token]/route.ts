@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { contentDisposition } from "@/lib/disposition";
 import { readObject, signedDownloadUrl, usingS3 } from "@/lib/storage";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ token: string }> }) {
@@ -20,7 +21,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ token: 
   return new NextResponse(file.body, {
     headers: {
       "content-type": file.contentType,
-      "content-disposition": `attachment; filename="${name.replace(/"/g, "")}"`,
+      "content-disposition": contentDisposition("attachment", name),
       "cache-control": "private, no-store",
     },
   });
