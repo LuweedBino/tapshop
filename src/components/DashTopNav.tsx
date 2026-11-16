@@ -51,7 +51,8 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
   const lastOpen = useRef(false);
   const [gold, setGold] = useState(false);
   const [hint, setHint] = useState(false);
-  const [labelW, setLabelW] = useState<[number, number] | null>(null);
+  // The logo keeps the width of "TapShop"; the hint is drawn in a smaller font so it fits that width.
+  const [label, setLabel] = useState<{ w: number; alt: number } | null>(null);
   const labelA = useRef<HTMLSpanElement>(null);
   const labelB = useRef<HTMLSpanElement>(null);
   const openRef = useRef(open);
@@ -104,10 +105,14 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
     };
   }, [path]);
 
-  // Measure both labels so the logo can grow and shrink smoothly between them.
+  // Measure both labels once fonts load: the hint's font size is set so it's exactly as wide as "TapShop".
   useEffect(() => {
     const measure = () => {
-      if (labelA.current && labelB.current) setLabelW([labelA.current.scrollWidth, labelB.current.scrollWidth]);
+      const a = labelA.current, b = labelB.current;
+      if (!a || !b) return;
+      const base = parseFloat(getComputedStyle(a).fontSize), now = parseFloat(getComputedStyle(b).fontSize);
+      const perEm = b.scrollWidth / (now / base);
+      if (perEm > 0) setLabel({ w: a.scrollWidth, alt: Math.min(0.74, (a.scrollWidth * 0.98) / perEm) });
     };
     measure();
     document.fonts?.ready.then(measure);
@@ -164,7 +169,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
           >
             <span
               className={`dash-slot${hint ? " alt" : ""}`}
-              style={{ width: labelW ? `${hint ? labelW[1] : labelW[0]}px` : "4.15em" }}
+              style={{ width: label ? `${label.w}px` : "4.15em", ...(label ? { "--alt": label.alt } : {}) } as React.CSSProperties}
               aria-hidden="true"
             >
               <span className="dash-slot-reel">
