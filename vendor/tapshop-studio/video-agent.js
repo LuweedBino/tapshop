@@ -119,7 +119,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-tag button{font-size:12px;padding:2px 8px!important;text-transform:none;letter-spacing:0}
 .ag-scene input,.ag-scene textarea,.ag-scene select{width:100%;margin-top:4px}
 .ag-scene .ag-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}.ag-scene .ag-row>label{flex:1 1 140px;font-size:12px}
-.ag-shot{font-size:13px;opacity:.85;margin:4px 0}.ag-len{margin:2px 0 8px;font-size:13px;color:#ec4899}
+.ag-shot{font-size:13px;opacity:.85;margin:4px 0}.ag-len{margin:2px 0 8px;font-size:13px;color:#ec4899}.ag-move{margin:0 4px;padding:2px 4px;font-size:12px;border-radius:8px;max-width:96px}
 .ag-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid #8886;border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
 .ag-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.ag-file button{width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:13px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
@@ -176,11 +176,13 @@ footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add c
   <div class="ag-cards">${card('footage','clips',f==='clips','🎥 Clips','Upload or film, scene by scene')}${card('footage','none',f==='none','🎨 No footage','Text and graphics only')}</div>`;
   if(f==='none')return h+`<p class="ag-help">Your video will be words, graphics, music and your voice on a plain background. You can add clips later in the editor.</p>`;
   const nextI=S.scenes.findIndex((s,i)=>!(files.get(i)||[]).length);
-  h+=`<div class="ag-btns"><button type="button" data-act="addAll">📁 Add all my clips at once</button></div>`;
+  const nClips=[...files.values()].reduce((n,l)=>n+l.length,0);
+  h+=`<div class="ag-btns"><button type="button" data-act="addAll">📁 Add all my clips at once</button>${nClips>1&&window.veClipReader?`<button type="button" class="primary" data-act="sortClips" ${busy?'disabled':''}>✨ Sort my clips into scenes</button>`:''}</div>`;
+  if(nClips>1&&window.veClipReader)h+=`<p class="ag-help">✨ The AI watches${S.voice==='talking'?' and listens to':''} each clip and puts it in the scene it fits best. Nothing is uploaded. Move any clip with the menu next to it.</p>`;
   h+=S.scenes.map((s,i)=>{const fl=files.get(i)||[];return `<div class="ag-scene${i===nextI?' next':''}"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}${i===nextI?' · next to film':''}</span></div>
     <p class="ag-shot">🎥 <b>Film:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
     <p class="ag-len">⏱️ <b>About ${filmSecs(s)} seconds</b> ${S.voice==='talking'?'· say your line in one take, with a breath before and after':'· a little extra is fine, we trim it to fit'}</p>
-    ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span><button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
+    ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span><select class="ag-move" data-i="${i}" data-j="${j}" aria-label="Move to scene">${S.scenes.map((_,k)=>`<option value="${k}"${k===i?' selected':''}>Scene ${k+1}</option>`).join('')}</select><button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
     <div class="ag-btns"><button type="button" data-act="add" data-i="${i}">📁 Add clip</button>${hasVault()?`<button type="button" data-act="vault" data-i="${i}">🗄️ From Vault</button>`:''}${touch()?`<button type="button" data-act="filmLine" data-i="${i}">🎬 Film with my line</button><button type="button" data-act="film" data-i="${i}">📷 Camera app</button>`:`<button type="button" data-act="film" data-i="${i}">🎬 Film it</button>`}</div></div>`}).join('');
   return h},
 voice(){const v=S.voice,none=S.scriptMode==='none';let h=`<h3>Voice + captions</h3><p class="ag-help">${none?'You picked no talking, so music and words on screen carry the video.':'How will people hear your script?'}</p>
@@ -284,6 +286,32 @@ const touch=()=>matchMedia('(pointer:coarse)').matches;
 function camPrompt(i){const s=S.scenes[i]||{},talk=S.voice==='talking';
   return {facing:talk?'user':'environment',prompt:{label:(talk?'🗣️ Say':'🎥 Film')+` · scene ${i+1} of ${S.scenes.length}`,line:talk?(s.say||s.text||''):(s.shot||'Anything that shows: '+(s.text||s.say||'')),secs:filmSecs(s)}}}
 function pickVault(i){VaultPicker.open({title:`Clip for scene ${i+1}`,kinds:['video'],onPick:async it=>{try{toast('Loading '+it.name+'…');addTo(i,[await VaultPicker.file(it)])}catch(e){toast(e.message)}if(!dlg.open)dlg.showModal()}})}
+// Moving one clip to another scene with the menu next to it.
+body.addEventListener('change',e=>{const m=e.target.closest?.('.ag-move');if(!m)return;const i=+m.dataset.i,j=+m.dataset.j,to=+m.value,l=(files.get(i)||[]).slice(),[f]=l.splice(j,1);
+  if(!f||to===i)return;files.set(i,l);files.set(to,[...(files.get(to)||[]),f]);paint();status(`Moved to scene ${to+1}.`)});
+// Phase 3: sort every added clip into the scene it fits best. The clip reader (CLIP, in video-broll.js's worker)
+// scores three frames of each clip against every scene's shot description; when the creator talks in their clips,
+// Whisper also listens to the first seconds and words shared with a scene's line add to its score. Then every
+// scene gets its best clip first (best pairs first), and the rest go to their best scene, keeping their order.
+const nrm=w=>String(w).toLowerCase().replace(/[^a-z0-9]/g,'');
+async function clipLen(f){const v=document.createElement('video');v.preload='metadata';v.muted=true;const u=URL.createObjectURL(f);v.src=u;
+  try{await new Promise((r,j)=>{v.onloadedmetadata=r;v.onerror=j;setTimeout(r,6000)});let d=v.duration;if(!Number.isFinite(d)){v.currentTime=1e9;await new Promise(r=>{v.ontimeupdate=r;setTimeout(r,3000)});d=v.duration}return {url:u,secs:Number.isFinite(d)&&d>0?d:3}}catch{return {url:u,secs:3}}}
+async function clipSound(f){try{let b=await new OfflineAudioContext(1,1,16000).decodeAudioData(await f.arrayBuffer());const n=Math.min(b.length,Math.ceil(b.duration*16000)),oc=new OfflineAudioContext(1,Math.min(n,28*16000)||1,16000),s=oc.createBufferSource();s.buffer=b;s.connect(oc.destination);s.start();b=await oc.startRendering();return b.getChannelData(0).slice()}catch{return null}}
+async function sortClips(){if(busy||!window.veClipReader)return;const R=veClipReader,all=[];for(const [i,l] of files)for(const f of l)all.push({f,from:i,order:all.length});if(all.length<2)return;
+  busy=true;paint();const say=m=>status(m),dl=m=>say(`Downloading the clip reader (one time only)… ${Math.round(m.loaded/1e6)} of ${Math.round(m.total/1e6)} MB`),talk=S.voice==='talking';
+  const labels=S.scenes.map(s=>String(s.shot||s.text||s.say||s.type).slice(0,120)),lines=S.scenes.map(s=>new Set(String(s.say||'').split(/\s+/).map(nrm).filter(w=>w.length>3)));
+  try{for(let k=0;k<all.length;k++){const c=all[k];say(`✨ Watching clip ${k+1} of ${all.length}…`);const {url,secs}=await clipLen(c.f);
+      try{const res=await R.see(await R.frames(url,secs),labels,dl);c.score=labels.map(l=>res.reduce((n,r)=>n+(r.find(x=>x.label===l)?.score||0),0)/res.length)}finally{URL.revokeObjectURL(url)}
+      if(talk){say(`✨ Listening to clip ${k+1} of ${all.length}…`);const a=await clipSound(c.f);if(a&&a.length>8000){const r=await R.hear(a,dl),heard=new Set(String(r.text||'').split(/\s+/).map(nrm).filter(w=>w.length>3));
+          lines.forEach((L,j)=>{let n=0;for(const w of heard)if(L.has(w))n++;c.score[j]+=L.size?1.5*n/L.size:0})}}}
+    // Best pairs first, so every scene gets a clip while there are enough; then the rest to their best scene.
+    const out=S.scenes.map(()=>[]),left=new Set(all),pairs=[];for(const c of all)c.score.forEach((v,j)=>pairs.push([v,c,j]));pairs.sort((a,b)=>b[0]-a[0]);
+    for(const [,c,j] of pairs){if(!left.has(c)||out[j].length)continue;out[j].push(c);left.delete(c)}
+    for(const c of left){const j=c.score.indexOf(Math.max(...c.score));out[j].push(c)}
+    files.clear();out.forEach((l,j)=>{if(l.length)files.set(j,l.sort((a,b)=>a.order-b.order).map(c=>c.f))});
+    const moved=all.filter(c=>out.findIndex(l=>l.includes(c))!==c.from).length;busy=false;paint();
+    status(`✨ Sorted ${all.length} clips into ${out.filter(l=>l.length).length} scenes${moved?` (${moved} moved)`:''}. Check them, and move any with the menu next to it.`)}
+  catch(e){console.warn(e);busy=false;paint();status('The clip reader couldn’t run here ('+(e.message||e)+'). Your clips stay where they are.')}}
 // ---------- building ----------
 const textSize=(s,W,H)=>{let f=.055,px=f*H,w=s.length*.6*px;if(w>W*.84)f=W*.84/(s.length*.6)/H;return Math.max(24,f*H*1280/W)};
 // Each scene's start in the voiceover, from the words heard (w.s in seconds): the script's words are matched to the
@@ -373,6 +401,7 @@ body.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||
     case 'rmScene':S.scenes.splice(i,1);{const m=new Map();for(const [k,l] of files)if(k!==i)m.set(k>i?k-1:k,l);files.clear();for(const [k,l] of m)files.set(k,l)}break;
     case 'addScene':S.scenes.push({type:'Demo/Solution',secs:3,say:'',text:'',shot:'',anim:'',sfx:''});pickParts(false);break;
     case 'footage':S.footage=v;break;
+    case 'sortClips':sortClips();return;
     case 'addAll':fileTarget=-1;fileIn.click();return;case 'add':fileTarget=i;fileIn.click();return;
     case 'vault':pickVault(i);return;
     case 'filmLine':if(window.VideoCamera){VideoCamera.open(list=>addTo(i,list),toast,{only:'video',inApp:true,...camPrompt(i)});return}

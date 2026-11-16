@@ -441,6 +441,10 @@ function ask(msg,onDl,transfer){return new Promise((res,rej)=>{if(!worker)worker
   const id=++askN;worker.onmessage=e=>{let m=e.data;if(m.type==='dl')onDl?.(m);else if(m.id!==id)return;else if(m.type==='done')res(m.result);else rej(Error(m.message))};
   worker.onerror=e=>rej(Error(e.message||'The clip reader could not start.'));worker.postMessage({...msg,id},transfer||[])})}
 function stopWorker(){worker?.terminate();worker=null}
+// The same clip reader for other makers (Build My Video sorts clips into scenes with it): see(images, labels) →
+// per image a list of {label, score}; hear(audio 16 kHz mono) → {text, chunks}; frames(url, seconds) → 3 small JPEGs.
+window.veClipReader={see:(images,labels,onDl)=>ask({task:'see',images,labels},onDl),hear:(audio,onDl)=>ask({task:'hear',audio},onDl,[audio.buffer]),
+  frames:(url,secs)=>frames({asset:{url,name:'clip'},in:0,out:secs}),stop:stopWorker};
 
 // Three small pictures from inside the clip (a separate <video>, so the editor's own players aren't moved).
 async function frames(src){const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=src.asset.url;
