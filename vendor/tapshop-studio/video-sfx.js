@@ -76,6 +76,7 @@ const wav=buf=>{const ch=buf.numberOfChannels,n=buf.length,v=new DataView(new Ar
   const d=[...Array(ch)].map((_,c)=>buf.getChannelData(c));let o=44;for(let i=0;i<n;i++)for(let c=0;c<ch;c++){const x=Math.max(-1,Math.min(1,d[c][i]));v.setInt16(o,x<0?x*0x8000:x*0x7fff,true);o+=2}return v.buffer};
 
 // Level for each effect, so they all land about as loud as each other (the limiter catches anything over).
+const SFX_MIX={volume:.6,duckAmt:.55};
 const LEVEL={swoosh:5.5,pop:1.2,cash:2.1,shutter:1,sparkle:2,drop:1,click:13,buzz:1.2,ding:2,riser:1.15,scratch:1.6,whoosh:.95};
 const leveled=(ctx,out,key)=>{const g=ctx.createGain();g.gain.value=LEVEL[key]||1;g.connect(out);return g};
 let live=null,liveOut=null;
@@ -91,7 +92,9 @@ window.TapSFX={list:LIST,fx:FX,
   // o.forId ties it to a strip: it then starts when that strip starts (plus o.rel seconds) and goes away with it.
   async add(key,o={}){if(exporting)return;const it=LIST.find(x=>x[0]===key);if(!it)return;const at=+(o.at??playhead).toFixed(2);if(!o.noSnap)snapshot();addTrack('audio');const t=extraTracks.at(-1);
     Object.assign(t,{name:it[1]+' '+it[2],lane:'sfx',offset:at},o.forId?{sfxFor:o.forId,sfxKey:key,sfxAt:+(o.rel||0).toFixed(2)}:{});targetTrack=t.id;await loadTrackMedia(await this.file(key));
-    if(!t.media){if(o.noSnap)deleteTrack(t.id);else undo();return false}t.offset=at;renderTracks();await seekTimeline(playhead);window.recordRecent?.('sfx-'+key);if(!o.quiet)toast(`${it[2]} added at ${at.toFixed(1)} s. Drag it to move it.`);return true}};
+    if(!t.media){if(o.noSnap)deleteTrack(t.id);else undo();return false}t.offset=at;
+    // Effects sit under the voice: a bit quieter overall, and they dip (less than music does) while someone talks.
+    Object.assign(t,{volume:SFX_MIX.volume,duck:true,duckAmt:SFX_MIX.duckAmt});renderTracks();await seekTimeline(playhead);window.recordRecent?.('sfx-'+key);if(!o.quiet)toast(`${it[2]} added at ${at.toFixed(1)} s. Drag it to move it.`);return true}};
 
 // ---- A sound effect on a text box or sticker: a "🔊 Sound effect" menu in its editing menu (timeline and preview pop-up).
 // The sound is its own audio track (sfxFor = the strip's id, sfxKey = which sound) that always starts with the strip.
