@@ -28,6 +28,7 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-empty{font-size:15px!important;opacity:.75;margin:0}
 .vo-set summary{cursor:pointer;font-size:14px;font-weight:600}
 .vo-set summary span{font-weight:400;opacity:.7}
+.vo-set-tip{display:block;margin:2px 0 0 18px;font-size:12px;font-weight:600;color:#ec4899}.vo-set[open] .vo-set-tip{display:none}
 .vo-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin:8px 0 4px}
 .vo-grid label{display:flex;flex-direction:column;gap:2px;font-size:13px}
 .vo-grid input{width:100%}
@@ -54,7 +55,7 @@ const dlg=document.createElement('dialog');dlg.id='voDialog';dlg.className='clos
 // One screen on phones: the script scrolls, everything else stays put, and the buttons sit at the bottom.
 dlg.innerHTML=`<div class="vo-head"><h2 id="voTitle">🎙️ Voiceover</h2><button type="button" class="vo-x" aria-label="Close" title="Close">×</button></div>
 <div id="voPrompter" class="vo-prompter" aria-live="polite"></div>
-<details id="voSet" class="vo-set"><summary>⚙️ Prompter settings <span id="voSetSum"></span></summary>
+<details id="voSet" class="vo-set"><summary>⚙️ Prompter settings <span id="voSetSum"></span><small class="vo-set-tip">👆 Tap here to change the speed and text size, move lines only when you tap Next scene, or edit the script.</small></summary>
 <div class="vo-grid"><label>Text size<input id="voSize" type="range" min="18" max="48" value="28"></label>
 <label id="voSpeedWrap">Speed: <b id="voSpeedV">1.0×</b><input id="voSpeed" type="range" min="0.5" max="2" step="0.1" value="1"></label></div>
 <label class="vo-check"><input type="checkbox" id="voManual"> Only move when I tap Next scene</label>
