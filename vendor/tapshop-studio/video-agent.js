@@ -240,6 +240,22 @@ function musicKey(){if(S.music!=='auto')return S.music;const st=STORIES.find(s=>
 
 // ---------- building ----------
 const textSize=(s,W,H)=>{let f=.055,px=f*H,w=s.length*.6*px;if(w>W*.84)f=W*.84/(s.length*.6)/H;return Math.max(24,f*H*1280/W)};
+// Each scene's start in the voiceover, from the words heard (w.s in seconds): the script's words are matched to the
+// heard ones in order (longest common run), a scene starts at its first matched word, less the words before it that
+// weren't caught. Scenes with no match sit between their neighbours by word count. Null when too little matched.
+const norm=w=>String(w).toLowerCase().replace(/[^a-z0-9]/g,'');
+function alignMarks(scenes,words,dur){const sw=[];scenes.forEach((s,k)=>String(s.say||'').split(/\s+/).map(norm).filter(Boolean).forEach((w,p)=>sw.push([w,k,p])));
+  const hw=words.map(w=>norm(w.w)),n=hw.length,m=sw.length;if(!n||!m)return null;
+  const L=Array.from({length:n+1},()=>new Uint16Array(m+1));
+  for(let i=n-1;i>=0;i--)for(let j=m-1;j>=0;j--)L[i][j]=hw[i]&&hw[i]===sw[j][0]?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  if(L[0][0]<Math.max(2,m*.3))return null;
+  const at=scenes.map(()=>null);let i=0,j=0;
+  while(i<n&&j<m){if(hw[i]&&hw[i]===sw[j][0]){const [,k,p]=sw[j];if(at[k]==null)at[k]=Math.max(0,words[i].s-p*.32);i++;j++}else if(L[i+1][j]>=L[i][j+1])i++;else j++}
+  const cnt=scenes.map(s=>String(s.say||'').split(/\s+/).filter(Boolean).length||1);at[0]=0;
+  for(let k=1;k<at.length;k++)if(at[k]!=null)at[k]=Math.max(0,at[k]-.15);
+  for(let k=1;k<at.length;k++){if(at[k]!=null)continue;let a=k-1,b=k;while(b<at.length&&at[b]==null)b++;
+    const tb=b<at.length?at[b]:dur,wa=cnt.slice(a,b).reduce((x,y)=>x+y,0);let w=0;for(let q=a;q<k;q++)w+=cnt[q];at[k]=at[a]+(tb-at[a])*w/wa}
+  for(let k=1;k<at.length;k++)at[k]=Math.min(Math.max(at[k],at[k-1]+.4),dur-.3);return at}
 async function build(){if(busy||(typeof exporting!=='undefined'&&exporting))return;busy=true;paint();const say=m=>status(m);
   try{if(clips.length||graphicTracks.length||extraTracks.length){say('Saving your current video to Recent videos…');if(window.veNewProject)await veNewProject();else{clips=[];graphicTracks=[];extraTracks=[]}}
     const st=byId('veStart');if(st)st.hidden=true;
@@ -248,9 +264,15 @@ async function build(){if(busy||(typeof exporting!=='undefined'&&exporting))retu
     const A=new Map();if(S.footage!=='none'){let n=0,all=[...files.values()].flat().length;
       for(const [i,list] of files){if(i>=S.scenes.length)continue;const got=[];for(const f of list){say(`Loading clip ${++n} of ${all}…`);try{got.push(await loadAsset(f))}catch(e){toast(e.message)}}A.set(i,got)}}
     // When each scene starts and how long it lasts: the voiceover's real timing, the clips' own length when talking, else the plan.
-    const spans=[];let cur=0;const talk=S.voice==='talking',voice=S.voice==='record'&&take;
+    const talk=S.voice==='talking',voice=S.voice==='record'&&take;
+    // Listen to the voiceover once: its words line each scene up with when it was really said (the prompter's
+    // timer only says when the line was highlighted), and they become the captions later.
+    let vw=null,marks=voice?take.marks:null;if(voice&&window.veClipWords){const a={id:uid(),name:'Voiceover',file:take.file,duration:take.dur};assets.push(a);
+      try{vw=await veClipWords({assetId:a.id,in:0,out:take.dur},m=>say(m))}catch(e){console.warn('Listening skipped:',e)}finally{assets=assets.filter(x=>x!==a)}
+      const al=vw&&alignMarks(S.scenes,vw,take.dur);if(al)marks=al}
+    const spans=[];let cur=0;
     S.scenes.forEach((s,i)=>{let start,len;
-      if(voice&&take.marks[i]!=null){start=take.marks[i];const nx=take.marks.slice(i+1).find(x=>x!=null);len=(nx??take.dur)-start}
+      if(voice&&marks[i]!=null){start=marks[i];const nx=marks.slice(i+1).find(x=>x!=null);len=(nx??take.dur)-start}
       else if(talk&&(A.get(i)||[]).length){start=cur;len=A.get(i).reduce((n,a)=>n+a.duration,0)}
       else{start=voice?Math.max(cur,take.dur):cur;len=Math.max(1.5,s.secs)}
       start=Math.round(start*100)/100;len=Math.max(.5,Math.round(len*100)/100);spans.push([start,len]);cur=Math.max(cur,start+len)});
@@ -278,8 +300,7 @@ async function build(){if(busy||(typeof exporting!=='undefined'&&exporting))retu
     byId('projectName').value='🪄 '+S.brief.product.slice(0,60);selected=-1;render();renderTracks();renderGraphicTracks();await seekTimeline(0);
     // Captions last, from the voiceover or the clips' own sound.
     let capNote='';if(S.voice!=='none'&&S.captions&&(voice||clips.length)){try{let s={};try{s=JSON.parse(localStorage.getItem('tapshop-captions')||'{}')}catch{}localStorage.setItem('tapshop-captions',JSON.stringify({...s,style:S.capStyle}))}catch{}
-      try{if(voice&&window.veClipWords){const a={id:uid(),name:'Voiceover',file:take.file,duration:take.dur};assets.push(a);let words;
-          try{words=await veClipWords({assetId:a.id,in:0,out:take.dur},m=>say(m))}finally{assets=assets.filter(x=>x!==a)}
+      try{if(voice&&window.veClipWords){const words=vw||[];
           capNote=words.length&&vePlaceCaptions(words.map(w=>({w:w.w,s:Math.round(w.s*100)/100,e:Math.round(w.e*100)/100})))?'':' We didn\'t hear any words for captions.'}
         else if(window.veAutoCaptions){say('Listening for captions…');capNote=await veAutoCaptions(say)?'':' We didn\'t hear any words for captions.'}}
       catch(e){console.warn('Captions skipped:',e);capNote=' Captions didn\'t work here; try ✨ Captions in the toolbar.'}
