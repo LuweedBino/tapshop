@@ -17,6 +17,15 @@ const css=`.vc-menu{width:min(340px,92vw);border:1px solid var(--ts-border-stron
 .vc-modes[hidden]{display:none}.vc-modes{display:flex;justify-content:center;gap:4px;grid-column:1/-1}
 .vc-line{position:absolute;left:0;right:0;bottom:0;padding:14px 18px 16px;background:linear-gradient(transparent,#000d 30%);font:600 clamp(17px,2.6vw,26px)/1.35 system-ui,sans-serif;text-align:center;text-shadow:0 1px 3px #000}.vc-line small{display:block;font-size:13px;font-weight:500;opacity:.8;margin-bottom:4px}
 .vc-rec.vc-ok{background:#16a34a}
+/* Countdown towards the suggested length: a big ring of seconds left, then a flashing green "Stop" light. */
+.vc-rec.vc-side-pill{left:14px;transform:none}
+.vc-count{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:clamp(96px,22vw,140px);aspect-ratio:1;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:conic-gradient(#fbbf24 calc(var(--p,0)*1turn),#ffffff33 0);box-shadow:0 4px 18px #0009;pointer-events:none}.vc-count[hidden]{display:none}
+.vc-count::before{content:'';position:absolute;inset:9px;border-radius:50%;background:#000c}
+.vc-count b,.vc-count small{position:relative;font-family:system-ui,sans-serif;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px #000}.vc-count b{font-size:clamp(40px,10vw,64px);font-weight:800;line-height:1}.vc-count small{font-size:10px;font-weight:700;opacity:.9;margin-top:2px;letter-spacing:.2px;text-align:center;line-height:1.1;max-width:70%}
+.vc-count.vc-go{background:#22c55e;box-shadow:0 0 40px #22c55e,0 0 90px #22c55e88;animation:vc-flash .5s ease-in-out 4 alternate}.vc-count.vc-go::before{background:#16a34a}
+@keyframes vc-flash{from{transform:translateX(-50%) scale(1);filter:brightness(1)}to{transform:translateX(-50%) scale(1.12);filter:brightness(1.35)}}
+.vc-bar .vc-shoot.vc-go{background:#22c55e!important;border-color:#bbf7d0!important;box-shadow:0 0 0 4px #22c55e66,0 0 24px #22c55e;animation:vc-glow 1s ease-in-out infinite alternate}@keyframes vc-glow{to{box-shadow:0 0 0 9px #22c55e33,0 0 36px #22c55e}}
+@media (prefers-reduced-motion:reduce){.vc-count.vc-go,.vc-bar .vc-shoot.vc-go{animation:none}}
 .vc-bar .vc-shoot{width:64px;height:64px;padding:0;border-radius:50%}.vc-bar .vc-shoot.vc-on{border-radius:14px;width:52px;height:52px;margin:6px}`;
 const FORMATS=['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];
 let styled=false,inputs=null;
@@ -40,7 +49,7 @@ function menu(add){
 // (it turns green once the shot is long enough). facing: 'user' | 'environment' picks the starting camera.
 function webcam(add,only,prompt,facing){
   let d=document.createElement('dialog');d.className='vc-cam';d.setAttribute('aria-label','Camera');
-  d.innerHTML=`<div class="vc-wrap"><div class="vc-stage"><video muted playsinline autoplay></video><div class="vc-status" role="status">Starting your camera…</div><div class="vc-rec" hidden></div>${prompt?`<div class="vc-line"><small></small><span></span></div>`:''}</div>
+  d.innerHTML=`<div class="vc-wrap"><div class="vc-stage"><video muted playsinline autoplay></video><div class="vc-status" role="status">Starting your camera…</div><div class="vc-rec" hidden></div><div class="vc-count" hidden aria-live="polite"><b></b><small></small></div>${prompt?`<div class="vc-line"><small></small><span></span></div>`:''}</div>
 <div class="vc-bar"><div class="vc-modes"><button type="button" data-mode="video" style="${GHOST}">Video</button><button type="button" data-mode="photo" style="${GHOST}">Photo</button></div>
 <div class="vc-side"><button type="button" class="vc-done" style="${GHOST}">Done</button></div><button type="button" class="vc-shoot" style="background:#fff;border:4px solid #fff" aria-label="Start recording" disabled></button><div class="vc-side vc-end"><button type="button" class="vc-flip" style="${GHOST}" hidden>⟲ Flip</button></div></div></div>`;
   document.body.appendChild(d);d.showModal();
@@ -75,10 +84,15 @@ function webcam(add,only,prompt,facing){
     try{r=new MediaRecorder(stream,type?{mimeType:type}:undefined)}catch{say('Recording isn’t supported in this browser.');return}
     r.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
     finished=new Promise(res=>{r.onstop=()=>{let t=(r.mimeType||type||'video/webm').split(';')[0],ext=t==='video/mp4'?'mp4':'webm';if(chunks.length){add([new File(chunks,`camera-video-${stamp()}.${ext}`,{type:t})]);saved()}res()}});
-    const goal=prompt?.secs||0,show=()=>{const s=Math.floor((Date.now()-start)/1000),ok=goal&&s>=goal;rec.classList.toggle('vc-ok',!!ok);rec.textContent=(ok?'✓ ':'● ')+clock(s)+(goal?(ok?' · you can stop':' / '+clock(goal)):'')};
-    r.start(1000);recorder=r;rec.hidden=false;show();tick=setInterval(show,500);paint();
+    const goal=prompt?.secs||0,count=q('.vc-count');let went=false;
+    const show=()=>{const t=(Date.now()-start)/1000,s=Math.floor(t),ok=goal&&t>=goal;rec.classList.toggle('vc-ok',!!ok);rec.textContent=(ok?'✓ ':'● ')+clock(s);
+      if(!goal)return;count.style.setProperty('--p',Math.min(1,t/goal).toFixed(3));
+      if(ok){if(!went){went=true;count.classList.add('vc-go');shoot.classList.add('vc-go');shoot.setAttribute('aria-label','Stop recording: you have enough');navigator.vibrate?.([120,80,120])}count.querySelector('b').textContent='✓';count.querySelector('small').textContent='TAP STOP'}
+      else{count.querySelector('b').textContent=Math.ceil(goal-t);count.querySelector('small').textContent=Math.ceil(goal-t)===1?'SECOND LEFT':'SECONDS LEFT'}};
+    rec.classList.toggle('vc-side-pill',!!goal);count.hidden=!goal;count.classList.remove('vc-go');
+    r.start(1000);recorder=r;rec.hidden=false;show();tick=setInterval(show,100);paint();
   }
-  async function endRecording(){if(!recorder)return;recorder.stop();recorder=null;clearInterval(tick);rec.hidden=true;await finished;paint()}
+  async function endRecording(){if(!recorder)return;recorder.stop();recorder=null;clearInterval(tick);rec.hidden=true;q('.vc-count').hidden=true;q('.vc-count').classList.remove('vc-go');shoot.classList.remove('vc-go');await finished;paint()}
   // Leaving mid-recording keeps the clip rather than losing it.
   async function close(){if(closed)return;closed=true;await endRecording();stop();d.close();d.remove()}
   shoot.onclick=()=>{if(!stream)return;if(mode==='photo')photo();else if(recorder)endRecording();else record()};
