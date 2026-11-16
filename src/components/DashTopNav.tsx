@@ -30,17 +30,16 @@ const POP_AFTER_BREEZE = 380;
 const POP_MS = 1100;
 const WELCOME_MS = 5 * 60 * 1000;
 const WELCOME_KEY = "tapshop-nav-welcome";
-// Every 30 s on phones (while the page buttons are folded) a gold shine sweeps the logo, then its label
+// Every 30 s (while the page buttons are folded) a gold shine sweeps the logo, then its label
 // rolls like a slot machine to "Tap here for menu" for 5 s and rolls back.
 const HINT_EVERY_MS = 30_000;
 const HINT_SHINE_MS = 1000;
 const HINT_HOLD_MS = 5000;
 
-// Phone header: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
+// The dashboard header, on phones and computers alike: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
 // which fold away. Tapping the logo or the toggle shows them. On every page load the buttons glide open and
 // shut, a soft breeze ripples out of the toggle, then flows across the logo as a shine and sparkles
 // (no press; the logo only presses in when it's tapped).
-// On computers the buttons sit in the sidebar and always show.
 export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.ReactNode }) {
   const path = usePathname();
   const [open, setOpen] = useState(false);
@@ -57,7 +56,6 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
   const labelB = useRef<HTMLSpanElement>(null);
   const openRef = useRef(open);
   openRef.current = open;
-  const [phone, setPhone] = useState(true);
   const timers = useRef<number[]>([]);
 
   const stopIntro = () => {
@@ -71,14 +69,6 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
     lastOpen.current = open;
     setSpin((d) => d - 180);
   }, [open]);
-
-  useEffect(() => {
-    const mq = matchMedia("(min-width: 768px)");
-    const update = () => setPhone(!mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
 
   useEffect(() => {
     const ids: number[] = [];
@@ -124,7 +114,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
   }, []);
 
   useEffect(() => {
-    if (!phone || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ids: number[] = [];
     const every = window.setInterval(() => {
       if (openRef.current || document.hidden) return;
@@ -139,7 +129,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
       setGold(false);
       setHint(false);
     };
-  }, [phone]);
+  }, []);
 
   function toggle() {
     stopIntro();
@@ -159,18 +149,16 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
 
   return (
     <>
-      <div className="flex items-center justify-between md:mb-6 md:block">
+      <div className="flex items-center justify-between">
         <div className={`relative ${pop === "tap" ? "dash-pop" : pop === "glint" ? "dash-glint" : ""}`}>
           <Link
             href="/dashboard"
             className={`dash-logo${gold ? " dash-gold" : ""}`}
-            aria-label={phone ? "TapShop, tap for the menu" : "TapShop"}
+            aria-label="TapShop, tap for the menu"
             onClick={(e) => {
-              // On phones the logo is the big button for the page buttons.
-              if (phone) {
-                e.preventDefault();
-                toggle();
-              }
+              // The logo is the big button for the page buttons.
+              e.preventDefault();
+              toggle();
               sparkle();
             }}
           >
@@ -197,7 +185,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
             aria-controls="dash-nav"
             aria-label={open ? "Hide page buttons" : "Show page buttons"}
             title={open ? "Hide page buttons" : "Show page buttons"}
-            className={`absolute -bottom-3 -left-3 z-[1] grid h-5 w-5 place-items-center rounded-full border border-neutral-300 bg-white text-neutral-700 shadow-sm md:hidden ${shake ? "dash-breeze" : ""}`}
+            className={`absolute -bottom-3 -left-3 z-[1] grid h-5 w-5 place-items-center rounded-full border border-neutral-300 bg-white text-neutral-700 shadow-sm ${shake ? "dash-breeze" : ""}`}
           >
             <svg viewBox="0 0 12 12" className="h-2.5 w-2.5 transition-[rotate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]" style={{ rotate: `${spin}deg` }} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M2.5 4.5 6 8l3.5-3.5" />
@@ -208,10 +196,10 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
       </div>
       <div
         id="dash-nav"
-        className={`grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:grid-rows-[1fr] ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+        className={`grid transition-[grid-template-rows] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >
-        <div className={`min-h-0 overflow-hidden transition-[opacity,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] md:translate-y-0 md:opacity-100 ${open ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"}`} inert={phone && !open ? true : undefined}>
-          <div className="pt-3 md:pt-0">
+        <div className={`min-h-0 overflow-hidden transition-[opacity,translate] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${open ? "translate-y-0 opacity-100" : "-translate-y-1 opacity-0"}`} inert={!open ? true : undefined}>
+          <div className="pt-3">
             <DashNav admin={admin} />
           </div>
         </div>
