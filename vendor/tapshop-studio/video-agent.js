@@ -66,7 +66,10 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-steps button{flex:none;border-radius:999px!important;padding:4px 10px!important;font-size:12px;opacity:.55}
 .ag-steps button.on{opacity:1;background:#ff3ea5!important;color:#fff!important;border-color:#ff3ea5!important}.ag-steps button.done{opacity:.9}
 .ag-steps button:disabled{opacity:.3}
-.ag-body{flex:1 1 auto;min-height:0;overflow:auto;padding:2px 2px 8px}
+/* Only the middle scrolls; the header, steps and buttons never shrink. contain + pan-y keep a finger swipe inside the window
+   instead of scrolling the page behind it (big touch screens like a folded-open phone). */
+.ag-head,.ag-steps,.ag-status,.ag-bar{flex:none}
+.ag-body{flex:1 1 auto;min-height:0;overflow:auto;padding:2px 2px 8px;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
 .ag-body h3{margin:6px 0 4px;font-size:17px}.ag-help{margin:0 0 10px;font-size:13px;opacity:.75}
 .ag-body label.ag-f{display:block;margin:10px 0;font-size:13px;font-weight:600}
 .ag-body label.ag-f input,.ag-body label.ag-f textarea,.ag-body label.ag-f select{display:block;width:100%;margin-top:4px;font-weight:400}
@@ -95,7 +98,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 /* The editor theme paints every pressed button in its own colours; the agent's picks must stay pink in light and dark. */
 html body #agDialog .ag-card.on{background:#ff3ea51f!important;color:inherit!important;border-color:#ff3ea5!important;box-shadow:inset 0 0 0 2px #ff3ea5!important}
 html body #agDialog .ag-chips button.on,html body #agDialog .ag-steps button.on{background:#ff3ea5!important;color:#fff!important;border-color:#ff3ea5!important}
-@media (max-width:700px){#agDialog[open]{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;margin:0;inset:0;border-radius:0;border:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}}`;
+@media (max-width:700px),(pointer:coarse){#agDialog[open]{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;margin:0;inset:0;border-radius:0;border:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}}`;
 document.head.appendChild(css);
 
 const dlg=document.createElement('dialog');dlg.id='agDialog';dlg.className='closable';dlg.setAttribute('aria-labelledby','agTitle');
