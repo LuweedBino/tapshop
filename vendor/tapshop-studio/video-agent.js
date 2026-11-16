@@ -40,6 +40,39 @@ const STORIES=[['AUTO','','✨ Pick for me','The AI picks the best story for you
   ['PUT_TO_TEST','Hook-first','Put It to the Test','Stress-test it on camera.','fitness']];
 const GROUPS=['Sell it','Build trust','Show it','Hook-first'];
 // Default look for each part of the story: text animation, sound effect, height on screen (%).
+// Word looks: every scene's words get their own style (font, colours, box, effect, or a shape with the words inside),
+// so the video doesn't feel samey. Fonts are the editor's bundled TapFont* ones, so phones without Impact look the same.
+// t = a text strip's fields, s = a shape strip's fields (inner text). SUIT lists the looks that fit each scene type.
+const BOLD='TapFont17',TLOOKS={
+  pill:['💗 Bold pill',{t:{color:'#ffffff',font:BOLD,boxColor:'#ff3ea5',boxOpacity:1,boxPad:30,boxRadius:60,textEffect:'shadow'}}],
+  marker:['🖍️ Highlighter',{t:{color:'#111111',font:BOLD,boxColor:'#ffe14d',boxOpacity:1,boxPad:22,boxRadius:6,rotation:-2}}],
+  neon:['💡 Neon sign',{t:{color:'#39ff14',font:BOLD,textEffect:'neon',effectColor:'#39ff14',boxColor:'#0b0b12',boxOpacity:.8,boxBorder:'solid',boxBorderW:4,boxBorderColor:'#39ff14',boxPad:26,boxRadius:20}}],
+  sticker:['🏷️ Sticker',{t:{color:'#111111',font:BOLD,boxColor:'#ffffff',boxOpacity:1,boxBorder:'solid',boxBorderW:7,boxBorderColor:'#111111',boxPad:24,boxRadius:22,rotation:3}}],
+  sunset:['🌅 Sunset 3D',{t:{color:'#ff8a00',gradTo:'#ff3ea5',gradAngle:90,textEffect:'extrude',effectColor:'#2a0f3d',font:BOLD}}],
+  retro:['🕹️ Retro',{t:{color:'#ffd23f',textEffect:'retro',effectColor:'#ff3ea5',font:'TapFont9'}}],
+  glass:['🧊 Frosted glass',{t:{color:'#ffffff',font:'TapFont16',boxColor:'#ffffff',boxOpacity:.22,boxBorder:'solid',boxBorderW:2,boxBorderColor:'#ffffff',boxPad:28,boxRadius:30,textEffect:'shadow'}}],
+  gold:['🏆 Gold',{t:{color:'#ffd27a',textEffect:'gold',boxColor:'#111111',boxOpacity:.75,boxPad:24,boxRadius:10,font:'TapFont3'}}],
+  fire:['🔥 Fire',{t:{color:'#ffcc00',textEffect:'fire',font:BOLD}}],
+  comic:['💥 Comic',{t:{color:'#ffffff',textEffect:'doubleOutline',effectColor:'#7c3aed',font:BOLD,rotation:-3}}],
+  ocean:['🌊 Ocean',{t:{color:'#38bdf8',textEffect:'ocean',font:BOLD,boxColor:'#0b1b33',boxOpacity:.7,boxPad:22,boxRadius:40}}],
+  burst:['⭐ Starburst',{s:{shape:'burst',color:'#ffcc00',innerColor:'#1a1a1a'}}],
+  speech:['💬 Speech bubble',{s:{shape:'cat:speech',color:'#ffffff',innerColor:'#111111'}}],
+  shout:['📣 Shout bubble',{s:{shape:'cat:shout',color:'#ff2d55',innerColor:'#ffffff'}}],
+  tag:['🏷️ Price tag',{s:{shape:'cat:tag',color:'#22c55e',innerColor:'#ffffff'}}],
+  banner:['🎀 Ribbon',{s:{shape:'cat:banner',color:'#7c3aed',innerColor:'#ffffff'}}],
+  seal:['🔴 Badge',{s:{shape:'cat:seal',color:'#ff3b30',innerColor:'#ffffff'}}],
+  classic:['⬛ Simple box',{t:{color:'#ffffff',boxColor:'#000000',boxOpacity:.55,boxPad:24,boxRadius:16}}]};
+const SUIT={Hook:['pill','sticker','sunset','comic','shout','neon','fire'],Problem:['marker','shout','comic','neon','retro'],Agitate:['fire','shout','marker','comic','retro'],
+  'Demo/Solution':['glass','speech','ocean','pill','gold','banner'],'Social Proof':['gold','speech','banner','seal','glass'],CTA:['burst','tag','seal','pill','banner']};
+// Size a shape so its words fit inside at a readable size: long words go on two balanced lines, then the shape is made
+// big and wide enough for its own text area (veTextBox, SHAPE_ASPECT in video.js) to hold them, within the frame.
+function shapeFit(g,text,W,H){const words=text.split(/\s+/);let lines=[text];
+  if(text.length>11&&words.length>1){let best=null;for(let i=1;i<words.length;i++){const a=words.slice(0,i).join(' '),b=words.slice(i).join(' '),m=Math.max(a.length,b.length);if(!best||m<best[0])best=[m,[a,b]]}lines=best[1]}
+  const tb=(typeof veTextBox==='function'&&veTextBox(g))||[.15,.15,.85,.85],bw=tb[2]-tb[0],bh=tb[3]-tb[1],ar=(typeof SHAPE_ASPECT!=='undefined'&&SHAPE_ASPECT[g.shape])||1,m=Math.max(...lines.map(l=>l.length),1);
+  const F=.075*W;let sw=m*.58*F/bw,sh=lines.length*1.2*F/bh;const k=Math.min(1,.94*W/sw,.3*H/sh);sw*=k;sh*=k;
+  Object.assign(g,{inner:lines.join('\n'),size:sh*1280/(2*W),sx:Math.max(.6,Math.min(4,sw/(sh*ar))),sy:1})}
+// Resolve "🎲 Surprise me" scenes: a look that fits the scene type, never the same as the one before it.
+function chooseLooks(){let last='';return S.scenes.map(s=>{let k=s.look;if(!TLOOKS[k]){const pool=(SUIT[s.type]||Object.keys(TLOOKS).filter(x=>x!=='classic')).filter(x=>x!==last);k=pool[Math.floor(Math.random()*pool.length)]}last=k;return k})}
 const LOOK={Hook:['pop','whoosh',30],Problem:['shake','buzz',22],Agitate:['wobble','scratch',22],'Demo/Solution':['slide','ding',22],'Social Proof':['bounce','sparkle',22],CTA:['elastic','click',72]};
 const CAPS=[['pop','Word pop'],['karaoke','Karaoke'],['classic','Classic'],['boxed','Bold box'],['bounce','Bounce'],['reveal','Type on'],['neon','Neon'],['highlight','Highlight']];
 
@@ -157,12 +190,13 @@ voice(){const v=S.voice,none=S.scriptMode==='none';let h=`<h3>Voice + captions</
   return h},
 parts(){const sx=[['','None'],...sfxList().map(([k,e,n])=>[k,e+' '+n])],an=anims(),groups=window.veMusicGroups?veMusicGroups():[];
   const music=[['auto','✨ Pick for me'],['','No music'],...groups.flatMap(([l,ks])=>ks.filter(k=>window.veMoods?.[k]).map(k=>[k,l.split(' ')[0]+' '+veMoods[k].name]))];
-  return `<h3>Graphics + sounds</h3><p class="ag-help">For each part: the words, how they animate and the sound they make. Change anything later in the editor.</p>
+  return `<h3>Graphics + sounds</h3><p class="ag-help">For each part: the words, their look, how they animate and the sound they make. 🎲 Surprise me gives every part a different, eye-catching style. Change anything later in the editor.</p>
   <div class="ag-btns"><button type="button" data-act="pick">✨ Pick for me</button></div>
   ${hasBrand()?`<label class="ag-check"><input type="checkbox" data-k="brand" ${S.brand?'checked':''}> ★ Use my brand kit (fonts and colours)</label>`:''}
   ${S.scenes.map((s,i)=>`<div class="ag-scene"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}</span></div>
     <label>Words on screen<input data-k="text" data-i="${i}" maxlength="120" value="${esc(s.text)}" placeholder="Leave empty for no text"></label>
-    <div class="ag-row"><label>Animation<select data-k="anim" data-i="${i}">${opts(an,s.anim||'fade')}</select></label>
+    <div class="ag-row"><label>Look<select data-k="look" data-i="${i}">${opts([['','🎲 Surprise me'],...Object.entries(TLOOKS).map(([k,[n]])=>[k,n])],s.look||'')}</select></label>
+    <label>Animation<select data-k="anim" data-i="${i}">${opts(an,s.anim||'fade')}</select></label>
     <label>Sound effect<select data-k="sfx" data-i="${i}">${opts(sx,s.sfx)}</select></label><button type="button" data-act="sfxPlay" data-i="${i}" aria-label="Play sound">▶</button></div></div>`).join('')}
   <div class="ag-g">Music</div><div class="ag-row" style="display:flex;gap:8px;align-items:center"><select data-k="music" style="flex:1">${opts(music,S.music)}</select><button type="button" data-act="musicPlay" aria-label="Listen">▶ Listen</button></div>`},
 build(){if(S.built)return `<div class="ag-done"><b>🎉 Your video is ready!</b><p class="ag-help">It's in the editor now: every clip, word, sound and caption can still be changed.</p>
@@ -289,10 +323,14 @@ async function build(){if(busy||(typeof exporting!=='undefined'&&exporting))retu
       const beat=window.veAutoBeat;window.veAutoBeat=null;try{await loadTrackMedia(take.file)}finally{window.veAutoBeat=beat}t.offset=0}
     // Words on screen, animated, with their sound effect.
     say('Adding your graphics…');const brand=S.brand&&hasBrand(),fonts=brand&&typeof veBrandFonts==='function'?veBrandFonts():null,cols=brand&&typeof veBrandColors==='function'?veBrandColors():[];
-    const placed=[];S.scenes.forEach((s,i)=>{const text=s.text.trim();if(!text)return;const [start,len]=spans[i],l=LOOK[s.type]||LOOK['Demo/Solution'];
+    const placed=[],looks=chooseLooks();S.scenes.forEach((s,i)=>{const text=s.text.trim();if(!text)return;const [start,len]=spans[i],l=LOOK[s.type]||LOOK['Demo/Solution'],lk=TLOOKS[looks[i]][1];
+      const base={name:s.type+': '+text.slice(0,18),x:50,y:l[2],animation:s.anim||l[0],offset:start,length:Math.max(.8,len)};
+      if(lk.s){createGraphicTrack('shape');const g=graphicTracks.at(-1);
+        Object.assign(g,base,{...lk.s,text:'',innerBold:true,innerFont:fonts?.heading||BOLD,points:null,outline:false,background:false,textEffect:'shadow'},
+          brand&&cols.length?{color:cols[1]||cols[0],innerColor:cols[1]?cols[0]:'#ffffff'}:{});shapeFit(g,text,W,H);placed.push([g,s.sfx]);return}
       createGraphicTrack('text');const g=graphicTracks.at(-1);
-      Object.assign(g,{name:s.type+': '+text.slice(0,18),text,color:cols[0]||'#ffffff',size:textSize(text,W,H),x:50,y:l[2],bold:true,background:false,animation:s.anim||l[0],
-        offset:start,length:Math.max(.8,len),boxColor:cols[1]||'#000000',boxOpacity:cols[1]?1:.55,boxPad:24,boxRadius:16},fonts?{font:fonts.heading}:{});placed.push([g,s.sfx])});
+      Object.assign(g,base,{text,size:textSize(text,W,H),bold:true,background:false,textEffect:'plain'},lk.t,
+        brand&&cols.length?{color:cols[0],...(lk.t.boxColor?{boxColor:cols[1]||lk.t.boxColor}:{})}:{},fonts?{font:fonts.heading}:{});placed.push([g,s.sfx])});
     if(window.TapSFX)for(const [g,k] of placed)if(k)try{await TapSFX.add(k,{at:g.offset,forId:g.id,noSnap:1,quiet:1})}catch{}
     // Music for the whole video, dipping under the voice.
     const mk=musicKey(),len=total();if(mk&&window.veMakeBeat&&len>0){say('Making your music…');try{const file=await veMakeBeat(len,mk,{bare:1});addTrack('audio');const t=extraTracks.at(-1);
