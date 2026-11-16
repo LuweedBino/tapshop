@@ -135,7 +135,7 @@ script(){const m=S.scriptMode;let h=`<h3>Your script</h3><p class="ag-help">What
   if(m==='own')h+=`<label class="ag-f">One line per scene. The first is your hook, the last your call to action.<textarea data-k="ownLines" rows="6" placeholder="Stop scrolling if your shakes are chalky.&#10;Mine always were…&#10;Then I found this bottle.&#10;Tap the orange cart.">${esc(S.ownLines)}</textarea></label><div class="ag-btns"><button type="button" class="primary" data-act="own">Use my lines</button></div>`;
   else h+=`<div class="ag-btns"><button type="button" class="primary" data-act="write" ${busy?'disabled':''}>${busy?'Writing…':S.scenes.length?'↻ Write a new one':'✨ Write my script'}</button></div>`;
   if(S.hookOptions.length>1)h+=`<div class="ag-g">Pick your hook</div><div class="ag-chips">${S.hookOptions.map((o,i)=>chip('hook',i,S.hook===i,`${i?String.fromCharCode(64+i):'Original'}: ${esc(o.slice(0,60))}${o.length>60?'…':''}`)).join('')}</div>`;
-  if(S.scenes.length)h+=`<div class="ag-g">${esc(S.title||'Your scenes')}</div>`+S.scenes.map((s,i)=>`<div class="ag-scene"><div class="ag-tag"><span>${i+1} · ${esc(s.type)} · ${s.secs}s</span><button type="button" data-act="rmScene" data-i="${i}" aria-label="Remove scene ${i+1}">✕</button></div>
+  if(S.scenes.length)h+=`<div class="ag-g">${esc(S.title||'Your scenes')}</div><p class="ag-help">✏️ Tap any line to change it · <b>✕ Remove</b> deletes a scene · <b>＋ Add a scene</b> at the bottom adds one.</p>`+S.scenes.map((s,i)=>`<div class="ag-scene"><div class="ag-tag"><span>${i+1} · ${esc(s.type)} · ${s.secs}s</span><button type="button" data-act="rmScene" data-i="${i}" aria-label="Remove scene ${i+1}">✕ Remove</button></div>
     ${m==='none'?'':`<label>What you say<textarea data-k="say" data-i="${i}" rows="2">${esc(s.say)}</textarea></label>`}
     <label>Words on screen<input data-k="text" data-i="${i}" maxlength="120" value="${esc(s.text)}"></label></div>`).join('')+`<div class="ag-btns"><button type="button" data-act="addScene">＋ Add a scene</button></div>`;
   return h},
@@ -211,13 +211,13 @@ async function writeScript(){if(busy)return;busy=true;paint();const b=S.brief,t0
     if(!data){status(res.status===504?'The AI took too long. Please try again.':'The connection dropped before the script finished. Please try again.');return}
     if(!data.ok){status(data.error||'Couldn\'t write the script. Please try again.');return}
     const sc=data.script;S.title=sc.title||'';S.scenes=sc.scenes.map(scene);S.hookOptions=[S.scenes[0]?.say||'',...(sc.hookVariations||[])].filter(Boolean);S.hook=0;
-    pickParts(true);files.clear();status('Script ready. Change any line you like, then tap Next.')}
+    pickParts(true);files.clear();status('Script ready. Edit any line, remove scenes with ✕ or add more, then tap Next.')}
   catch(e){status(e?.name==='AbortError'?'The AI took too long. Tap ✨ Write my script to try again.':'Network error. Check your connection and try again.')}
   finally{clearInterval(timer);clearTimeout(limit);busy=false;save();paint()}}
 function useOwn(){const lines=S.ownLines.split('\n').map(l=>l.trim()).filter(Boolean).slice(0,20);if(!lines.length){status('Type at least one line.');return}
   const n=lines.length;S.scenes=lines.map((l,i)=>({type:i===0?'Hook':i===n-1&&n>1?'CTA':i===1&&n>=4?'Problem':'Demo/Solution',
     secs:Math.max(2,Math.round(l.split(/\s+/).length/2.5)),say:l,text:l.split(/\s+/).slice(0,7).join(' '),shot:'',anim:'',sfx:''}));
-  S.title='';S.hookOptions=[];pickParts(true);save();paint();status('Got it. Shorten the words on screen if you like, then tap Next.')}
+  S.title='';S.hookOptions=[];pickParts(true);save();paint();status('Got it. Edit any line, remove scenes with ✕ or add more, then tap Next.')}
 
 // ---------- footage ----------
 function addTo(i,list){const vids=[...(list||[])].filter(f=>/^video\//.test(f.type)||/\.(mp4|mov|webm|m4v|mkv)$/i.test(f.name));if(!vids.length)return;
