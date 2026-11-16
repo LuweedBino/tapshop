@@ -8,8 +8,9 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const creator = await requireCreator();
   const dark = (await cookies()).get("tapshop_theme")?.value === "dark";
+  // The Studio marks itself data-studio-full so it can use the whole screen width on computers.
   return (
-    <div data-dash-root className={`mx-auto min-h-dvh max-w-6xl md:flex md:gap-8 md:px-6 md:py-8 ${dark ? "tapshop-dark" : ""}`}>
+    <div data-dash-root className={`mx-auto min-h-dvh max-w-6xl md:has-[[data-studio-full]]:max-w-none md:flex md:gap-8 md:px-6 md:py-8 ${dark ? "tapshop-dark" : ""}`}>
       <aside className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:static md:w-52 md:shrink-0 md:border-0 md:bg-transparent md:p-0">
         <DashTopNav
           admin={isAdmin(creator)}
