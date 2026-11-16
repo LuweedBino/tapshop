@@ -18,7 +18,8 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .vo-head h2{margin:0;font-size:20px}
 .vo-x{flex:none;width:40px;height:40px;padding:0;border-radius:50%;font-size:22px;line-height:1}
-.vo-prompter{height:min(46vh,380px);min-height:120px;overflow:auto;padding:10px;border-radius:12px;background:#0b0b10;color:#fff;line-height:1.3}
+.vo-head,.vo-set,#voTake,.vo-status,.vo-bar{flex:none}
+.vo-prompter{height:min(46vh,380px);min-height:120px;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:10px;border-radius:12px;background:#0b0b10;color:#fff;line-height:1.3}
 .vo-line{padding:8px 12px;border-radius:10px;opacity:.45;transition:opacity .2s,background .2s;cursor:pointer}
 .vo-line small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
 .vo-line p{margin:0;font-weight:600}
@@ -43,7 +44,7 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 #voRec.vo-live{background:#e5484d;border-color:#e5484d;color:#fff;animation:voPulse 1.2s infinite}
 @keyframes voPulse{50%{box-shadow:0 0 0 6px #e5484d33}}
 @media (prefers-reduced-motion:reduce){#voRec.vo-live{animation:none}}
-@media (max-width:700px){
+@media (max-width:700px),(pointer:coarse){
   #voDialog[open]{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;margin:0;inset:0;border-radius:0;border:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
   .vo-prompter{flex:1 1 auto;height:auto}
 }`;
@@ -73,7 +74,7 @@ try{const p=JSON.parse(localStorage.getItem(PREFS)||'{}');if(p.size)q('voSize').
 function prefs(){q('voSpeedV').textContent=speed().toFixed(1)+'×';q('voSpeedWrap').classList.toggle('off',manual());q('voSpeed').disabled=manual();
   q('voSetSum').textContent='· '+(manual()?'tap Next to move':speed().toFixed(1)+'× speed');
   try{localStorage.setItem(PREFS,JSON.stringify({size:q('voSize').value,speed:q('voSpeed').value,manual:manual()}))}catch{}}
-const small=()=>window.matchMedia('(max-width:700px)').matches;
+const small=()=>window.matchMedia('(max-width:700px),(pointer:coarse)').matches;
 if(!small())q('voSet').open=true;
 
 function paint(){
