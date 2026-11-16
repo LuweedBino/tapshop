@@ -70,7 +70,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
    instead of scrolling the page behind it (big touch screens like a folded-open phone). */
 .ag-head,.ag-steps,.ag-status,.ag-bar{flex:none}
 .ag-body{flex:1 1 auto;min-height:0;overflow:auto;padding:2px 2px 8px;overscroll-behavior:contain;touch-action:pan-y;-webkit-overflow-scrolling:touch}
-.ag-body h3{margin:6px 0 4px;font-size:17px}.ag-help{margin:0 0 10px;font-size:13px;opacity:.75}
+.ag-body h3{margin:6px 0 4px;font-size:17px}.ag-help{margin:0 0 10px;font-size:13px;opacity:.75}.ag-help.ag-tip{opacity:1;color:#ec4899;font-weight:600;margin:4px 0 6px}
 .ag-body label.ag-f{display:block;margin:10px 0;font-size:13px;font-weight:600}
 .ag-body label.ag-f input,.ag-body label.ag-f textarea,.ag-body label.ag-f select{display:block;width:100%;margin-top:4px;font-weight:400}
 .ag-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:6px 0 10px}
@@ -152,7 +152,7 @@ footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add c
 voice(){const v=S.voice,none=S.scriptMode==='none';let h=`<h3>Voice + captions</h3><p class="ag-help">${none?'You picked no talking, so music and words on screen carry the video.':'How will people hear your script?'}</p>
   <div class="ag-cards">${card('voice','record',v==='record','🎙️ Record a voiceover','With a teleprompter')}${card('voice','talking',v==='talking','🗣️ I\'m talking in my clips','Use the sound from my clips')}${card('voice','none',v==='none','🔇 No voice','Music and text only')}</div>`;
   if(v==='record')h+=take?`<p class="ag-help">✓ Voiceover ready (${take.dur.toFixed(1)} s). Scenes will line up with when you said them.</p><audio controls src="${esc(take.url)}" style="width:100%"></audio><div class="ag-btns"><button type="button" data-act="record">↺ Record again</button></div>`
-    :`<div class="ag-btns"><button type="button" class="primary" data-act="record">🎙️ Open the teleprompter</button></div>`;
+    :`<p class="ag-help ag-tip">👇 Tap <b>Open the teleprompter</b> to record. Your script scrolls on screen while you read it out loud.</p><div class="ag-btns"><button type="button" class="primary" data-act="record">🎙️ Open the teleprompter</button></div>`;
   if(v!=='none')h+=`<label class="ag-check"><input type="checkbox" data-k="captions" ${S.captions?'checked':''}> ✨ Auto captions</label>${S.captions?`<label class="ag-f">Caption style<select data-k="capStyle">${opts(CAPS,S.capStyle)}</select></label>`:''}`;
   return h},
 parts(){const sx=[['','None'],...sfxList().map(([k,e,n])=>[k,e+' '+n])],an=anims(),groups=window.veMusicGroups?veMusicGroups():[];
@@ -186,7 +186,7 @@ function paint(){const i=S.step;
 function check(){const k=STEPS[S.step][0];
   if(k==='about'&&(!S.brief.product.trim()||!S.brief.benefits.trim()))return 'Add the product name and its key benefits first.';
   if(k==='script'&&!S.scenes.length)return S.scriptMode==='own'?'Type your lines, then tap Use my lines.':'Tap ✨ Write my script first.';
-  if(k==='voice'&&S.voice==='record'&&!take)return 'Record your voiceover first, or pick another option.';
+  if(k==='voice'&&S.voice==='record'&&!take)return 'Tap 🎙️ Open the teleprompter to record your voiceover, or pick another option.';
   return ''}
 function go(to){if(busy)return;if(to>S.step){const e=check();if(e){status(e);return}}
   stopMusic();S.step=Math.max(0,Math.min(STEPS.length-1,to));S.max=Math.max(S.max,S.step);
@@ -317,7 +317,7 @@ byId('agSteps').addEventListener('click',e=>{const b=e.target.closest('[data-ste
 nextBtn.onclick=()=>{if(S.step!==STEPS.length-1)return go(S.step+1);
   // A draft reopened after a reload has its words but not its clips or voice take, which live in memory only.
   if(!S.scenes.length){S.step=2;paint();return status('Your script is missing. Write or paste it first.')}
-  if(S.voice==='record'&&!take){S.step=4;paint();return status('Record your voiceover first, or pick another option.')}
+  if(S.voice==='record'&&!take){S.step=4;paint();return status('Tap 🎙️ Open the teleprompter to record your voiceover, or pick another option.')}
   build()};
 backBtn.onclick=()=>go(S.step-1);
 dlg.querySelector('.ag-x').onclick=()=>dlg.close();
