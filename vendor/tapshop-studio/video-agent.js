@@ -123,6 +123,8 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid #8886;border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
 .ag-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.ag-file button{width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:13px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.ag-best{position:relative;border:2px solid #ec4899!important;background:#ec489926!important;font-weight:700}.ag-best::after{content:'⭐ Best';position:absolute;top:-9px;right:-6px;padding:1px 7px;border-radius:999px;background:#ec4899;color:#fff;font-size:10px;font-weight:800;line-height:16px}
+.ag-rec{margin:4px 0 12px;padding:12px 14px;border-radius:14px;border:2px solid #ec4899;background:linear-gradient(90deg,#ec489922,#fbbf2418);font-size:14px;line-height:1.45}.ag-rec b{color:#ec4899}
 .ag-check{display:flex!important;align-items:center;gap:8px;font-size:14px;margin:10px 0}.ag-check input{width:20px;height:20px;flex:none}
 .ag-sum{margin:6px 0;padding-left:18px;line-height:1.7}.ag-done{text-align:center;padding:24px 8px}.ag-done b{display:block;font-size:22px;margin-bottom:6px}
 .ag-status{margin:0;font-size:13px;min-height:1.2em;opacity:.85}
@@ -183,13 +185,14 @@ footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add c
   if(f==='none')return h+`<p class="ag-help">Your video will be words, graphics, music and your voice on a plain background. You can add clips later in the editor.</p>`;
   const nextI=S.scenes.findIndex((s,i)=>!(files.get(i)||[]).length);
   const nClips=[...files.values()].reduce((n,l)=>n+l.length,0);
+  h+=`<div class="ag-rec">⭐ <b>Highly recommended: 🎬 Film with my line.</b> Your ${S.voice==='talking'?'line':'shot idea'} shows right on the screen while you film, and a timer turns green when you've filmed enough. It's the easiest way to get clips that fit each scene.</div>`;
   h+=`<div class="ag-btns"><button type="button" data-act="addAll">📁 Add all my clips at once</button>${nClips>1&&window.veClipReader?`<button type="button" class="primary" data-act="sortClips" ${busy?'disabled':''}>✨ Sort my clips into scenes</button>`:''}</div>`;
   if(nClips>1&&window.veClipReader)h+=`<p class="ag-help">✨ The AI watches${S.voice==='talking'?' and listens to':''} each clip and puts it in the scene it fits best. Nothing is uploaded. Move any clip with the menu next to it.</p>`;
   h+=S.scenes.map((s,i)=>{const fl=files.get(i)||[];return `<div class="ag-scene${i===nextI?' next':''}"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}${i===nextI?' · next to film':''}</span></div>
     <p class="ag-shot">🎥 <b>Film:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
     <p class="ag-len">⏱️ <b>About ${filmSecs(s)} seconds</b> ${S.voice==='talking'?'· say your line in one take, with a breath before and after':'· a little extra is fine, we trim it to fit'}</p>
     ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span><select class="ag-move" data-i="${i}" data-j="${j}" aria-label="Move to scene">${S.scenes.map((_,k)=>`<option value="${k}"${k===i?' selected':''}>Scene ${k+1}</option>`).join('')}</select>${window.VideoCamera?`<button type="button" class="ag-retake" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip" title="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
-    <div class="ag-btns"><button type="button" data-act="add" data-i="${i}">📁 Add clip</button>${hasVault()?`<button type="button" data-act="vault" data-i="${i}">🗄️ From Vault</button>`:''}${touch()?`<button type="button" data-act="filmLine" data-i="${i}">🎬 Film with my line</button><button type="button" data-act="film" data-i="${i}">📷 Camera app</button>`:`<button type="button" data-act="film" data-i="${i}">🎬 Film it</button>`}</div></div>`}).join('');
+    <div class="ag-btns"><button type="button" class="ag-best" data-act="${touch()?'filmLine':'film'}" data-i="${i}">🎬 Film with my line</button><button type="button" data-act="add" data-i="${i}">📁 Add clip</button>${hasVault()?`<button type="button" data-act="vault" data-i="${i}">🗄️ From Vault</button>`:''}${touch()?`<button type="button" data-act="film" data-i="${i}">📷 Camera app</button>`:''}</div></div>`}).join('');
   return h},
 voice(){const v=S.voice,none=S.scriptMode==='none';let h=`<h3>Voice + captions</h3><p class="ag-help">${none?'You picked no talking, so music and words on screen carry the video.':'How will people hear your script?'}</p>
   <div class="ag-cards">${card('voice','record',v==='record','🎙️ Record a voiceover','With a teleprompter')}${card('voice','talking',v==='talking','🗣️ I\'m talking in my clips','Use the sound from my clips')}${card('voice','none',v==='none','🔇 No voice','Music and text only')}</div>`;
@@ -487,9 +490,12 @@ window.veBuildMyVideo=function(){if(typeof exporting!=='undefined'&&exporting)re
   const t=bar.querySelector('b');t?t.after(b):bar.prepend(b)}}
 // A card at the top of the start screen's quick makers (video-broll.js builds that box).
 function startCard(){const box=byId('vsQuick');if(!box||byId('vsAgent'))return;const b=document.createElement('button');b.type='button';b.id='vsAgent';b.className='vs-reviews';
-  b.innerHTML='<b>🪄 Build My Video With AI</b><span>Your footage, your voice. AI helps put it together: a script for your product, guided filming, a voiceover with a teleprompter, animated words and sounds for each part, music and captions. Everything stays editable.</span>';
+  b.innerHTML='<b>🪄 Build My Video With AI</b><span>Your footage, your voice. AI helps put it together: a script for your product, guided filming, a voiceover with a teleprompter, animated words and sounds for each part, music and captions. Everything stays editable.</span><span class="ag-star">⭐ Must try: <em>🎬 Film with my line</em>. Your script shows on screen while you film, so every clip fits.</span>';
+  if(!byId('agStarCss')){const st=document.createElement('style');st.id='agStarCss';st.textContent='#vsAgent .ag-star{display:block;margin-top:8px;padding:7px 10px;border-radius:10px;background:#ec489933;font-size:13px;font-weight:600}#vsAgent .ag-star em{display:inline;font-style:normal;font-weight:800;color:#ff3ea5}';document.head.appendChild(st)}
   b.onclick=()=>window.veBuildMyVideo();const h=box.querySelector('.vs-qh');h?h.after(b):box.prepend(b)}
 new MutationObserver(startCard).observe(document.body,{childList:true,subtree:true});startCard();
+// video.html#agent (the Studio home's Build My Video banner) opens the maker straight away.
+if(/(^|[#&])agent\b/.test(location.hash)){window.history.replaceState(null,'',location.pathname+location.search);setTimeout(()=>window.veBuildMyVideo?.(),0)}
 // Dashboard → editor: tapshop:open-agent (the dashboard's "🪄 Build My Video With AI" button).
 window.addEventListener('message',e=>{if(e.source!==window.parent||e.origin!==location.origin)return;const m=e.data;if(m&&m.version===1&&m.type==='tapshop:open-agent')window.veBuildMyVideo()});
 })();
