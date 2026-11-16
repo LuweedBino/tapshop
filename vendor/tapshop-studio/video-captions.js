@@ -141,11 +141,14 @@ function ask(msg,onProgress){return new Promise((res,rej)=>{if(!worker){let url=
 // Decode a clip's sound straight to 16 kHz (decodeAudioData resamples to the context's rate), mono, trimmed to the clip.
 const decoded=new Map();
 async function clipAudio(c){let a=asset(c);if(!a?.file)throw Error('Can’t find the file for '+(a?.name||'a clip'));
+  let all=await fileAudio(a.id,a.file,a.name);return all.slice(Math.floor(c.in*16000),Math.ceil(c.out*16000))}
+// A whole file's sound as 16 kHz mono, decoded once per key.
+async function fileAudio(key,file,name){const a={id:key,file,name};
   if(!decoded.has(a.id)){let buf;try{buf=await new OfflineAudioContext(1,1,16000).decodeAudioData(await a.file.arrayBuffer())}catch{throw Error((a.name||'A clip')+' has no sound we can read.')}
     // Some browsers hand back the file's own sample rate; resample so 16000 samples really is one second.
     if(buf.sampleRate!==16000){let oc=new OfflineAudioContext(buf.numberOfChannels,Math.ceil(buf.duration*16000),16000),src=oc.createBufferSource();src.buffer=buf;src.connect(oc.destination);src.start();buf=await oc.startRendering()}
     let n=buf.length,mono=new Float32Array(n);for(let ch=0;ch<buf.numberOfChannels;ch++){let d=buf.getChannelData(ch);for(let i=0;i<n;i++)mono[i]+=d[i]/buf.numberOfChannels}decoded.set(a.id,mono)}
-  let all=decoded.get(a.id);return all.slice(Math.floor(c.in*16000),Math.ceil(c.out*16000))}
+  return decoded.get(a.id)}
 // The speech library's own splitting of audio over 30 s gets word times wrong (they drift later and
 // later; transformers.js issue 1358), so send pieces of at most 28 s, cut at the quietest 0.1 s
 // between 18 and 28 s so a word is rarely split, and add each piece's start time ourselves.
@@ -154,7 +157,10 @@ function pieces(audio){const SR=16000,MAX=28*SR,MIN=18*SR,F=SR/10,out=[];let pos
     best=Math.round(best);out.push({at:pos/SR,audio:audio.slice(pos,best)});pos=best}
   out.push({at:pos/SR,audio:audio.slice(pos)});return out}
 // Turn engine output into words with times inside a clip of length dur.
-function toWords(r,dur){let words=[];
+// Whisper writes markers like [BLANK_AUDIO], [Music] or (silence) when it hears no speech; they're never words.
+const NOT_SPEECH=/[\[\]()♪*]|^_*(BLANK|AUDIO|BLANK_AUDIO|MUSIC|SILENCE|APPLAUSE|INAUDIBLE|NO_SPEECH)_*$/;
+function toWords(r,dur){return rawWords(r,dur).filter(w=>!NOT_SPEECH.test(String(w.w).trim()))}
+function rawWords(r,dur){let words=[];
   if(r.mode==='word')for(let c of r.chunks){let w=String(c.text).trim();if(!w)continue;let [s,e]=c.ts||[];s=Number.isFinite(s)?s:null;e=Number.isFinite(e)?e:null;words.push({w,s,e})}
   let good=words.length&&words.filter(w=>w.s!=null).length>=words.length*.8&&new Set(words.map(w=>w.s)).size>=Math.max(1,words.length/3)&&Math.max(...words.map(w=>w.s??0))<=dur+1;
   if(good){words.forEach((w,i)=>{if(w.s==null)w.s=i?words[i-1].e??words[i-1].s:0;if(w.e==null||w.e<=w.s)w.e=Math.min(dur,(words[i+1]?.s??w.s+.4))});return words}
@@ -189,19 +195,23 @@ function syncStyles(){document.querySelectorAll('#capStyleBox .cap-preset').forE
 let busy=false,cancelled=false;
 function cancel(close){if(busy){cancelled=true;worker?.terminate();worker=null;busy=false;toast('Captions cancelled.')}if(close)document.getElementById('capDialog')?.close();setBusy(false)}
 function setBusy(on){let d=document.getElementById('capDialog');if(!d)return;d.querySelector('#capWork').hidden=!on;d.querySelector('#capGo').disabled=on;d.querySelector('#capNote').hidden=on;d.querySelectorAll('select,.cap-preset').forEach(x=>x.disabled=on)}
-window.openCaptions=function(){if(exporting)return;pause();if(!clips.length){toast('Add a video first, then make captions.');return}let d=dialog();fillStyles();d.querySelector('#capErr').textContent='';setBusy(false);
+window.openCaptions=function(){if(exporting)return;pause();if(!clips.length&&!voiceTracks().length){toast('Add a video first, then make captions.');return}let d=dialog();fillStyles();d.querySelector('#capErr').textContent='';setBusy(false);
   let old=graphicTracks.find(isCap);d.querySelector('#capGo').textContent=old?'Replace captions':'Create captions';d.showModal()};
 
 // Listens to every clip on the main timeline and returns its words placed on the timeline (null if cancelled).
-async function listenAll(lang,q,say){let files={},all=[],list=clips.map((c,i)=>({c,i,start:startOf(i)}));
+// Clips that are muted (e.g. under a voiceover) are skipped; audio tracks that carry a voice (a recorded voiceover,
+// or any audio that isn't music or a sound effect) are listened to as well, at their place on the timeline.
+const voiceTracks=()=>extraTracks.filter(t=>t.type==='audio'&&t.file&&!t.muted&&(t.volume??1)>.01&&(t.voiceover||(!t.bpm&&!t.musicKey&&!(window.veIsSfx?veIsSfx(t):t.lane==='sfx'))));
+async function listenAll(lang,q,say){let files={},all=[],list=clips.map((c,i)=>({c,i,start:startOf(i)})).filter(({c})=>!c.muted&&(c.volume??1)>.01);
+  for(const t of voiceTracks())list.push({c:{speed:t.speed||1,in:t.start||0,out:t.end,track:t},start:t.offset||0});
   say('Starting the speech engine…');
   for(let k=0;k<list.length;k++){let {c,i,start}=list[k];if(cancelled)return;
-      say(`Getting the sound from clip ${k+1} of ${list.length}…`);let audio;try{audio=await clipAudio(c)}catch(x){toast(x.message);continue}
+      say(`Getting the sound from clip ${k+1} of ${list.length}…`);let audio;try{audio=c.track?(await fileAudio('trk:'+c.track.id+':'+c.track.file.size,c.track.file,c.track.name)).slice(Math.floor(c.in*16000),Math.ceil(c.out*16000)):await clipAudio(c)}catch(x){toast(x.message);continue}
       if(audio.length<1600)continue;let parts=pieces(audio);
       for(let pi=0;pi<parts.length;pi++){let part=parts[pi],dur=part.audio.length/16000,where=`clip ${k+1} of ${list.length}`+(parts.length>1?`, part ${pi+1} of ${parts.length}`:'');if(dur<.1)continue;
       let r=await ask({key:q,models:MODELS[q],gpu:'gpu' in navigator,language:lang,audio:part.audio},m=>{if(m.type==='dl'){files[m.file]=[m.loaded,m.total];let l=0,t=0;for(let [a,b] of Object.values(files)){l+=a;t+=b}say(`Downloading the speech engine (first time only)… ${Math.round(l/t*100)}%`,l/t)}else say(`Listening to ${where}… (this can take a minute)`)});
       if(cancelled)return;say(`Listening to ${where}… (this can take a minute)`);
-      for(let w of toWords(r,dur)){let s=start+(part.at+Math.min(w.s,dur))/c.speed,e=start+(part.at+Math.min(w.e,dur))/c.speed;if(s<start+duration(c)-.02)all.push({w:w.w,s:Math.round(s*100)/100,e:Math.round(Math.min(e,start+duration(c))*100)/100})}}}
+      for(let w of toWords(r,dur)){let s=start+(part.at+Math.min(w.s,dur))/c.speed,e=start+(part.at+Math.min(w.e,dur))/c.speed;const len=c.track?(c.out-c.in)/c.speed:duration(c);if(s<start+len-.02)all.push({w:w.w,s:Math.round(s*100)/100,e:Math.round(Math.min(e,start+len)*100)/100})}}}
   return cancelled?null:all.sort((a,b)=>a.s-b.s)}
 // Puts the words on the timeline as the one Captions track, replacing an old one (its style is kept when the preset matches).
 function placeCaptions(all,preset){snapshot();let old=graphicTracks.find(isCap),keepStyle=old&&old.style?.preset===preset?old.style:null;graphicTracks=graphicTracks.filter(t=>!isCap(t));
@@ -222,7 +232,7 @@ async function run(){let d=dialog(),status=d.querySelector('#capStatus'),prog=d.
 // dialog (or Pop, English, Fast). say(text) reports progress. Resolves to the number of words added (0 = none heard).
 const lastSettings=()=>{let s={};try{s=JSON.parse(localStorage.getItem('tapshop-captions')||'{}')}catch{}
   return {preset:hasPreset(s.style)?s.style:'pop',lang:s.lang!=null?s.lang:'english',q:MODELS[s.model]?s.model:'fast'}};
-window.veAutoCaptions=async function(say=()=>{}){if(busy||exporting||!clips.length)return 0;
+window.veAutoCaptions=async function(say=()=>{}){if(busy||exporting||(!clips.length&&!voiceTracks().length))return 0;
   let {preset,lang,q}=lastSettings();
   busy=true;cancelled=false;try{let all=await listenAll(lang,q,t=>say(t));if(!all||!all.length)return 0;placeCaptions(all,preset);return all.length}
   catch(x){worker?.terminate();worker=null;throw x}finally{busy=false}};
@@ -273,7 +283,7 @@ window.veCloudWords=async function(list,say=()=>{}){if(!veCloudOn())throw cloudE
 // 🔄 Redo captions: listens to the timeline as it is now (after deleting, moving or trimming clips) and makes
 // fresh captions in the same style. Cloud AI first when it's on (one use of the daily limit), else on this device.
 const FILL=/^(u+m+|u+h+|uhm+|e+r+m*|a+h+|h+m+|m+h*m+)$/i;
-window.capRedo=async function(id){if(busy||exporting||!clips.length)return;pause();const old=graphicTracks.find(t=>t.id===id)||graphicTracks.find(isCap),keep=old?.style;
+window.capRedo=async function(id){if(busy||exporting||(!clips.length&&!voiceTracks().length))return;pause();const old=graphicTracks.find(t=>t.id===id)||graphicTracks.find(isCap),keep=old?.style;
   const btns=()=>document.querySelectorAll('.cap-redo'),say=s=>btns().forEach(b=>{b.textContent=s;b.disabled=true});busy=true;cancelled=false;let all=null,how='';
   try{let cloudOk=veCloudOn();try{cloudOk=cloudOk&&localStorage.getItem('tapshop-broll-cloud')!=='off'}catch{}
     if(cloudOk){try{busy=false;const r=await veCloudWords(clips.map(c=>({assetId:c.assetId,in:c.in,out:c.out})),say);busy=true;all=[];
