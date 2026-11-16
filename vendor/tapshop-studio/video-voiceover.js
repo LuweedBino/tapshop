@@ -74,11 +74,11 @@ html.ts:not(.ts-dark) .vo-line.on{background:#ff5b831f}
   #voDialog[open]{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;margin:0;inset:0;border-radius:0;border:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
   .vo-stage{flex:1 1 auto}
   .vo-prompter{flex:1 1 auto;height:auto;min-height:0}
-  /* Phone keyboard open while typing in the script box or the AI chat: the dialog shrinks to the space above
-     the keyboard and the teleprompter steps aside, so the box, its button and Record stay in view. */
-  #voDialog.vo-kb .vo-stage{display:none}
-  #voDialog.vo-kb .vo-set[open]{max-height:none;flex:1 1 auto;min-height:0}
-}`;
+}
+/* On-screen keyboard open while typing in the script box or the AI chat: the dialog shrinks to the space above
+   the keyboard and the teleprompter steps aside, so the box, its button and Record stay in view. */
+#voDialog.vo-kb .vo-stage{display:none}
+#voDialog.vo-kb .vo-set[open]{max-height:none;flex:1 1 auto;min-height:0}`;
 document.head.appendChild(css);
 
 const dlg=document.createElement('dialog');dlg.id='voDialog';dlg.className='closable';dlg.setAttribute('aria-labelledby','voTitle');
@@ -271,15 +271,24 @@ q('voAsk').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault()
 q('voUndo').onclick=()=>{if(!AI.prev||AI.busy)return;setScenes(AI.prev);AI.prev=null;AI.log.push({text:'↩ Put the last version back.'});chatPaint();status('↩ Back to the last version.')};
 chatPaint();
 // Phones: the on-screen keyboard only shrinks the visual viewport, so a full-screen dialog stays tall and the
-// keyboard covers its lower part. Fit the dialog to the space above the keyboard and keep the focused box in view.
+// keyboard covers its lower part. Inside the dashboard the editor is an iframe whose own viewport never changes,
+// so the keyboard is read from the dashboard page's visual viewport (same origin) and mapped into the iframe.
+// The dialog is fitted to the part of the screen above the keyboard and the focused box is kept in view.
 const vv=window.visualViewport;
+function room(){
+  try{const pw=window.parent,pv=pw!==window&&pw.visualViewport,fe=window.frameElement;
+    if(pv&&fe){const r=fe.getBoundingClientRect(),top=Math.max(0,pv.offsetTop-r.top),bot=Math.min(innerHeight,pv.offsetTop+pv.height-r.top);
+      return {kb:pw.innerHeight-pv.height>100,top,h:Math.max(160,bot-top)}}}catch{}
+  return vv?{kb:innerHeight-vv.height>100,top:vv.offsetTop,h:vv.height}:{kb:false}}
 function fitKb(){const a=document.activeElement,typing=a&&dlg.contains(a)&&/^(TEXTAREA|INPUT)$/.test(a.tagName)&&a.type!=='range'&&a.type!=='checkbox';
-  const kb=!!(vv&&dlg.open&&small()&&typing&&vv.height<window.innerHeight-100);
+  const v=room(),kb=!!(dlg.open&&typing&&v.kb);
   dlg.classList.toggle('vo-kb',kb&&q('voSet').contains(a));
-  if(kb){dlg.style.top=vv.offsetTop+'px';dlg.style.height=dlg.style.maxHeight=vv.height+'px';setTimeout(()=>a.scrollIntoView({block:'center'}),60)}
-  else dlg.style.top=dlg.style.height=dlg.style.maxHeight=''}
-if(vv){vv.addEventListener('resize',fitKb);vv.addEventListener('scroll',fitKb)}
-dlg.addEventListener('focusin',()=>{fitKb();setTimeout(fitKb,400)});dlg.addEventListener('focusout',()=>setTimeout(fitKb,100));dlg.addEventListener('close',()=>{dlg.classList.remove('vo-kb');dlg.style.top=dlg.style.height=dlg.style.maxHeight=''});
+  // !important so no other stylesheet's dialog sizes win while the keyboard is up.
+  const set=(k,val)=>val?dlg.style.setProperty(k,val,'important'):dlg.style.removeProperty(k);
+  set('top',kb?v.top+'px':'');set('bottom',kb?'auto':'');set('margin',kb?'0':'');set('height',kb?v.h+'px':'');set('max-height',kb?v.h+'px':'');
+  if(kb)setTimeout(()=>a.scrollIntoView({block:'center'}),60)}
+for(const w of [vv,(()=>{try{return window.parent!==window&&window.parent.visualViewport}catch{return null}})()])if(w){w.addEventListener('resize',fitKb);w.addEventListener('scroll',fitKb)}
+dlg.addEventListener('focusin',()=>{fitKb();setTimeout(fitKb,400);setTimeout(fitKb,900)});dlg.addEventListener('focusout',()=>setTimeout(fitKb,100));dlg.addEventListener('close',()=>{dlg.classList.remove('vo-kb');for(const k of ['top','bottom','margin','height','max-height'])dlg.style.removeProperty(k)});
 window.veVoiceover=function(script,opts={}){
   if(typeof exporting!=='undefined'&&exporting)return;
   S.onTake=typeof opts.onTake==='function'?opts.onTake:null;useBtn.textContent=S.onTake?'✓ Use this take':'✓ Add to timeline';
