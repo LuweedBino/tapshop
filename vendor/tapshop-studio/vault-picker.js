@@ -4,7 +4,7 @@
 (function(){
   const inTapShop=window.parent!==window;
   const KIND_ICON={video:'▶',image:'🖼',audio:'♫',document:'📄',project:'✳',other:'📦'};
-  const css=`.vp{width:min(560px,94vw);max-height:min(86vh,86dvh);overflow:auto;border:1px solid #8a7aa855;border-radius:16px;padding:18px;background:#fff;color:#221d2c;box-shadow:0 20px 60px #0006}
+  const css=`.vp{width:min(560px,94vw);max-height:min(86vh,86dvh);overflow:auto;overscroll-behavior:contain;border:1px solid #8a7aa855;border-radius:16px;padding:18px;background:#fff;color:#221d2c;box-shadow:0 20px 60px #0006}
 .vp.vp-dark{background:#1d1a26;color:#eee9f7}.vp::backdrop{background:#0008}.vp h2{margin:0 0 4px;font-size:18px}.vp p{margin:0 0 12px;font-size:12px;opacity:.75}
 .vp-x{float:right;position:sticky;top:0;width:36px;height:36px;border-radius:50%;border:1px solid #8a7aa855;background:inherit;color:inherit;font-size:20px;cursor:pointer}
 .vp-list{display:grid;gap:8px}.vp-item[hidden]{display:none}.vp-item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;padding:8px;border:1px solid #8a7aa855;border-radius:12px;background:transparent;color:inherit;cursor:pointer;font:inherit}
@@ -56,6 +56,12 @@
     d.innerHTML=`<button type="button" class="vp-x" aria-label="Close">×</button><h2>${esc(title)}</h2><p>Loading your files…</p><input class="vp-search" type="search" placeholder="🔍 Search your files" aria-label="Search files by name" hidden><div class="vp-folders" hidden></div><div class="vp-list"></div>`;
     document.body.appendChild(d);d.showModal();
     const frames=videoThumbs(d),close=()=>{frames.stop();d.close();d.remove()};
+    // A swipe on the picker scrolls only the picker. When the list is short (or at its end) the browser
+    // passed the swipe on and the editor behind it slid around, so those moves are stopped here.
+    let tx=0,ty=0;d.addEventListener('touchstart',e=>{tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+    d.addEventListener('touchmove',e=>{if(dragging||e.touches.length>1)return;let t=e.touches[0],dx=t.clientX-tx,dy=t.clientY-ty;tx=t.clientX;ty=t.clientY;
+      if(Math.abs(dx)>Math.abs(dy)){if(!e.target.closest?.('.vp-folders'))e.preventDefault();return}
+      if((dy>0&&d.scrollTop<=0)||(dy<0&&d.scrollTop+d.clientHeight>=d.scrollHeight-1))e.preventDefault()},{passive:false});
     d.querySelector('.vp-x').onclick=close;d.addEventListener('cancel',e=>{e.preventDefault();close()});
     d.addEventListener('click',e=>{if(e.target!==d)return;let r=d.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)close()});
     let items,folders;try{({items,folders}=await load());items=items.filter(i=>(!kinds||kinds.includes(i.kind))&&(!accept||accept(i)))}catch(e){d.querySelector('p').textContent=e.message;return}
