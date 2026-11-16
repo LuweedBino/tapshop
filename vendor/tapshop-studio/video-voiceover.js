@@ -80,7 +80,7 @@ function paint(){
   if(!S.scenes.length)prompter.innerHTML='<p class="vo-empty">No script yet. Open ✏️ Edit script and type what you want to say, one line per scene, or make one with ✨ AI Script Writer above the Studio.</p>';
   else prompter.innerHTML=S.scenes.map((s,i)=>`<div class="vo-line${i===S.idx?' on':''}${i<S.idx?' done':''}" data-i="${i}"><small>${esc(s.sectionType||'Scene '+(i+1))}${s.durationSeconds?' · '+s.durationSeconds+'s':''}</small><p>${esc(s.voiceoverLine)}</p></div>`).join('');
   prompter.style.fontSize=q('voSize').value+'px';
-  q('voTextWrap').hidden=!S.scenes.some(s=>s.onScreenText);
+  q('voTextWrap').hidden=!!S.onTake||!S.scenes.some(s=>s.onScreenText);
   const on=prompter.querySelector('.vo-line.on');
   if(on)prompter.scrollTo({top:Math.max(0,on.offsetTop-prompter.clientHeight/2+on.offsetHeight/2),behavior:'smooth'});
 }
@@ -140,6 +140,8 @@ function wav(b){const n=b.length,ch=b.numberOfChannels,sr=b.sampleRate,v=new Dat
   return v.buffer}
 
 async function use(){
+  // Opened by another maker (Build My Video With AI): hand the take and the scene marks back instead of adding it here.
+  if(S.onTake&&S.take){const cb=S.onTake;cb({file:S.take,marks:S.marks.slice(),dur:S.takeDur});S.take=null;dlg.close();return}
   if(!S.take||(typeof exporting!=='undefined'&&exporting))return;
   useBtn.disabled=true;status('Adding to your timeline…');
   const at=+playhead.toFixed(2);snapshot();
@@ -181,8 +183,10 @@ dlg.addEventListener('keydown',e=>{if(S.rec&&(e.key==='ArrowRight'||e.key==='Arr
 dlg.querySelector('.vo-x').onclick=()=>dlg.close();
 dlg.addEventListener('close',()=>{if(S.rec||S.stream){S.discard=true;stop()}clearTake();status('')});
 
-window.veVoiceover=function(script){
+// opts.onTake({file, marks, dur}): use the take elsewhere; the button then reads "Use this take".
+window.veVoiceover=function(script,opts={}){
   if(typeof exporting!=='undefined'&&exporting)return;
+  S.onTake=typeof opts.onTake==='function'?opts.onTake:null;useBtn.textContent=S.onTake?'✓ Use this take':'✓ Add to timeline';
   if(script)setScenes(script.scenes);else paint();
   if(!dlg.open)dlg.showModal();
   status(S.scenes.length?'Tap ● Record when you\'re ready. You get a 3-second countdown.':'');

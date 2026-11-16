@@ -47,6 +47,7 @@ const FILES = new Set([
   "video-bpm.js",
   "video-fx.js",
   "video-voiceover.js",
+  "video-agent.js",
   "video-toolbar.js",
   "video-topbar.js",
   "mediabunny.js",

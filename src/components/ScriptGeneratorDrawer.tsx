@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   DURATIONS,
-  FRAMEWORKS,
   FRAMEWORK_LABELS,
+  POPULAR_FRAMEWORKS,
+  STORY_TYPES,
   TONES,
   type GenerateScriptRequest,
   type GenerateScriptResponse,
@@ -31,6 +32,7 @@ interface ScriptGeneratorDrawerProps {
 const SECTION_STYLES: Record<SectionType, string> = {
   Hook: "bg-[#C59B57]/15 text-[#E2C38E] border-[#C59B57]/40",
   Problem: "bg-rose-500/10 text-rose-300 border-rose-500/30",
+  Agitate: "bg-orange-500/10 text-orange-300 border-orange-500/30",
   "Demo/Solution": "bg-emerald-500/10 text-emerald-300 border-emerald-500/30",
   "Social Proof": "bg-sky-500/10 text-sky-300 border-sky-500/30",
   CTA: "bg-violet-500/10 text-violet-300 border-violet-500/30",
@@ -321,9 +323,9 @@ export default function ScriptGeneratorDrawer({
             </Field>
 
             <div>
-              <Label>Framework</Label>
+              <Label>Story type</Label>
               <div className="mt-2 grid grid-cols-2 gap-2">
-                {FRAMEWORKS.map((f) => (
+                {POPULAR_FRAMEWORKS.map((f) => (
                   <button
                     key={f}
                     type="button"
@@ -342,6 +344,25 @@ export default function ScriptGeneratorDrawer({
                   </button>
                 ))}
               </div>
+              <select
+                aria-label="More story types"
+                value={(POPULAR_FRAMEWORKS as readonly string[]).includes(form.framework) ? "" : form.framework}
+                onChange={(e) => e.target.value && update("framework", e.target.value as GenerateScriptRequest["framework"])}
+                className={`${inputCls(false)} mt-2`}
+              >
+                <option value="" className="bg-[#0F1115]">
+                  More story types ({STORY_TYPES.length - POPULAR_FRAMEWORKS.length})…
+                </option>
+                {[...new Set(STORY_TYPES.map((t) => t.group))].map((g) => (
+                  <optgroup key={g} label={g} className="bg-[#0F1115]">
+                    {STORY_TYPES.filter((t) => t.group === g && !(POPULAR_FRAMEWORKS as readonly string[]).includes(t.id)).map((t) => (
+                      <option key={t.id} value={t.id} className="bg-[#0F1115]">
+                        {t.label}: {t.blurb}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
             </div>
 
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-[auto_1fr]">
