@@ -11,6 +11,8 @@ export const maxDuration = 300;
 // Build My Video With AI's "💬 Change my script" and "↻ 3 new hooks": the creator's current script plus a
 // plain-English request in, the changed script out (same shape as /api/generate-script, plus a one-line
 // summary of what changed). Streams NDJSON like generate-script.
+// mode "write" (the voiceover recorder's ✨ AI script help) writes a brand-new script from a topic, a style
+// (friendly, funny, …) and a length, with no current script needed; its "💬 Ask AI" chat then uses mode "edit".
 
 type Scene = { sectionType: string; durationSeconds: number; visualDirection: string; voiceoverLine: string; onScreenText: string };
 
@@ -21,7 +23,9 @@ const SYSTEM_INSTRUCTION = `You edit short UGC video scripts for creators. You g
 - Scene 1 stays the Hook (≤3 s) and the last scene stays the CTA, unless the request says otherwise.
 - Voiceover lines must be speakable in their scene's seconds (~2.5 words per second). onScreenText stays short (≤ ~8 words).
 - hookVariations: exactly 3 opening lines with different angles (curiosity, pain call-out, bold claim); each can replace scene 1's voiceover. When asked for new hooks, make all 3 fresh and different from the current ones and from scene 1.
-- changeSummary: one short, friendly sentence telling the creator what you changed.
+- When asked to write a brand-new script: 3–6 scenes, Hook first and CTA last, durations adding up to the requested length, written fully in the requested style (funny means genuinely funny, calm means slow and gentle, and so on), with visualDirection saying what to show on screen.
+- When a style is given for an edit, keep the script in that style.
+- changeSummary: one short, friendly sentence telling the creator what you changed (or what you wrote).
 - Respond only with JSON matching the schema.`;
 
 const SCHEMA: Schema = {
@@ -95,10 +99,13 @@ export async function POST(req: Request) {
   } catch {
     return fail(400, "Invalid JSON body.");
   }
-  const mode = body.mode === "hooks" ? "hooks" : body.mode === "line" ? "line" : "edit";
+  const mode = body.mode === "hooks" ? "hooks" : body.mode === "line" ? "line" : body.mode === "write" ? "write" : "edit";
   const request = str(body.request, 500);
-  const scenes = readScenes(body.scenes);
+  const style = str(body.style, 60);
+  const seconds = Math.max(10, Math.min(90, Math.round(Number(body.seconds) || 30)));
+  const scenes = mode === "write" ? [] : readScenes(body.scenes);
   if (!scenes) return fail(400, "There's no script to change yet.");
+  if (mode === "write" && !request) return fail(400, "Tell the AI what your video is about.");
   if (mode !== "hooks" && !request) return fail(400, "Type what you'd like to change.");
   const index = Math.round(Number(body.index));
   if (mode === "line" && !(index >= 0 && index < scenes.length)) return fail(400, "Pick a scene to change.");
@@ -110,14 +117,22 @@ export async function POST(req: Request) {
     `Product: ${str(body.product, 120) || "not given"}`,
     `Product details (only claim what's here): ${str(body.benefits, 1500) || "not given"}`,
     ...(tone ? [`Tone: ${tone}`] : []),
-    `Current hooks: ${JSON.stringify(Array.isArray(body.hooks) ? body.hooks.map((h) => str(h, 300)).filter(Boolean).slice(0, 4) : [])}`,
-    `Current script: ${JSON.stringify({ title: str(body.title, 120), scenes })}`,
-    "",
-    mode === "hooks"
-      ? "Request: write 3 brand-new hookVariations with different angles from the current ones. Keep every scene exactly as it is."
-      : mode === "line"
-        ? `Request: rewrite ONLY scene ${index + 1} (${scenes[index]?.sectionType}, ${scenes[index]?.durationSeconds} s). Give exactly 3 different options in "options", each a voiceoverLine plus a short matching onScreenText (≤ ~8 words). Style: ${request}. Each must still fit between the scene before and after it, be speakable in ${scenes[index]?.durationSeconds} s, and differ clearly from the current line and from each other.`
-        : `Request: ${request}`,
+    ...(style ? [`Style: ${style}`] : []),
+    ...(mode === "write"
+      ? [
+          "",
+          `Request: write a brand-new voiceover script about: ${request}. Style: ${style || "friendly and natural"}. Total length: about ${seconds} seconds. Speak as the creator, first person.`,
+        ]
+      : [
+          `Current hooks: ${JSON.stringify(Array.isArray(body.hooks) ? body.hooks.map((h) => str(h, 300)).filter(Boolean).slice(0, 4) : [])}`,
+          `Current script: ${JSON.stringify({ title: str(body.title, 120), scenes })}`,
+          "",
+          mode === "hooks"
+            ? "Request: write 3 brand-new hookVariations with different angles from the current ones. Keep every scene exactly as it is."
+            : mode === "line"
+              ? `Request: rewrite ONLY scene ${index + 1} (${scenes[index]?.sectionType}, ${scenes[index]?.durationSeconds} s). Give exactly 3 different options in "options", each a voiceoverLine plus a short matching onScreenText (≤ ~8 words). Style: ${request}. Each must still fit between the scene before and after it, be speakable in ${scenes[index]?.durationSeconds} s, and differ clearly from the current line and from each other.`
+              : `Request: ${request}`,
+        ]),
   ].join("\n");
 
   if (mode === "line")
@@ -145,7 +160,7 @@ export async function POST(req: Request) {
     contents,
     systemInstruction: SYSTEM_INSTRUCTION,
     schema: SCHEMA,
-    what: "change the script",
+    what: mode === "write" ? "write the script" : "change the script",
     finish: (parsed) => {
       const r = (parsed ?? {}) as Record<string, unknown>;
       const next = readScenes(r.scenes);

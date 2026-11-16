@@ -49,6 +49,18 @@ html.ts:not(.ts-dark) .vo-line.on{background:#ff5b831f}
 .vo-check input{width:20px;height:20px;flex:none}
 #voSpeedWrap.off{opacity:.4}
 #voEditWrap{margin-top:6px}
+.vo-set[open]{max-height:50vh;max-height:50dvh;overflow:auto;overscroll-behavior:contain}
+/* ✨ AI script help: the writer fills the empty teleprompter; the 💬 chat sits under Edit script. */
+.vo-aiw{font-size:15px;line-height:1.35}.vo-aiw .vo-empty{margin-bottom:10px}
+.vo-lab{display:block;margin:10px 0 5px;font-size:13px;font-weight:700;opacity:.85}
+.vo-aiw textarea,#voAsk{width:100%;box-sizing:border-box;padding:9px 11px;border-radius:10px;border:1px solid #8a7aa877;background:transparent;color:inherit;font:15px system-ui,sans-serif}
+.vo-chips{display:flex;flex-wrap:wrap;gap:6px}.vo-chips button{padding:6px 11px!important;border-radius:999px!important;font:600 13px system-ui,sans-serif!important;border:1px solid #8a7aa877!important;background:transparent!important;color:inherit!important;cursor:pointer}
+.vo-chips button.on{background:#ec4899!important;border-color:#ec4899!important;color:#fff!important}
+.vo-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}.vo-row input{flex:1 1 160px}
+.vo-gen{padding:10px 16px!important;border-radius:12px!important;border:0!important;background:#ec4899!important;color:#fff!important;font:700 15px system-ui,sans-serif!important;cursor:pointer}.vo-gen:disabled{opacity:.5}
+#voChatWrap{margin-top:8px}#voChatWrap summary{font-weight:700}
+.vo-log{display:flex;flex-direction:column;gap:6px;margin:8px 0;max-height:160px;overflow:auto}
+.vo-log p{margin:0;padding:7px 11px;border-radius:12px;font-size:13px;max-width:88%}.vo-log .me{align-self:flex-end;background:#ec489933}.vo-log .ai{align-self:flex-start;background:#8a7aa82e}
 #voEdit{width:100%;margin:6px 0}
 #voAudio{width:100%;height:40px}
 .vo-status{margin:0;font-size:13px;min-height:1.2em;opacity:.8}
@@ -73,7 +85,9 @@ dlg.innerHTML=`<div class="vo-head"><h2 id="voTitle">🎙️ Voiceover</h2><butt
 <div class="vo-grid"><label>Text size<input id="voSize" type="range" min="18" max="48" value="28"></label>
 <label id="voSpeedWrap">Speed: <b id="voSpeedV">1.0×</b><input id="voSpeed" type="range" min="0.5" max="2" step="0.1" value="1"></label></div>
 <label class="vo-check"><input type="checkbox" id="voManual"> Only move when I tap Next scene</label>
-<details id="voEditWrap"><summary>✏️ Edit script</summary><textarea id="voEdit" rows="5" placeholder="Type what you'll say, one line per scene"></textarea><button type="button" id="voApply">Use these lines</button></details></details>
+<details id="voEditWrap"><summary>✏️ Edit script</summary><textarea id="voEdit" rows="5" placeholder="Type what you'll say, one line per scene"></textarea><button type="button" id="voApply">Use these lines</button></details>
+<details id="voChatWrap" hidden><summary>💬 Ask AI to change it</summary><div id="voChatLog" class="vo-log"></div><div class="vo-chips" id="voAsks"></div>
+<div class="vo-row"><input id="voAsk" type="text" maxlength="300" placeholder="e.g. make it funnier, or shorten the hook"><button type="button" class="vo-gen" style="background:#ec4899" id="voSend">Send</button><button type="button" id="voUndo" hidden>↩ Undo</button></div></details></details>
 <div id="voTake" hidden><audio id="voAudio" controls></audio>
 <label class="vo-check" id="voTextWrap"><input type="checkbox" id="voText" checked> Put each scene's on-screen text on the timeline</label></div>
 <p id="voStatus" class="vo-status" role="status"></p>
@@ -93,9 +107,9 @@ const small=()=>window.matchMedia('(max-width:700px),(pointer:coarse)').matches;
 if(!small())q('voSet').open=true;
 
 function paint(){
-  if(!S.scenes.length)prompter.innerHTML='<p class="vo-empty">No script yet. Type what you want to say below, one line per scene, then tap Use these lines.</p><button type="button" class="vo-write" style="background:#ec489926">✏️ Write my script</button>';
+  if(!S.scenes.length)prompter.innerHTML=aiOK()?aiForm():'<p class="vo-empty">No script yet. Type what you want to say below, one line per scene, then tap Use these lines.</p><button type="button" class="vo-write" style="background:#ec489926">✏️ Write my script</button>';
   else prompter.innerHTML=S.scenes.map((s,i)=>`<div class="vo-line${i===S.idx?' on':''}${i<S.idx?' done':''}" data-i="${i}"><small>${esc(s.sectionType||'Scene '+(i+1))}${s.durationSeconds?' · '+s.durationSeconds+'s':''}</small><p>${esc(s.voiceoverLine)}</p></div>`).join('');
-  prompter.style.fontSize=q('voSize').value+'px';
+  prompter.style.fontSize=q('voSize').value+'px';q('voChatWrap').hidden=!aiOK()||!S.scenes.length;
   q('voTextWrap').hidden=!!S.onTake||!S.scenes.some(s=>s.onScreenText);
   const on=prompter.querySelector('.vo-line.on');
   if(on)prompter.scrollTo({top:Math.max(0,on.offsetTop-prompter.clientHeight/2+on.offsetHeight/2),behavior:'smooth'});
@@ -206,12 +220,58 @@ dlg.addEventListener('close',()=>{if(S.rec||S.stream){S.discard=true;stop()}clea
 // No script yet: open the settings and the script box so there's somewhere to type straight away.
 function openEditor(focus){q('voSet').open=true;q('voEditWrap').open=true;if(!focus)return;const t=q('voEdit');t.scrollIntoView({block:'center',behavior:'smooth'});t.focus({preventScroll:true})}
 q('voPrompter').addEventListener('click',e=>{if(e.target.closest('.vo-write'))openEditor(true)});
+// ✨ AI script help (inside TapShop, where /api/edit-script lives): write a script from a topic, a style and a
+// length (mode "write"), then change it by chatting (mode "edit"). The style chosen is kept for the changes.
+const STYLES=[['friendly','😊 Friendly','friendly and warm, like talking to a friend'],['funny','😂 Funny','funny and playful, with light jokes'],['hype','⚡ Hype','high energy, excited and punchy'],['calm','😌 Calm','calm, soft and slow'],['pro','💼 Professional','clear, confident and professional'],['story','📖 Storytime','storytime: a personal little story'],['heart','💗 Heartfelt','heartfelt and emotional'],['bold','🔥 Bold','bold, direct and a little edgy']];
+const ASKS=['Make it shorter','Make it funnier','Punchier hook','Simpler words','Stronger ending','More friendly'];
+const AI={topic:'',style:'friendly',len:30,busy:false,log:[],prev:null};
+try{const p=JSON.parse(localStorage.getItem('tapshop-vo-ai')||'{}');if(p.style)AI.style=p.style;if(p.len)AI.len=p.len}catch{}
+const aiOK=()=>typeof inTapShop==='function'?inTapShop():window.parent!==window;
+const styleOf=()=>STYLES.find(x=>x[0]===AI.style)||STYLES[0];
+function aiForm(){return `<div class="vo-aiw"><p class="vo-empty">No script yet. ✨ Let AI write one for you, or type your own.</p>
+<label class="vo-lab" for="voTopic">What's your video about?</label><textarea id="voTopic" rows="2" maxlength="500" placeholder="e.g. my new blender bottle, no more lumpy shakes, link in bio">${esc(AI.topic)}</textarea>
+<span class="vo-lab">Style</span><div class="vo-chips">${STYLES.map(([k,l])=>`<button type="button" style="background:transparent" data-style="${k}" class="${AI.style===k?'on':''}" aria-pressed="${AI.style===k}">${l}</button>`).join('')}</div>
+<span class="vo-lab">Length</span><div class="vo-chips">${[15,30,60].map(n=>`<button type="button" style="background:transparent" data-len="${n}" class="${AI.len===n?'on':''}" aria-pressed="${AI.len===n}">${n} seconds</button>`).join('')}</div>
+<div class="vo-row"><button type="button" class="vo-gen" style="background:#ec4899" data-ai="write" ${AI.busy?'disabled':''}>✨ Write my script</button><button type="button" class="vo-write" style="background:#ec489926">✏️ I'll type my own</button></div></div>`}
+function chatPaint(){q('voChatLog').innerHTML=AI.log.map(m=>`<p class="${m.me?'me':'ai'}">${esc(m.text)}</p>`).join('');q('voChatLog').scrollTop=1e9;
+  q('voAsks').innerHTML=ASKS.map(a=>`<button type="button" style="background:transparent" data-ask="${esc(a)}" ${AI.busy?'disabled':''}>${a}</button>`).join('')+STYLES.filter(x=>x[0]!==AI.style).slice(0,3).map(([k,l])=>`<button type="button" style="background:transparent" data-ask="Change the style: ${STYLES.find(x=>x[0]===k)[2]}" data-to="${k}" ${AI.busy?'disabled':''}>→ ${l}</button>`).join('');
+  q('voSend').disabled=AI.busy;q('voUndo').hidden=!AI.prev||AI.busy}
+async function readNd(res){const rd=res.body.getReader(),dec=new TextDecoder();let buf='',out=null;
+  for(;;){const {value,done}=await rd.read();buf+=dec.decode(value||new Uint8Array(),{stream:!done});let nl;
+    while((nl=buf.indexOf('\n'))>=0){const line=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(!line)continue;try{const ev=JSON.parse(line);if(ev.type==='result')out=ev}catch{}}
+    if(done)return out}}
+async function askAI(mode,request,to){if(AI.busy||S.rec)return;if(!request){status(mode==='write'?'Tell the AI what your video is about first.':'Type what you’d like to change first.');return}
+  AI.busy=true;if(mode==='edit'){AI.log.push({me:1,text:request});chatPaint()}paint();const t0=Date.now(),tick=()=>status(`✨ ${mode==='write'?'Writing your script':'Changing your script'}… ${Math.round((Date.now()-t0)/1000)} s`);
+  const timer=setInterval(tick,1000),ctl=new AbortController(),limit=setTimeout(()=>ctl.abort(),150000);tick();
+  try{const st=styleOf(),body={mode,request,style:st[2],seconds:AI.len};
+    if(mode==='edit')body.scenes=S.scenes.map(x=>({sectionType:x.sectionType,durationSeconds:x.durationSeconds||3,visualDirection:'',voiceoverLine:x.voiceoverLine,onScreenText:x.onScreenText||''}));
+    const res=await fetch('/api/edit-script',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctl.signal,body:JSON.stringify(body)});
+    const data=(res.headers.get('content-type')||'').includes('ndjson')&&res.body?await readNd(res):await res.json().catch(()=>null);
+    if(!data){status('The connection dropped before the AI finished. Please try again.');return}
+    if(!data.ok){status(data.error||'The AI couldn’t do that. Please try again.');if(mode==='edit')AI.log.push({text:'😕 '+(data.error||'Something went wrong. Try again.')});return}
+    const old=S.scenes;AI.prev=old.length?old.map(x=>({...x})):null;if(to)AI.style=to;
+    // Lines the creator typed keep their own labels ("Scene 2"); the AI's sections are named by type.
+    setScenes(data.script.scenes.map((x,i)=>({sectionType:mode==='edit'&&old[i]&&/^Scene \d+$/.test(old[i].sectionType||'')?old[i].sectionType:x.sectionType,durationSeconds:x.durationSeconds,voiceoverLine:x.voiceoverLine,onScreenText:x.onScreenText})));
+    const said=data.summary||'Done.';AI.log.push({text:'✨ '+said});
+    if(mode==='write'){q('voEditWrap').open=false;q('voSet').open=true;q('voChatWrap').open=true}
+    status(mode==='write'?'✨ Script ready. Change any line in ✏️ Edit script, or ask the AI below. Then tap ● Record.':'✨ '+said);
+    try{localStorage.setItem('tapshop-vo-ai',JSON.stringify({style:AI.style,len:AI.len}))}catch{}}
+  catch(e){status(e?.name==='AbortError'?'The AI took too long. Please try again.':'Network error. Check your connection and try again.')}
+  finally{clearInterval(timer);clearTimeout(limit);AI.busy=false;paint();chatPaint()}}
+prompter.addEventListener('input',e=>{if(e.target.id==='voTopic')AI.topic=e.target.value});
+prompter.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.style){AI.style=b.dataset.style;paint()}else if(b.dataset.len){AI.len=+b.dataset.len;paint()}else if(b.dataset.ai==='write')askAI('write',AI.topic.trim())});
+q('voAsks').addEventListener('click',e=>{const b=e.target.closest('button[data-ask]');if(b)askAI('edit',b.dataset.ask,b.dataset.to)});
+q('voSend').onclick=()=>{const v=q('voAsk').value.trim();q('voAsk').value='';askAI('edit',v)};
+q('voAsk').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();q('voSend').click()}});
+q('voUndo').onclick=()=>{if(!AI.prev||AI.busy)return;setScenes(AI.prev);AI.prev=null;AI.log.push({text:'↩ Put the last version back.'});chatPaint();status('↩ Back to the last version.')};
+chatPaint();
 window.veVoiceover=function(script,opts={}){
   if(typeof exporting!=='undefined'&&exporting)return;
   S.onTake=typeof opts.onTake==='function'?opts.onTake:null;useBtn.textContent=S.onTake?'✓ Use this take':'✓ Add to timeline';
   if(script)setScenes(script.scenes);else paint();
   if(!dlg.open)dlg.showModal();
-  status(S.scenes.length?'Tap ● Record when you\'re ready. You get a 3-second countdown.':'');if(!S.scenes.length)openEditor();
+  status(S.scenes.length?'Tap ● Record when you\'re ready. You get a 3-second countdown.':'');if(!S.scenes.length&&!aiOK())openEditor();
 };
 
 // Timeline bar button, next to 🔊 Sound FX (video-toolbar.js sorts it into a section).
