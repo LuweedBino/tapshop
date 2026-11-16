@@ -34,6 +34,10 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-line p{margin:0;font-weight:600}
 .vo-line.on{opacity:1;background:#ff5b8322;box-shadow:inset 3px 0 0 #ff5b83}
 .vo-line.done{opacity:.3}
+/* Light theme: the script box follows it (dark stays the default, also outside the dashboard). */
+html.ts:not(.ts-dark) .vo-prompter{background:#f7f4fb;color:#1d1a26;border:1px solid #e3ddec}
+html.ts:not(.ts-dark) .vo-line.on{background:#ff5b831f}
+.vo-write{color:#fff!important}html.ts:not(.ts-dark) .vo-write{color:#be185d!important}
 .vo-empty{font-size:15px!important;opacity:.75;margin:0}.vo-write{margin-top:12px;padding:10px 16px;border-radius:12px;border:2px solid #ec4899!important;background:#ec489926!important;color:inherit;font:700 15px system-ui,sans-serif;cursor:pointer}
 .vo-set summary{cursor:pointer;font-size:14px;font-weight:600}
 .vo-set summary span{font-weight:400;opacity:.7}
