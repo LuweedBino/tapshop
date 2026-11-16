@@ -119,7 +119,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-tag button{font-size:12px;padding:2px 8px!important;text-transform:none;letter-spacing:0}
 .ag-scene input,.ag-scene textarea,.ag-scene select{width:100%;margin-top:4px}
 .ag-scene .ag-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}.ag-scene .ag-row>label{flex:1 1 140px;font-size:12px}
-.ag-shot{font-size:13px;opacity:.85;margin:4px 0}.ag-len{margin:2px 0 8px;font-size:13px;color:#ec4899}.ag-move{margin:0 4px;padding:2px 4px;font-size:12px;border-radius:8px;max-width:96px}.ag-hooks .ag-card small{white-space:normal;font-size:13px;line-height:1.35}
+.ag-shot{font-size:13px;opacity:.85;margin:4px 0}.ag-len{margin:2px 0 8px;font-size:13px;color:#ec4899}.ag-move{margin:0 4px;padding:2px 4px;font-size:12px;border-radius:8px;max-width:96px}.ag-hooks .ag-card small{white-space:normal;font-size:13px;line-height:1.35}.ag-ai{display:flex;gap:6px;overflow-x:auto;align-items:center;margin:8px 0 2px;padding-bottom:2px;scrollbar-width:thin}.ag-ai span{flex:none;font-size:12px;font-weight:700;color:#ec4899}.ag-ai button{flex:none;font-size:12px;padding:5px 10px;border-radius:999px;white-space:nowrap}.ag-ai button.on{border-color:#ec4899;color:#ec4899}
 .ag-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid #8886;border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
 .ag-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.ag-file button{width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:13px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
@@ -176,7 +176,7 @@ script(){const m=S.scriptMode;let h=`<h3>Your script</h3><p class="ag-help">What
     <div class="ag-btns"><button type="button" class="primary" data-act="askGo" ${busy?'disabled':''}>✨ Change it</button>${S.prev?`<button type="button" data-act="undoAsk" ${busy?'disabled':''}>↩ Undo last change</button>`:''}</div>`}
   if(S.scenes.length)h+=`<div class="ag-g">${esc(S.title||'Your scenes')}</div><p class="ag-help">✏️ Tap any line to change it · <b>✕ Remove</b> deletes a scene · <b>＋ Add a scene</b> at the bottom adds one.</p>`+S.scenes.map((s,i)=>`<div class="ag-scene"><div class="ag-tag"><span>${i+1} · ${esc(s.type)} · ${s.secs}s</span><button type="button" data-act="rmScene" data-i="${i}" aria-label="Remove scene ${i+1}">✕ Remove</button></div>
     ${m==='none'?'':`<label>What you say<textarea data-k="say" data-i="${i}" rows="2">${esc(s.say)}</textarea></label>`}
-    <label>Words on screen<input data-k="text" data-i="${i}" maxlength="120" value="${esc(s.text)}"></label></div>`).join('')+`<div class="ag-btns"><button type="button" data-act="addScene">＋ Add a scene</button></div>`;
+    <label>Words on screen<input data-k="text" data-i="${i}" maxlength="120" value="${esc(s.text)}"></label>${lineAI(i)}</div>`).join('')+`<div class="ag-btns"><button type="button" data-act="addScene">＋ Add a scene</button></div>`;
   return h},
 footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add clips you have, or film each shot now. You can mix both.</p>
   <div class="ag-cards">${card('footage','clips',f==='clips','🎥 Clips','Upload or film, scene by scene')}${card('footage','none',f==='none','🎨 No footage','Text and graphics only')}</div>`;
@@ -259,6 +259,22 @@ async function writeScript(){if(busy)return;busy=true;paint();const b=S.brief,t0
   finally{clearInterval(timer);clearTimeout(limit);busy=false;save();paint()}}
 // Phase 4: change the script by asking (or get 3 fresh hooks) through /api/edit-script. The scenes keep their
 // look, animation and sound when the change leaves them at the same place; ↩ Undo restores the last version.
+// Per-scene AI: a row of chips under each scene; one tap asks for 3 rewrites of just that scene's line in that
+// style, shown as cards to tap; ↩ puts the line back. Only one scene's options are open at a time (S.sugg).
+const LINE_STYLES=[['better','✨ Better','make it better: more scroll-stopping and clear'],['simple','🧸 Simpler','simpler words, easy to say'],['natural','🗣️ More natural','more natural flowing, like real talk'],['punchy','⚡ Punchier','punchier and more energetic'],['funny','😂 Funnier','add a little humor'],['short','✂️ Shorter','shorter'],['emotional','💗 More emotional','more emotional and relatable'],['specific','🎯 More specific','more specific and concrete, sensory details']];
+function lineAI(i){const g=S.sugg,open=g&&g.i===i;let h=`<div class="ag-ai"><span>✨ AI:</span>${LINE_STYLES.map(([k,l])=>`<button type="button" data-act="lineAI" data-i="${i}" data-v="${k}" class="${open&&g.style===k?'on':''}" ${busy?'disabled':''}>${l}</button>`).join('')}</div>`;
+  if(open&&g.options)h+=`<div class="ag-cards ag-hooks">${g.options.map((o,j)=>`<button type="button" class="ag-card" data-act="useLine" data-i="${i}" data-v="${j}"><b>Option ${j+1}</b><small>${esc(o.say)}${o.text?`<br><i>On screen: ${esc(o.text)}</i>`:''}</small></button>`).join('')}</div><div class="ag-btns"><button type="button" data-act="lineAI" data-i="${i}" data-v="${g.style}" ${busy?'disabled':''}>↻ 3 more</button><button type="button" data-act="closeLine">Close</button></div>`;
+  if(S.lineUndo&&S.lineUndo.i===i)h+=`<div class="ag-btns"><button type="button" data-act="undoLine" data-i="${i}">↩ Put back my old line</button></div>`;return h}
+async function lineEdit(i,style){if(busy||!S.scenes[i])return;const st=LINE_STYLES.find(x=>x[0]===style);if(!st)return;busy=true;S.sugg={i,style};paint();const b=S.brief,t0=Date.now();
+  const timer=setInterval(()=>status(`✨ Rewriting scene ${i+1} (${st[1].slice(2).trim()})… ${Math.round((Date.now()-t0)/1000)} s`),1000),ctl=new AbortController(),limit=setTimeout(()=>ctl.abort(),120000);
+  try{const res=await fetch('/api/edit-script',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctl.signal,body:JSON.stringify({mode:'line',index:i,request:st[2],product:b.product,benefits:b.benefits,tone:b.tone,title:S.title,
+        scenes:S.scenes.map(x=>({sectionType:x.type,durationSeconds:x.secs,visualDirection:x.shot,voiceoverLine:x.say,onScreenText:x.text}))})});
+    const data=(res.headers.get('content-type')||'').includes('ndjson')&&res.body?await readStream(res,()=>{}):await res.json().catch(()=>null);
+    if(!data){status('The connection dropped before the AI finished. Please try again.');S.sugg=null;return}
+    if(!data.ok){status(data.error||'Couldn’t rewrite that line. Please try again.');S.sugg=null;return}
+    S.sugg={i,style,options:data.options};status(`✨ 3 options for scene ${i+1}. Tap one to use it.`)}
+  catch(e){S.sugg=null;status(e?.name==='AbortError'?'The AI took too long. Please try again.':'Network error. Check your connection and try again.')}
+  finally{clearInterval(timer);clearTimeout(limit);busy=false;paint()}}
 const ASKS=['Make the hook punchier','Make it shorter','More casual and fun','Stronger call to action','Add a little humor','More about the benefits'];
 async function editScript(mode,request){if(busy||!S.scenes.length)return;if(mode==='edit'&&!request){status('Type what you’d like to change first.');return}
   busy=true;paint();const b=S.brief,t0=Date.now();let chars=0;const tick=()=>status(mode==='hooks'?`Writing new hooks… ${Math.round((Date.now()-t0)/1000)} s`:chars?`Changing your script… ${Math.min(95,Math.round(chars/(400+S.scenes.length*260)*100))}%`:`Thinking… ${Math.round((Date.now()-t0)/1000)} s`);
@@ -422,6 +438,10 @@ body.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||
     case 'mode':S.scriptMode=v;if(v==='none')S.voice='none';else if(S.voice==='none')S.voice='record';break;
     case 'write':writeScript();return;
     case 'newHooks':editScript('hooks');return;
+    case 'lineAI':lineEdit(i,v);return;
+    case 'closeLine':S.sugg=null;break;
+    case 'useLine':{const o=S.sugg?.options?.[+v],sc=S.scenes[i];if(o&&sc){S.lineUndo={i,say:sc.say,text:sc.text};sc.say=o.say;if(o.text)sc.text=o.text;if(i===0)S.hookOptions[0]=o.say;S.sugg=null;status(`Scene ${i+1} updated. ↩ puts your old line back.`)}}break;
+    case 'undoLine':{const u=S.lineUndo,sc=S.scenes[i];if(u&&sc&&u.i===i){sc.say=u.say;sc.text=u.text;S.lineUndo=null;status('Old line back.')}}break;
     case 'ask':editScript('edit',v);return;
     case 'askGo':editScript('edit',(S.ask||'').trim());return;
     case 'undoAsk':if(S.prev){Object.assign(S,S.prev);S.prev=null;status('Back to how it was.')}break;case 'own':useOwn();return;

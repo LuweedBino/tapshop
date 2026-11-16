@@ -50,6 +50,23 @@ const SCHEMA: Schema = {
   propertyOrdering: ["changeSummary", "title", "hookVariations", "scenes"],
 };
 
+// One scene's line rewritten three ways ("✨ AI" chips under each scene in the maker).
+const LINE_SCHEMA: Schema = {
+  type: Type.OBJECT,
+  properties: {
+    options: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: { voiceoverLine: { type: Type.STRING }, onScreenText: { type: Type.STRING } },
+        required: ["voiceoverLine", "onScreenText"],
+        propertyOrdering: ["voiceoverLine", "onScreenText"],
+      },
+    },
+  },
+  required: ["options"],
+};
+
 const fail = (status: number, error: string) => NextResponse.json({ ok: false, error }, { status });
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
@@ -78,11 +95,13 @@ export async function POST(req: Request) {
   } catch {
     return fail(400, "Invalid JSON body.");
   }
-  const mode = body.mode === "hooks" ? "hooks" : "edit";
+  const mode = body.mode === "hooks" ? "hooks" : body.mode === "line" ? "line" : "edit";
   const request = str(body.request, 500);
   const scenes = readScenes(body.scenes);
   if (!scenes) return fail(400, "There's no script to change yet.");
-  if (mode === "edit" && !request) return fail(400, "Type what you'd like to change.");
+  if (mode !== "hooks" && !request) return fail(400, "Type what you'd like to change.");
+  const index = Math.round(Number(body.index));
+  if (mode === "line" && !(index >= 0 && index < scenes.length)) return fail(400, "Pick a scene to change.");
   const ai = getGemini();
   if (!ai) return fail(500, "The script AI is not configured. Please try again later.");
 
@@ -96,8 +115,29 @@ export async function POST(req: Request) {
     "",
     mode === "hooks"
       ? "Request: write 3 brand-new hookVariations with different angles from the current ones. Keep every scene exactly as it is."
-      : `Request: ${request}`,
+      : mode === "line"
+        ? `Request: rewrite ONLY scene ${index + 1} (${scenes[index]?.sectionType}, ${scenes[index]?.durationSeconds} s). Give exactly 3 different options in "options", each a voiceoverLine plus a short matching onScreenText (≤ ~8 words). Style: ${request}. Each must still fit between the scene before and after it, be speakable in ${scenes[index]?.durationSeconds} s, and differ clearly from the current line and from each other.`
+        : `Request: ${request}`,
   ].join("\n");
+
+  if (mode === "line")
+    return streamGeminiJson({
+      tag: "edit-script",
+      ai,
+      contents,
+      systemInstruction: SYSTEM_INSTRUCTION,
+      schema: LINE_SCHEMA,
+      what: "rewrite the line",
+      finish: (parsed) => {
+        const r = (parsed ?? {}) as Record<string, unknown>;
+        const options = (Array.isArray(r.options) ? r.options : [])
+          .map((o): Record<string, unknown> => (o && typeof o === "object" ? (o as Record<string, unknown>) : {}))
+          .map((o) => ({ say: str(o.voiceoverLine, 400), text: str(o.onScreenText, 120) }))
+          .filter((o) => o.say)
+          .slice(0, 3);
+        return options.length ? { ok: true, options } : { ok: false, error: "The AI didn't come up with options. Please try again." };
+      },
+    });
 
   return streamGeminiJson({
     tag: "edit-script",
