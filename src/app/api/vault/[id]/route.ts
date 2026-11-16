@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { deleteVaultItem, renameVaultItem } from "@/app/actions/vault";
+import { contentDisposition } from "@/lib/disposition";
 import { readObject, signedDownloadUrl, usingS3 } from "@/lib/storage";
 
 // Opens (or with ?download=1 downloads) a Media Vault file. Only its owner can.
@@ -33,7 +34,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       ...(file.size ? { "content-length": String(file.size) } : {}),
       ...(file.contentRange ? { "content-range": file.contentRange } : {}),
       "content-type": media ?? (item.contentType || file.contentType),
-      "content-disposition": `${download ? "attachment" : "inline"}; filename="${name}"`,
+      "content-disposition": contentDisposition(download ? "attachment" : "inline", name),
       "cache-control": "private, no-store",
       "x-content-type-options": "nosniff",
       ...(media ? {} : { "content-security-policy": "sandbox" }),
