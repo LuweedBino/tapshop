@@ -1,4 +1,4 @@
-// Shared types for the UGC Script Generator and "Build My Video With AI" (API route, drawer and Video Editor).
+// Shared types for the script API used by "Build My Video With AI" (API route and Video Editor).
 
 // Story types (the request's `framework`). `structure` is sent to Gemini; label/blurb/group are for the UI.
 // The Video Editor's guided maker (vendor/tapshop-studio/video-agent.js) keeps its own copy of ids and labels.
@@ -56,8 +56,6 @@ export const STORY_TYPES = [
 ] as const;
 
 export const FRAMEWORKS = STORY_TYPES.map((s) => s.id) as readonly ScriptFramework[];
-// The four shown as big cards in the Script Writer drawer; the rest are in its "More story types" menu.
-export const POPULAR_FRAMEWORKS = ["PAS", "3_REASONS", "SKEPTIC_UNBOXING", "TIKTOK_SHOP_HOOK"] as const;
 export const DURATIONS = [15, 30, 60] as const;
 export const TONES = ["Casual & Authentic", "High Energy", "ASMR / Calm", "Storytime"] as const;
 export const SECTION_TYPES = ["Hook", "Problem", "Agitate", "Demo/Solution", "Social Proof", "CTA"] as const;
