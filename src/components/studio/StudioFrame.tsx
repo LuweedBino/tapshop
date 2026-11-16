@@ -6,7 +6,6 @@ import { SaveToTapShop, type StudioImage } from "./SaveToTapShop";
 import { MediaVault, saveToVault, type SavedItem, type VaultFolderView, type VaultItemView } from "./MediaVault";
 import { SellThis } from "./SellThis";
 import { UseInStudio, type DesignOption, type StudioChoice } from "./UseInStudio";
-import ScriptGeneratorDrawer from "@/components/ScriptGeneratorDrawer";
 import { formatBytes, VAULT_MAX_BYTES } from "@/lib/vault";
 
 type VaultFile = { file: File; source: "design" | "video" };
@@ -52,7 +51,6 @@ export function StudioFrame({ products, vault, folders, handle, hasPayments }: {
   // A file waiting for the other Studio page to finish loading (it says tapshop:studio-ready).
   const pending = useRef<{ page: Page; message: unknown; at: number } | null>(null);
   const [height, setHeight] = useState<number | null>(null);
-  const [scriptOpen, setScriptOpen] = useState(false);
 
   // Size the Studio to the space left under the dashboard header, which wraps onto more rows
   // on tablets, so the editor never runs past the bottom of the screen.
@@ -207,13 +205,6 @@ export function StudioFrame({ products, vault, folders, handle, hasPayments }: {
           >
             🪄 Build My Video With AI
           </button>
-          <button
-            type="button"
-            onClick={() => setScriptOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#C59B57]/50 bg-[#0F1115] px-3.5 py-1.5 text-sm font-semibold text-[#E2C38E] shadow-sm transition hover:border-[#C59B57] hover:bg-[#1A1D23] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C59B57]"
-          >
-            ✨ AI Script Writer
-          </button>
         </div>
       )}
       <iframe
@@ -238,20 +229,6 @@ export function StudioFrame({ products, vault, folders, handle, hasPayments }: {
       {using && <UseInStudio item={using} designs={designs} onChoose={choose} onClose={() => setUsing(null)} />}
       {selling && <SellThis item={selling} handle={handle} hasPayments={hasPayments} onClose={() => setSelling(null)} />}
       {image && <SaveToTapShop image={image} products={products} onClose={() => setImage(null)} />}
-      <ScriptGeneratorDrawer
-        open={scriptOpen}
-        onClose={() => setScriptOpen(false)}
-        onSendToVoiceover={(text, scenes) => {
-          setScriptOpen(false);
-          setView("studio");
-          sendTo("video", {
-            type: "tapshop:voiceover-script",
-            version: 1,
-            text,
-            scenes: scenes.map((s) => ({ sectionType: s.sectionType, durationSeconds: s.durationSeconds, voiceoverLine: s.voiceoverLine, onScreenText: s.onScreenText })),
-          });
-        }}
-      />
     </>
   );
 }
