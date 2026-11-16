@@ -178,10 +178,10 @@ footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add c
   const nextI=S.scenes.findIndex((s,i)=>!(files.get(i)||[]).length);
   h+=`<div class="ag-btns"><button type="button" data-act="addAll">📁 Add all my clips at once</button></div>`;
   h+=S.scenes.map((s,i)=>{const fl=files.get(i)||[];return `<div class="ag-scene${i===nextI?' next':''}"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}${i===nextI?' · next to film':''}</span></div>
-    <p class="ag-shot">🎬 <b>Film:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
+    <p class="ag-shot">🎥 <b>Film:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
     <p class="ag-len">⏱️ <b>About ${filmSecs(s)} seconds</b> ${S.voice==='talking'?'· say your line in one take, with a breath before and after':'· a little extra is fine, we trim it to fit'}</p>
     ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span><button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
-    <div class="ag-btns"><button type="button" data-act="add" data-i="${i}">📁 Add clip</button><button type="button" data-act="film" data-i="${i}">📷 Film it</button></div></div>`}).join('');
+    <div class="ag-btns"><button type="button" data-act="add" data-i="${i}">📁 Add clip</button>${hasVault()?`<button type="button" data-act="vault" data-i="${i}">🗄️ From Vault</button>`:''}${touch()?`<button type="button" data-act="filmLine" data-i="${i}">🎬 Film with my line</button><button type="button" data-act="film" data-i="${i}">📷 Camera app</button>`:`<button type="button" data-act="film" data-i="${i}">🎬 Film it</button>`}</div></div>`}).join('');
   return h},
 voice(){const v=S.voice,none=S.scriptMode==='none';let h=`<h3>Voice + captions</h3><p class="ag-help">${none?'You picked no talking, so music and words on screen carry the video.':'How will people hear your script?'}</p>
   <div class="ag-cards">${card('voice','record',v==='record','🎙️ Record a voiceover','With a teleprompter')}${card('voice','talking',v==='talking','🗣️ I\'m talking in my clips','Use the sound from my clips')}${card('voice','none',v==='none','🔇 No voice','Music and text only')}</div>`;
@@ -277,6 +277,13 @@ function musicKey(){if(S.music!=='auto')return S.music;const st=STORIES.find(s=>
 // whichever is longer, plus 2 s to trim from. Talking to camera: the line's own length plus a breath.
 const nWords=t=>String(t||'').split(/\s+/).filter(Boolean).length;
 function filmSecs(s){const say=nWords(s.say)/2.5;return S.voice==='talking'?Math.max(2,Math.ceil(say+1)):Math.ceil(Math.max(s.secs||0,say,2)+2)}
+// Footage helpers: the Media Vault (inside TapShop only), and the in-page camera with the scene's line on screen:
+// talking to camera shows what to say on the front camera; b-roll shows what to film on the back camera.
+const hasVault=()=>typeof VaultPicker!=='undefined'&&VaultPicker.inTapShop;
+const touch=()=>matchMedia('(pointer:coarse)').matches;
+function camPrompt(i){const s=S.scenes[i]||{},talk=S.voice==='talking';
+  return {facing:talk?'user':'environment',prompt:{label:(talk?'🗣️ Say':'🎥 Film')+` · scene ${i+1} of ${S.scenes.length}`,line:talk?(s.say||s.text||''):(s.shot||'Anything that shows: '+(s.text||s.say||'')),secs:filmSecs(s)}}}
+function pickVault(i){VaultPicker.open({title:`Clip for scene ${i+1}`,kinds:['video'],onPick:async it=>{try{toast('Loading '+it.name+'…');addTo(i,[await VaultPicker.file(it)])}catch(e){toast(e.message)}if(!dlg.open)dlg.showModal()}})}
 // ---------- building ----------
 const textSize=(s,W,H)=>{let f=.055,px=f*H,w=s.length*.6*px;if(w>W*.84)f=W*.84/(s.length*.6)/H;return Math.max(24,f*H*1280/W)};
 // Each scene's start in the voiceover, from the words heard (w.s in seconds): the script's words are matched to the
@@ -367,7 +374,10 @@ body.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||
     case 'addScene':S.scenes.push({type:'Demo/Solution',secs:3,say:'',text:'',shot:'',anim:'',sfx:''});pickParts(false);break;
     case 'footage':S.footage=v;break;
     case 'addAll':fileTarget=-1;fileIn.click();return;case 'add':fileTarget=i;fileIn.click();return;
-    case 'film':toast(`🎬 Film about ${filmSecs(S.scenes[i]||{})} seconds for this scene.`);if(window.VideoCamera)VideoCamera.open(list=>addTo(i,list),toast,{only:'video'});else{fileTarget=i;fileIn.click()}return;
+    case 'vault':pickVault(i);return;
+    case 'filmLine':if(window.VideoCamera){VideoCamera.open(list=>addTo(i,list),toast,{only:'video',inApp:true,...camPrompt(i)});return}
+    // falls through: no in-page camera here
+    case 'film':if(window.VideoCamera&&!touch()){VideoCamera.open(list=>addTo(i,list),toast,{only:'video',...camPrompt(i)});return}toast(`🎬 Film about ${filmSecs(S.scenes[i]||{})} seconds for this scene.`);if(window.VideoCamera)VideoCamera.open(list=>addTo(i,list),toast,{only:'video'});else{fileTarget=i;fileIn.click()}return;
     case 'rmFile':{const l=(files.get(i)||[]).slice();l.splice(+b.dataset.j,1);files.set(i,l)}break;
     case 'voice':S.voice=v;break;case 'record':record();return;
     case 'pick':pickParts(true);S.music='auto';status('Picked for you. Change anything you like.');break;

@@ -15,6 +15,8 @@ const css=`.vc-menu{width:min(340px,92vw);border:1px solid var(--ts-border-stron
 .vc-bar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;padding:12px 16px calc(14px + env(safe-area-inset-bottom));background:#111}
 .vc-side{display:flex;gap:8px}.vc-side.vc-end{justify-content:flex-end}.vc-bar button{font:600 14px system-ui,sans-serif;border-radius:10px;padding:10px 14px;cursor:pointer}.vc-bar button[hidden]{display:none}.vc-bar button:disabled{opacity:.4;cursor:default}
 .vc-modes[hidden]{display:none}.vc-modes{display:flex;justify-content:center;gap:4px;grid-column:1/-1}
+.vc-line{position:absolute;left:0;right:0;bottom:0;padding:14px 18px 16px;background:linear-gradient(transparent,#000d 30%);font:600 clamp(17px,2.6vw,26px)/1.35 system-ui,sans-serif;text-align:center;text-shadow:0 1px 3px #000}.vc-line small{display:block;font-size:13px;font-weight:500;opacity:.8;margin-bottom:4px}
+.vc-rec.vc-ok{background:#16a34a}
 .vc-bar .vc-shoot{width:64px;height:64px;padding:0;border-radius:50%}.vc-bar .vc-shoot.vc-on{border-radius:14px;width:52px;height:52px;margin:6px}`;
 const FORMATS=['video/mp4;codecs=avc1.42E01F,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];
 let styled=false,inputs=null;
@@ -34,27 +36,29 @@ function menu(add){
   document.body.appendChild(d);d.showModal();
 }
 
-function webcam(add,only){
+// prompt {line, label, secs}: shows what to say or film over the picture, and the timer counts towards secs
+// (it turns green once the shot is long enough). facing: 'user' | 'environment' picks the starting camera.
+function webcam(add,only,prompt,facing){
   let d=document.createElement('dialog');d.className='vc-cam';d.setAttribute('aria-label','Camera');
-  d.innerHTML=`<div class="vc-wrap"><div class="vc-stage"><video muted playsinline autoplay></video><div class="vc-status" role="status">Starting your camera…</div><div class="vc-rec" hidden></div></div>
+  d.innerHTML=`<div class="vc-wrap"><div class="vc-stage"><video muted playsinline autoplay></video><div class="vc-status" role="status">Starting your camera…</div><div class="vc-rec" hidden></div>${prompt?`<div class="vc-line"><small></small><span></span></div>`:''}</div>
 <div class="vc-bar"><div class="vc-modes"><button type="button" data-mode="video" style="${GHOST}">Video</button><button type="button" data-mode="photo" style="${GHOST}">Photo</button></div>
 <div class="vc-side"><button type="button" class="vc-done" style="${GHOST}">Done</button></div><button type="button" class="vc-shoot" style="background:#fff;border:4px solid #fff" aria-label="Start recording" disabled></button><div class="vc-side vc-end"><button type="button" class="vc-flip" style="${GHOST}" hidden>⟲ Flip</button></div></div></div>`;
   document.body.appendChild(d);d.showModal();
-  const q=s=>d.querySelector(s);if(only)q('.vc-modes').hidden=true;const v=q('video'),status=q('.vc-status'),rec=q('.vc-rec'),shoot=q('.vc-shoot'),flip=q('.vc-flip'),done=q('.vc-done');
+  const q=s=>d.querySelector(s);if(only)q('.vc-modes').hidden=true;if(prompt){q('.vc-line small').textContent=(prompt.label||'')+(prompt.secs?` · about ${prompt.secs} s`:'');q('.vc-line span').textContent=prompt.line||''}const v=q('video'),status=q('.vc-status'),rec=q('.vc-rec'),shoot=q('.vc-shoot'),flip=q('.vc-flip'),done=q('.vc-done');
   let stream=null,mode='video',recorder=null,tick=null,finished=null,count=0,cams=[],cam=0,closed=false;
   const say=t=>{status.textContent=t;status.hidden=!t};
   const saved=()=>{count++;done.textContent=`Done (${count} added)`};
   const stop=()=>{stream?.getTracks().forEach(t=>t.stop());stream=null;v.srcObject=null};
   const paint=()=>{let photo=mode==='photo',on=!!recorder;shoot.style.background=photo?'#fff':'#d92d20';shoot.classList.toggle('vc-on',on);shoot.setAttribute('aria-label',photo?'Take photo':on?'Stop recording':'Start recording');shoot.disabled=!stream;flip.disabled=on;for(const b of d.querySelectorAll('[data-mode]')){let now=b.dataset.mode===mode;b.setAttribute('aria-pressed',String(now));b.style.background=now?'#fff':'transparent';b.style.color=now?'#111':'#fffa';b.disabled=on}};
   async function connect(){
-    let video={width:{ideal:1920},height:{ideal:1080}};if(cams[cam])video.deviceId={exact:cams[cam].deviceId};
+    let video={width:{ideal:1920},height:{ideal:1080}};if(cams[cam])video.deviceId={exact:cams[cam].deviceId};else if(facing)video.facingMode={ideal:facing};
     stop();paint();say('Starting your camera…');
     try{
       let s;try{s=await navigator.mediaDevices.getUserMedia({video,audio:true})}catch(e){if(e.name==='OverconstrainedError'||e.name==='AbortError')throw e;s=await navigator.mediaDevices.getUserMedia({video})}
       if(closed){s.getTracks().forEach(t=>t.stop());return}
       stream=s;v.srcObject=s;await v.play().catch(()=>{});
       v.classList.toggle('vc-mirror',s.getVideoTracks()[0]?.getSettings().facingMode!=='environment');
-      cams=(await navigator.mediaDevices.enumerateDevices()).filter(c=>c.kind==='videoinput');flip.hidden=cams.length<2;
+      if(!cams.length){cams=(await navigator.mediaDevices.enumerateDevices()).filter(c=>c.kind==='videoinput');const id=s.getVideoTracks()[0]?.getSettings().deviceId,k=cams.findIndex(c=>c.deviceId===id);if(k>=0)cam=k}flip.hidden=cams.length<2;
       say('');
     }catch(e){
       say(e.name==='NotAllowedError'?'Your camera is blocked. Allow it for this site in your browser’s settings, then try again.':e.name==='NotFoundError'||e.name==='OverconstrainedError'?'No camera was found on this computer.':e.name==='NotReadableError'?'Another app is using your camera. Close it, then try again.':'Your camera could not be started.');
@@ -71,7 +75,8 @@ function webcam(add,only){
     try{r=new MediaRecorder(stream,type?{mimeType:type}:undefined)}catch{say('Recording isn’t supported in this browser.');return}
     r.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
     finished=new Promise(res=>{r.onstop=()=>{let t=(r.mimeType||type||'video/webm').split(';')[0],ext=t==='video/mp4'?'mp4':'webm';if(chunks.length){add([new File(chunks,`camera-video-${stamp()}.${ext}`,{type:t})]);saved()}res()}});
-    r.start(1000);recorder=r;rec.hidden=false;rec.textContent='● 0:00';tick=setInterval(()=>{rec.textContent='● '+clock(Math.floor((Date.now()-start)/1000))},500);paint();
+    const goal=prompt?.secs||0,show=()=>{const s=Math.floor((Date.now()-start)/1000),ok=goal&&s>=goal;rec.classList.toggle('vc-ok',!!ok);rec.textContent=(ok?'✓ ':'● ')+clock(s)+(goal?(ok?' · you can stop':' / '+clock(goal)):'')};
+    r.start(1000);recorder=r;rec.hidden=false;show();tick=setInterval(show,500);paint();
   }
   async function endRecording(){if(!recorder)return;recorder.stop();recorder=null;clearInterval(tick);rec.hidden=true;await finished;paint()}
   // Leaving mid-recording keeps the clip rather than losing it.
@@ -84,11 +89,12 @@ function webcam(add,only){
 }
 
 // only:'video' is for places that take video alone: no photo choice on either kind of device.
-function open(add,toast,{only}={}){
+// inApp: use the in-page camera even on phones (so prompt can show over the picture), not the camera app.
+function open(add,toast,{only,prompt,inApp,facing}={}){
   dress();
-  if(matchMedia('(pointer:coarse)').matches){if(only)nativeInputs(add)[only].click();else menu(add);return}
+  if(!inApp&&matchMedia('(pointer:coarse)').matches){if(only)nativeInputs(add)[only].click();else menu(add);return}
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){toast('This browser can’t use your camera here.');return}
-  webcam(add,only);
+  webcam(add,only,prompt,facing);
 }
 return {open};
 })();
