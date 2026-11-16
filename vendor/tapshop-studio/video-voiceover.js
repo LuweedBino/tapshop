@@ -1,5 +1,5 @@
 // Voiceover recorder with a teleprompter (🎙️ Voiceover on the timeline bar).
-// Opens empty from the bar, or with a script from the dashboard's AI Script Writer
+// Opens empty from the bar, or with a script from Build My Video (or a dashboard message)
 // (tapshop:voiceover-script). Records the microphone, turns the take into a WAV (browser
 // recordings often don't state their length, which loadTrackMedia refuses) and adds it as an
 // audio track that never ducks: it is the voice the music ducks under. Each scene's on-screen
@@ -34,7 +34,7 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-line p{margin:0;font-weight:600}
 .vo-line.on{opacity:1;background:#ff5b8322;box-shadow:inset 3px 0 0 #ff5b83}
 .vo-line.done{opacity:.3}
-.vo-empty{font-size:15px!important;opacity:.75;margin:0}
+.vo-empty{font-size:15px!important;opacity:.75;margin:0}.vo-write{margin-top:12px;padding:10px 16px;border-radius:12px;border:2px solid #ec4899!important;background:#ec489926!important;color:inherit;font:700 15px system-ui,sans-serif;cursor:pointer}
 .vo-set summary{cursor:pointer;font-size:14px;font-weight:600}
 .vo-set summary span{font-weight:400;opacity:.7}
 .vo-set-tip{display:block;margin:2px 0 0 18px;font-size:12px;font-weight:600;color:#ec4899}.vo-set[open] .vo-set-tip{display:none}
@@ -89,7 +89,7 @@ const small=()=>window.matchMedia('(max-width:700px),(pointer:coarse)').matches;
 if(!small())q('voSet').open=true;
 
 function paint(){
-  if(!S.scenes.length)prompter.innerHTML='<p class="vo-empty">No script yet. Open ✏️ Edit script and type what you want to say, one line per scene, or make one with ✨ AI Script Writer above the Studio.</p>';
+  if(!S.scenes.length)prompter.innerHTML='<p class="vo-empty">No script yet. Type what you want to say below, one line per scene, then tap Use these lines.</p><button type="button" class="vo-write" style="background:#ec489926">✏️ Write my script</button>';
   else prompter.innerHTML=S.scenes.map((s,i)=>`<div class="vo-line${i===S.idx?' on':''}${i<S.idx?' done':''}" data-i="${i}"><small>${esc(s.sectionType||'Scene '+(i+1))}${s.durationSeconds?' · '+s.durationSeconds+'s':''}</small><p>${esc(s.voiceoverLine)}</p></div>`).join('');
   prompter.style.fontSize=q('voSize').value+'px';
   q('voTextWrap').hidden=!!S.onTake||!S.scenes.some(s=>s.onScreenText);
@@ -199,12 +199,15 @@ dlg.querySelector('.vo-x').onclick=()=>dlg.close();
 dlg.addEventListener('close',()=>{if(S.rec||S.stream){S.discard=true;stop()}clearTake();status('')});
 
 // opts.onTake({file, marks, dur}): use the take elsewhere; the button then reads "Use this take".
+// No script yet: open the settings and the script box so there's somewhere to type straight away.
+function openEditor(focus){q('voSet').open=true;q('voEditWrap').open=true;if(!focus)return;const t=q('voEdit');t.scrollIntoView({block:'center',behavior:'smooth'});t.focus({preventScroll:true})}
+q('voPrompter').addEventListener('click',e=>{if(e.target.closest('.vo-write'))openEditor(true)});
 window.veVoiceover=function(script,opts={}){
   if(typeof exporting!=='undefined'&&exporting)return;
   S.onTake=typeof opts.onTake==='function'?opts.onTake:null;useBtn.textContent=S.onTake?'✓ Use this take':'✓ Add to timeline';
   if(script)setScenes(script.scenes);else paint();
   if(!dlg.open)dlg.showModal();
-  status(S.scenes.length?'Tap ● Record when you\'re ready. You get a 3-second countdown.':'');
+  status(S.scenes.length?'Tap ● Record when you\'re ready. You get a 3-second countdown.':'');if(!S.scenes.length)openEditor();
 };
 
 // Timeline bar button, next to 🔊 Sound FX (video-toolbar.js sorts it into a section).
