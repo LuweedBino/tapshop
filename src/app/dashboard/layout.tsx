@@ -10,30 +10,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const dark = (await cookies()).get("tapshop_theme")?.value === "dark";
   // The Studio marks itself data-studio-full so it can use the whole screen width on computers.
   return (
-    <div data-dash-root className={`mx-auto min-h-dvh max-w-6xl md:has-[[data-studio-full]]:max-w-none md:flex md:gap-8 md:px-6 md:py-8 ${dark ? "tapshop-dark" : ""}`}>
-      <aside className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:static md:w-52 md:shrink-0 md:border-0 md:bg-transparent md:p-0">
+    <div data-dash-root className={`mx-auto min-h-dvh max-w-6xl md:has-[[data-studio-full]]:max-w-none ${dark ? "tapshop-dark" : ""}`}>
+      <aside className="sticky top-0 z-10 border-b border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur md:px-6">
         <DashTopNav
           admin={isAdmin(creator)}
           actions={
-            <div className="flex items-center gap-3 md:mt-1 md:block">
+            <div className="flex items-center gap-3">
               <Link href={`/${creator.handle}`} target="_blank" className="text-xs font-semibold text-neutral-500">/{creator.handle} ↗</Link>
-              <span className="md:hidden">
-                <ThemeToggle initialDark={dark} />
-              </span>
-              <form action={logout} className="md:hidden">
+              <ThemeToggle initialDark={dark} />
+              <form action={logout}>
                 <button className="text-xs text-neutral-500">Sign out</button>
               </form>
             </div>
           }
         />
-        <div className="hidden md:mt-6 md:block md:px-3">
-          <ThemeToggle initialDark={dark} />
-        </div>
-        <form action={logout} className="hidden md:mt-6 md:block">
-          <button className="px-3 text-sm text-neutral-500 hover:text-neutral-900">Sign out</button>
-        </form>
       </aside>
-      <main className="min-w-0 flex-1 px-4 py-6 md:p-0">
+      <main className="min-w-0 px-4 py-6 md:px-6 md:py-8">
         {creator.pausedAt && (
           <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
             Your store is paused, so visitors can&apos;t see it or buy. Your past buyers can still download what they bought. Contact TapShop support to turn it back on.

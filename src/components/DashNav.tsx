@@ -19,7 +19,7 @@ export function DashNav({ admin = false }: { admin?: boolean }) {
   const path = usePathname();
   const items = admin ? [...ITEMS, { href: "/dashboard/admin", label: "Admin" }] : ITEMS;
   return (
-    <nav className="flex gap-1 overflow-x-auto md:flex-col">
+    <nav className="flex gap-1 overflow-x-auto">
       {items.map((i) => {
         const active = i.href === "/dashboard" ? path === i.href : path.startsWith(i.href);
         return (
