@@ -23,7 +23,8 @@ export const maxDuration = 300;
 
 // Google retires models often and new API keys can't use older ones, so try these in order and
 // move on when one answers 404. GEMINI_MODEL (optional) goes first.
-const MODELS = [...new Set([env.geminiModel, "gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"].filter(Boolean))];
+// Flash-Lite first: a script needs speed more than deep reasoning, and the bigger models could take over a minute.
+const MODELS = [...new Set([env.geminiModel, "gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-3.5-flash", "gemini-flash-latest"].filter(Boolean))];
 const MAX_FIELD_LENGTH = { productName: 120, keyBenefits: 1500, targetAudience: 400 } as const;
 
 // ---------------------------------------------------------------------------
