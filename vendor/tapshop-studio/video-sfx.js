@@ -1,4 +1,4 @@
-// Sound effects: 12 short one-shot sounds made on the device (no audio files), for cuts, text pop-ups and ads.
+// Sound effects: 23 short one-shot sounds made on the device (no audio files), for cuts, text pop-ups and ads.
 // Each effect is a function (ctx, out, t) that builds its sound on any audio context (live or offline), starting at time t,
 // and returns how long it lasts. Everything goes through a limiter (veLimiter in video.js) so nothing clips.
 // TapSFX.play(key) plays one now, TapSFX.file(key) makes a WAV, TapSFX.add(key) puts it on the timeline at the playhead.
@@ -64,37 +64,101 @@ const FX={
   whoosh(ctx,out,t){const s=src(ctx,t,.22,true),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.Q.value=1;f.frequency.setValueAtTime(400,t);f.frequency.exponentialRampToValueAtTime(4500,t+.18);
     g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(.7,t+.17);g.gain.exponentialRampToValueAtTime(0.0001,t+.22);s.connect(f);f.connect(g);g.connect(out);
     const u=t+.17,o=osc(ctx,'sine',170,u,.23),og=ctx.createGain();o.frequency.exponentialRampToValueAtTime(55,u+.12);env(og,u,.9,.003,.2);o.connect(og);og.connect(out);
-    const k=src(ctx,u,.03),kf=ctx.createBiquadFilter(),kg=ctx.createGain();kf.type='lowpass';kf.frequency.value=2500;env(kg,u,.35,.001,.025);k.connect(kf);kf.connect(kg);kg.connect(out);return .4}};
+    const k=src(ctx,u,.03),kf=ctx.createBiquadFilter(),kg=ctx.createGain();kf.type='lowpass';kf.frequency.value=2500;env(kg,u,.35,.001,.025);k.connect(kf);kf.connect(kg);kg.connect(out);return .4},
+  // 13. A trailer boom: a driven sine diving from 90 to 30 Hz under a burst of dark noise.
+  impact(ctx,out,t){const o=osc(ctx,'sine',90,t,1.4),g=ctx.createGain(),lv=ctx.createGain(),w=drive(ctx,3,lv);lv.gain.value=.8;lv.connect(out);o.frequency.exponentialRampToValueAtTime(30,t+1.1);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(1,t+.005);g.gain.exponentialRampToValueAtTime(0.0001,t+1.4);o.connect(g);g.connect(w);
+    const n=src(ctx,t,.7,true),nf=ctx.createBiquadFilter(),ng=ctx.createGain();nf.type='lowpass';nf.frequency.setValueAtTime(1800,t);nf.frequency.exponentialRampToValueAtTime(150,t+.6);env(ng,t,.9,.002,.65);n.connect(nf);nf.connect(ng);ng.connect(out);return 1.4},
+  // 14. Two heartbeats, each a "lub" and a softer "dub".
+  heartbeat(ctx,out,t){[[0,1],[.2,.65],[.8,1],[1,.65]].forEach(([dt,v])=>{const u=t+dt,o=osc(ctx,'sine',75,u,.25),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(42,u+.15);env(g,u,v,.006,.2);o.connect(g);g.connect(out)});return 1.25},
+  // 15. A few uneven keyboard taps: a crisp click with a little low "thock" each.
+  typing(ctx,out,t){[0,.09,.16,.27,.33,.45,.52].forEach((dt,i)=>{const u=t+dt,s=src(ctx,u,.025),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=2600+((i*733)%1400);f.Q.value=4;env(g,u,.9,.0005,.02);s.connect(f);f.connect(g);g.connect(pan(ctx,((i*37)%9-4)/10,out));
+    const o=osc(ctx,'sine',190,u,.04),og=ctx.createGain();env(og,u,.22,.001,.03);o.connect(og);og.connect(out)});return .6},
+  // 16. A soft two-note phone notification.
+  notify(ctx,out,t){[[880,0],[1320,.12]].forEach(([f,dt])=>{const u=t+dt,o=osc(ctx,'triangle',f,u,.32),g=ctx.createGain();env(g,u,.35,.004,.28);o.connect(g);g.connect(out);bell(ctx,out,u,f,1,[[2,.06,.15]])});return .45},
+  // 17. A cartoon spring: a sine sliding up with a wobble that settles.
+  boing(ctx,out,t){const o=osc(ctx,'sine',120,t,.7),l=osc(ctx,'sine',17,t,.7),lg=ctx.createGain(),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(380,t+.5);lg.gain.setValueAtTime(70,t);lg.gain.exponentialRampToValueAtTime(2,t+.65);l.connect(lg);lg.connect(o.frequency);
+    env(g,t,.8,.004,.65);o.connect(g);g.connect(out);return .7},
+  // 18. Choppy digital blips at random-sounding pitches, with crackle.
+  glitch(ctx,out,t){const P=[1480,220,880,330,1760,440,1240,260,990,620];P.forEach((f,i)=>{const u=t+i*.035,o=osc(ctx,i%3?'square':'sawtooth',f,u,.03),g=ctx.createGain();g.gain.setValueAtTime(.16,u);g.gain.setValueAtTime(0,u+.028);o.connect(g);g.connect(pan(ctx,i%2?.5:-.5,out))});
+    const n=src(ctx,t,.38),nf=ctx.createBiquadFilter(),ng=ctx.createGain();nf.type='highpass';nf.frequency.value=4000;for(let i=0;i<10;i++){ng.gain.setValueAtTime(i%2?0:.25,t+i*.038)}ng.gain.setValueAtTime(0,t+.38);n.connect(nf);nf.connect(ng);ng.connect(out);return .4},
+  // 19. A harp running up a pentatonic scale, each string ringing on.
+  harp(ctx,out,t){[523,587,659,784,880,1047,1175,1319,1568,1760].forEach((f,i)=>{const u=t+i*.05,o=osc(ctx,'triangle',f,u,.9),g=ctx.createGain();env(g,u,.22,.003,.85);o.connect(g);g.connect(pan(ctx,-.6+i*.13,out));bell(ctx,out,u,f,1,[[2,.05,.4]])});return 1.4},
+  // 20. A classic game coin: two quick square notes.
+  coin(ctx,out,t){const o=osc(ctx,'square',988,t,.42),f=ctx.createBiquadFilter(),g=ctx.createGain();o.frequency.setValueAtTime(1319,t+.08);f.type='lowpass';f.frequency.value=5000;g.gain.setValueAtTime(.18,t);g.gain.setValueAtTime(.18,t+.1);g.gain.exponentialRampToValueAtTime(0.0001,t+.42);o.connect(f);f.connect(g);g.connect(out);return .42},
+  // 21. A clock: tick, tock, tick, tock.
+  tick(ctx,out,t){[0,.25,.5,.75].forEach((dt,i)=>{const u=t+dt,s=src(ctx,u,.025),f=ctx.createBiquadFilter(),g=ctx.createGain();f.type='bandpass';f.frequency.value=i%2?2400:4200;f.Q.value=6;env(g,u,1.2,.0005,.02);s.connect(f);f.connect(g);g.connect(out);
+    const o=osc(ctx,'sine',i%2?1300:1900,u,.04),og=ctx.createGain();env(og,u,.18,.001,.03);o.connect(og);og.connect(out)});return .8},
+  // 22. A sci-fi zap: a bright saw diving down through a closing filter.
+  zap(ctx,out,t){const o=osc(ctx,'sawtooth',2400,t,.25),f=ctx.createBiquadFilter(),g=ctx.createGain();o.frequency.exponentialRampToValueAtTime(150,t+.22);f.type='lowpass';f.frequency.setValueAtTime(6000,t);f.frequency.exponentialRampToValueAtTime(800,t+.22);env(g,t,.35,.002,.22);o.connect(f);f.connect(g);g.connect(out);return .25},
+  // 23. A very short, airy flick to the side.
+  swipe(ctx,out,t){const s=src(ctx,t,.15),f=ctx.createBiquadFilter(),g=ctx.createGain(),p=pan(ctx,-.4,out);f.type='bandpass';f.Q.value=1.5;f.frequency.setValueAtTime(3000,t);f.frequency.exponentialRampToValueAtTime(9000,t+.12);env(g,t,.7,.03,.11);
+    if(p.pan)p.pan.linearRampToValueAtTime(.5,t+.13);s.connect(f);f.connect(g);g.connect(p);return .15}};
 
 const LIST=[['swoosh','💨','Swoosh','B-roll cuts and swipes'],['pop','🫧','Bubble pop','captions and stickers popping in'],['cash','💰','Cha-ching','price drops and deals'],
   ['shutter','📸','Camera shutter','product snapshots'],['sparkle','✨','Magic sparkle','glow-ups and “after” reveals'],['drop','💥','Bass drop','big hook moments'],
   ['click','👆','Button tap','“Link in bio” and “Shop now” taps'],['buzz','❌','Error buzz','“Don’t buy this…” moments'],['ding','✅','Success ding','pro tips and fixed problems'],
-  ['riser','📈','Riser','building up right into a cut'],['scratch','💿','Record scratch','“Wait a minute…” freeze frames'],['whoosh','👊','Whoosh hit','fast, snappy TikTok cuts']];
+  ['riser','📈','Riser','building up right into a cut'],['scratch','💿','Record scratch','“Wait a minute…” freeze frames'],['whoosh','👊','Whoosh hit','fast, snappy TikTok cuts'],
+  ['impact','🎬','Cinematic boom','trailers and big reveals'],['heartbeat','💓','Heartbeat','suspense and “wait for it…”'],['typing','⌨️','Typing','texts, emails and DM screenshots'],
+  ['notify','🔔','Phone ping','“you got a message” moments'],['boing','🤪','Boing','funny fails and bounces'],['glitch','📺','Glitch','tech, transitions and “error” jokes'],
+  ['harp','🪄','Dreamy harp','flashbacks and daydreams'],['coin','🪙','Coin','deals, savings and rewards'],['tick','⏰','Clock tick','countdowns and “limited time”'],
+  ['zap','⚡','Zap','energy, speed and power-ups'],['swipe','👉','Quick swipe','next item, next slide']];
 
 const wav=buf=>{const ch=buf.numberOfChannels,n=buf.length,v=new DataView(new ArrayBuffer(44+n*ch*2)),w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
   w(0,'RIFF');v.setUint32(4,36+n*ch*2,true);w(8,'WAVE');w(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,ch,true);v.setUint32(24,buf.sampleRate,true);v.setUint32(28,buf.sampleRate*ch*2,true);v.setUint16(32,ch*2,true);v.setUint16(34,16,true);w(36,'data');v.setUint32(40,n*ch*2,true);
   const d=[...Array(ch)].map((_,c)=>buf.getChannelData(c));let o=44;for(let i=0;i<n;i++)for(let c=0;c<ch;c++){const x=Math.max(-1,Math.min(1,d[c][i]));v.setInt16(o,x<0?x*0x8000:x*0x7fff,true);o+=2}return v.buffer};
 
 // Level for each effect, so they all land about as loud as each other (the limiter catches anything over).
-const SFX_MIX={volume:.6,duckAmt:.55};
+// Effects sit behind the voice: no ducking (they're short and rarely land on a word), a lower track volume, and every
+// render is "pushed back" (see render) and evened out to the same loudness, so no effect jumps out more than another.
+const SFX_MIX={volume:.7};
+// Spaces: a little room sound around each effect, like it was played in a studio, a room or a hall, or a soft echo.
+const SPACES=[['dry','Dry (no echo)'],['studio','Studio'],['room','Room'],['hall','Concert hall'],['echo','Echo']];
+const SPACE={studio:{len:.45,pre:.008,wet:.3,damp:.55},room:{len:.9,pre:.015,wet:.38,damp:.45},hall:{len:2.4,pre:.03,wet:.45,damp:.3}};
+const defSpace=()=>{try{const v=localStorage.getItem('tapshop-sfx-space');return SPACES.some(x=>x[0]===v)?v:'room'}catch{return 'room'}};
+const setDefSpace=v=>{try{localStorage.setItem('tapshop-sfx-space',v)}catch{}};
+// A made-up room echo: stereo noise dying away by 60 dB, getting darker as it fades, with a few early reflections.
+const irCache=new Map();
+const ir=(ctx,k)=>{const sp=SPACE[k],SR=ctx.sampleRate,id=k+SR;let d=irCache.get(id);if(!d){const n=Math.ceil(sp.len*SR);d=[0,1].map(c=>{const a=new Float32Array(n);let lp=0;
+    for(let i=0;i<n;i++){const x=i/n,co=Math.min(.97,sp.damp*.4+.85*x);lp=lp*co+(Math.random()*2-1)*(1-co);a[i]=lp*Math.pow(.001,x)}
+    for(const [ms,v] of [[7,.5],[13,.35],[21,.28],[34,.2],[47,.15]]){const j=Math.round((ms+c*3)*SR/1000);if(j<n)a[j]+=v*(c?-1:1)}return a});irCache.set(id,d)}
+  const b=ctx.createBuffer(2,d[0].length,SR);b.copyToChannel(d[0],0);b.copyToChannel(d[1],1);return b};
+const tailOf=k=>SPACE[k]?SPACE[k].len+SPACE[k].pre:k==='echo'?1.3:0;
+// Thin out the low rumble and the 2–5 kHz "presence" a voice lives in, soften the very top, then add the space.
+function backChain(ctx,out,k){const hp=ctx.createBiquadFilter(),pk=ctx.createBiquadFilter(),hs=ctx.createBiquadFilter(),dry=ctx.createGain();
+  hp.type='highpass';hp.frequency.value=110;pk.type='peaking';pk.frequency.value=3200;pk.Q.value=.8;pk.gain.value=-5;hs.type='highshelf';hs.frequency.value=7500;hs.gain.value=-4;
+  hp.connect(pk);pk.connect(hs);hs.connect(dry);dry.connect(out);const sp=SPACE[k];
+  if(sp){dry.gain.value=1-sp.wet*.4;const pre=ctx.createDelay(.1),cv=ctx.createConvolver(),wet=ctx.createGain();pre.delayTime.value=sp.pre;cv.buffer=ir(ctx,k);wet.gain.value=sp.wet;hs.connect(pre);pre.connect(cv);cv.connect(wet);wet.connect(out)}
+  else if(k==='echo'){const l=ctx.createDelay(1),r=ctx.createDelay(1),fb=ctx.createGain(),lp=ctx.createBiquadFilter(),wet=ctx.createGain();l.delayTime.value=.19;r.delayTime.value=.29;fb.gain.value=.35;lp.type='lowpass';lp.frequency.value=2800;wet.gain.value=.4;
+    hs.connect(l);l.connect(lp);lp.connect(r);r.connect(fb);fb.connect(l);l.connect(pan(ctx,-.7,wet));r.connect(pan(ctx,.7,wet));wet.connect(out)}
+  return hp}
+// Same loudness for every effect: the loudest 100 ms is brought to one level (peaks kept under 0.8).
+const TARGET=.09;
+function even(o){const SR=o.sampleRate,ch=[0,1].map(c=>o.getChannelData(c)),w=Math.round(SR*.1);let best=0,peak=0,acc=0;const sq=i=>(ch[0][i]**2+ch[1][i]**2)/2;
+  for(let i=0;i<o.length;i++){acc+=sq(i);if(i>=w)acc-=sq(i-w);best=Math.max(best,acc/Math.min(i+1,w));peak=Math.max(peak,Math.abs(ch[0][i]),Math.abs(ch[1][i]))}
+  const g=Math.min(TARGET/Math.sqrt(best||1e-9),.8/(peak||1e-9));for(const a of ch)for(let i=0;i<a.length;i++)a[i]*=g;return o}
 const LEVEL={swoosh:5.5,pop:1.2,cash:2.1,shutter:1,sparkle:2,drop:1,click:13,buzz:1.2,ding:2,riser:1.15,scratch:1.6,whoosh:.95};
 const leveled=(ctx,out,key)=>{const g=ctx.createGain();g.gain.value=LEVEL[key]||1;g.connect(out);return g};
 let live=null,liveOut=null;
 window.TapSFX={list:LIST,fx:FX,
   // Play one now: on the editor's own sound (through its limiter) when it's running, else on a small context of our own.
-  play(key){const f=FX[key];if(!f)return;let ctx,out;
+  // Play one now, exactly as it will sound on the timeline (same render, at the effects' track volume).
+  spaces:SPACES,defaultSpace:defSpace,setDefaultSpace:setDefSpace,
+  async play(key,space){if(!FX[key])return;let ctx,out;
     if(typeof audioCtx!=='undefined'&&audioCtx&&veSpk){ctx=audioCtx;out=veSpk}else{live=live||new (window.AudioContext||window.webkitAudioContext)();liveOut=liveOut||veLimiter(live,live.destination);ctx=live;out=liveOut}
-    ctx.resume?.();return f(ctx,leveled(ctx,out,key),ctx.currentTime+.02)},
-  async render(key){const f=FX[key],SR=44100,oc=new OfflineAudioContext(2,Math.ceil(1.6*SR),SR),d=f(oc,leveled(oc,veLimiter(oc,oc.destination),key),0);const b=await oc.startRendering(),n=Math.ceil(Math.max(d+.03,.15)*SR),o=new AudioBuffer({length:n,numberOfChannels:2,sampleRate:SR});
-    for(let c=0;c<2;c++)o.copyToChannel(b.getChannelData(c).subarray(0,n),c);return o},
-  async file(key){const it=LIST.find(x=>x[0]===key);return new File([wav(await this.render(key))],`TapShop sound · ${it?it[2]:key}.wav`,{type:'audio/wav'})},
+    ctx.resume?.();const b=await this.render(key,space),s=ctx.createBufferSource(),g=ctx.createGain();g.gain.value=SFX_MIX.volume;s.buffer=b;s.connect(g);g.connect(out);s.start(ctx.currentTime+.02);return b.duration},
+  _cache:new Map(),
+  async render(key,space){const k=space||defSpace(),id=key+'|'+k,hit=this._cache.get(id);if(hit)return hit;const f=FX[key],SR=44100,tail=tailOf(k),oc=new OfflineAudioContext(2,Math.ceil((1.6+tail)*SR),SR);
+    const d=f(oc,leveled(oc,backChain(oc,oc.destination,k),key),0);const b=await oc.startRendering(),n=Math.min(b.length,Math.ceil(Math.max(d+tail+.03,.15)*SR)),o=new AudioBuffer({length:n,numberOfChannels:2,sampleRate:SR});
+    for(let c=0;c<2;c++){const a=b.getChannelData(c).slice(0,n),fade=Math.round(SR*.05);for(let i=0;i<fade&&i<n;i++)a[n-1-i]*=i/fade;o.copyToChannel(a,c)}
+    even(o);this._cache.set(id,o);return o},
+  async file(key,space){const it=LIST.find(x=>x[0]===key);return new File([wav(await this.render(key,space))],`TapShop sound · ${it?it[2]:key}.wav`,{type:'audio/wav'})},
   // Put one on the timeline (at the playhead unless o.at), on a "Sound effects" row (all effects share it when they don't overlap). Undo-able.
   // o.forId ties it to a strip: it then starts when that strip starts (plus o.rel seconds) and goes away with it.
   async add(key,o={}){if(exporting)return;const it=LIST.find(x=>x[0]===key);if(!it)return;const at=+(o.at??playhead).toFixed(2);if(!o.noSnap)snapshot();addTrack('audio');const t=extraTracks.at(-1);
-    Object.assign(t,{name:it[1]+' '+it[2],lane:'sfx',offset:at,sfxKey:key},o.forId?{sfxFor:o.forId,sfxKey:key,sfxAt:+(o.rel||0).toFixed(2)}:{});targetTrack=t.id;await loadTrackMedia(await this.file(key));
+    const space=o.space||defSpace();Object.assign(t,{name:it[1]+' '+it[2],lane:'sfx',offset:at,sfxKey:key,sfxSpace:space},o.forId?{sfxFor:o.forId,sfxKey:key,sfxAt:+(o.rel||0).toFixed(2)}:{});targetTrack=t.id;await loadTrackMedia(await this.file(key,space));
     if(!t.media){if(o.noSnap)deleteTrack(t.id);else undo();return false}t.offset=at;
-    // Effects sit under the voice: a bit quieter overall, and they dip (less than music does) while someone talks.
-    Object.assign(t,{volume:SFX_MIX.volume,duck:true,duckAmt:SFX_MIX.duckAmt});renderTracks();await seekTimeline(playhead);window.recordRecent?.('sfx-'+key);if(!o.quiet)toast(`${it[2]} added at ${at.toFixed(1)} s. Drag it to move it.`);return true}};
+    Object.assign(t,{volume:SFX_MIX.volume,duck:false});renderTracks();await seekTimeline(playhead);window.recordRecent?.('sfx-'+key);if(!o.quiet)toast(`${it[2]} added at ${at.toFixed(1)} s. Drag it to move it.`);return true}};
 
 // ---- A sound effect on a text box or sticker: a "🔊 Sound effect" menu in its editing menu (timeline and preview pop-up).
 // The sound is its own audio track (sfxFor = the strip's id, sfxKey = which sound) that always starts with the strip.
@@ -107,11 +171,12 @@ window.veSfxPick=async function(id,key){if(exporting)return;const g=graphicTrack
   expandedStrip=id;renderGraphicTracks()};
 // A sound effect's own track menu swaps the sound in place: same time, volume and ducking, still tied to its text
 // or sticker, whose 🔊 menu reads this track's sfxKey, so both always show the same sound.
-window.veSfxSwapMenu=t=>`<label class="sfx-swap">🔊 Sound effect<select onchange="veSfxSwap('${t.id}',this.value)">${t.sfxKey?'':'<option value="">Pick a sound…</option>'}${LIST.map(([k,e,n])=>`<option value="${k}"${k===t.sfxKey?' selected':''}>${e} ${n}</option>`).join('')}</select></label><button type="button" onclick="const v=this.previousElementSibling.querySelector('select').value;v?TapSFX.play(v):toast('Pick a sound first.')" aria-label="Listen to the sound effect">▶</button>`;
-window.veSfxSwap=async function(id,key){if(exporting)return;const t=extraTracks.find(x=>x.id===id),it=LIST.find(x=>x[0]===key);if(!t||!it)return;pause();snapshot();
-  const keep={offset:t.offset,speed:t.speed,volume:t.volume},was=t.file;targetTrack=t.id;await loadTrackMedia(await TapSFX.file(key));
-  if(t.file===was){undo();return}Object.assign(t,keep,{sfxKey:key,name:it[1]+' '+it[2]});expandedStrip=t.id;renderTracks();renderGraphicTracks();await seekTimeline(playhead);
-  const g=t.sfxFor&&graphicTracks.find(x=>x.id===t.sfxFor);toast(`${it[2]} now plays here${g?` with “${(g.text||g.name||'').toString().slice(0,24)}”`:''}.`)};
+window.veSfxSwapMenu=t=>`<label class="sfx-swap">🔊 Sound effect<select onchange="veSfxSwap('${t.id}',this.value)">${t.sfxKey?'':'<option value="">Pick a sound…</option>'}${LIST.map(([k,e,n])=>`<option value="${k}"${k===t.sfxKey?' selected':''}>${e} ${n}</option>`).join('')}</select></label><button type="button" onclick="const v=this.previousElementSibling.querySelector('select').value;v?TapSFX.play(v,'${t.sfxSpace||'dry'}'):toast('Pick a sound first.')" aria-label="Listen to the sound effect">▶</button>${t.sfxKey?`<label class="sfx-swap">🏛️ Space<select onchange="veSfxSwap('${t.id}','${t.sfxKey}',this.value)">${SPACES.map(([k,n])=>`<option value="${k}"${k===(t.sfxSpace||'dry')?' selected':''}>${n}</option>`).join('')}</select></label>`:''}`;
+window.veSfxSwap=async function(id,key,space){if(exporting)return;const t=extraTracks.find(x=>x.id===id),it=LIST.find(x=>x[0]===key);if(!t||!it)return;pause();snapshot();
+  const sp=space||t.sfxSpace||defSpace();if(space)setDefSpace(space);
+  const keep={offset:t.offset,speed:t.speed,volume:t.volume},was=t.file;targetTrack=t.id;await loadTrackMedia(await TapSFX.file(key,sp));
+  if(t.file===was){undo();return}Object.assign(t,keep,{sfxKey:key,sfxSpace:sp,name:it[1]+' '+it[2]});expandedStrip=t.id;renderTracks();renderGraphicTracks();await seekTimeline(playhead);
+  const g=t.sfxFor&&graphicTracks.find(x=>x.id===t.sfxFor);toast(space?`${it[2]} now sounds like: ${SPACES.find(x=>x[0]===sp)[1]}.`:`${it[2]} now plays here${g?` with “${(g.text||g.name||'').toString().slice(0,24)}”`:''}.`)};
 // Keep each tied sound at its strip's start; drop it when the strip is gone. Runs before every redraw of the strips.
 let syncing=false;const syncLinks=()=>{if(syncing)return false;syncing=true;try{let gone=extraTracks.filter(t=>t.sfxFor&&!graphicTracks.some(g=>g.id===t.sfxFor));
   for(const t of extraTracks)if(t.sfxFor){const g=graphicTracks.find(g=>g.id===t.sfxFor);const want=+(g?g.offset+(t.sfxAt||0):0).toFixed(3);if(g&&Math.abs(t.offset-want)>1e-3)t.offset=want}
@@ -125,8 +190,9 @@ const sfxMenu=g=>{const cur=linked(g.id).find(t=>!t.sfxAt)?.sfxKey||'';return `<
 const open=()=>{if(exporting)return;pause();let d=document.getElementById('sfxDialog');
   if(!d){d=document.createElement('dialog');d.id='sfxDialog';d.className='closable';document.body.appendChild(d)}
   d.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>🔊 Sound effects</h2><p class="sub">Made on your device, free to use anywhere. Press ▶ to hear one, then <b>Add</b> to drop it at the playhead (${playhead.toFixed(1)} s).</p>
+  <label class="sfx-space">🏛️ Space: how far back the effects sound<select id="sfxSpace">${SPACES.map(([k,n])=>`<option value="${k}"${k===defSpace()?' selected':''}>${n}</option>`).join('')}</select></label>
   <div class="sfx-list">${LIST.map(([k,e,n,u])=>`<div class="sfx-row"><button type="button" class="sfx-play" data-p="${k}" aria-label="Listen to ${n}">▶</button><span><b>${e} ${n}</b><small>${u}</small></span><button type="button" class="primary" data-a="${k}">Add</button></div>`).join('')}</div>`;
-  d.querySelector('.dialog-x').onclick=()=>d.close();
+  d.querySelector('.dialog-x').onclick=()=>d.close();d.querySelector('#sfxSpace').onchange=e=>setDefSpace(e.target.value);
   d.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{try{TapSFX.play(b.dataset.p)}catch(e){toast('Couldn’t play it here.')}});
   d.querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{d.querySelectorAll('button').forEach(x=>x.disabled=true);try{if(await TapSFX.add(b.dataset.a)!==false)d.close()}catch(e){toast('Couldn’t add it: '+(e.message||e))}finally{d.querySelectorAll('button').forEach(x=>x.disabled=false)}});
   d.showModal()};
@@ -136,6 +202,7 @@ if(bar){const b=document.createElement('button');b.type='button';b.id='sfxButton
 const st=document.createElement('style');st.textContent=`#sfxDialog{width:min(520px,94vw)}.sfx-list{display:flex;flex-direction:column;gap:6px;max-height:min(62vh,560px);overflow:auto;margin:10px 0}
 .sfx-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border:1px solid var(--ts-border,#8884);border-radius:12px}.sfx-row span{flex:1;min-width:0}.sfx-row b,.sfx-row small{display:block}.sfx-row small{opacity:.65;font-size:12px}
 .sfx-pick{display:flex;flex-wrap:wrap;align-items:flex-end;gap:6px 8px;margin:0 0 10px;padding:8px;border:1px dashed #ff3ea566;border-radius:10px}.sfx-pick label{flex:1;min-width:170px}.sfx-pick select{width:100%}.sfx-pick button{width:40px;height:36px;padding:0!important;flex:none}.sfx-pick small{flex-basis:100%;opacity:.65;font-size:11px}
+.sfx-space{display:block;margin:8px 0 0;font-size:13px}.sfx-space select{display:block;width:100%;margin-top:4px}
 .sfx-play{width:40px;height:40px;padding:0!important;border-radius:50%!important;flex:none}`;document.head.appendChild(st);
 })();
 
@@ -184,7 +251,7 @@ const META={
   booktok:['Storytelling',['dreamy','nostalgic','cozy'],['BookTok','Kindle setup','cozy reading'],['booktok','kindle','reading','music box','cozy','books'],'G Lydian',3],
   mistakes:['Storytelling',['authoritative','sharp','brisk'],['myth-busting','3 mistakes you’re making','tips list'],['mistakes','myth','tips','staccato','strings','facts'],'E harmonic minor',3],
   finale:['Sales & Reviews',['uplifting','resolving','confident'],['link in bio call-to-action','video ending','shop now outro'],['link in bio','cta','ending','outro','finale','shop now'],'C Ionian (ends on C)',3]};
-const LEN={swoosh:.5,pop:.15,cash:.8,shutter:.2,sparkle:1,drop:.9,click:.05,buzz:.35,ding:.6,riser:1.2,scratch:.3,whoosh:.4};
+const LEN={swoosh:.5,pop:.15,cash:.8,shutter:.2,sparkle:1,drop:.9,click:.05,buzz:.35,ding:.6,riser:1.2,scratch:.3,whoosh:.4,impact:1.4,heartbeat:1.25,typing:.6,notify:.45,boing:.7,glitch:.4,harp:1.4,coin:.42,tick:.8,zap:.25,swipe:.15};
 // Moods and uses for the styles that came before the batches (so search and filters can find them too).
 const OLD={bright:[['happy','upbeat','pop'],['product demo','everyday vlog']],upbeat:[['upbeat','energetic','dance'],['hauls','fast edits']],chill:[['chill','calm','lofi'],['vlogs','aesthetic b-roll']],
   trap:[['hype','bold','urban'],['streetwear','hype edits']],rnb:[['smooth','warm','sensual'],['beauty','night routine']],acoustic:[['happy','warm','organic'],['lifestyle','family']],
