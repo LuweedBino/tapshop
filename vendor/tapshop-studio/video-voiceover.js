@@ -19,6 +19,15 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-head h2{margin:0;font-size:20px}
 .vo-x{flex:none;width:40px;height:40px;padding:0;border-radius:50%;font-size:22px;line-height:1}
 .vo-head,.vo-set,#voTake,.vo-status,.vo-bar{flex:none}
+.vo-stage{position:relative;display:flex;flex-direction:column;min-height:0}
+/* Big countdown over the script (3, 2, 1 in an amber ring, then a green GO light), and a red REC timer you can see. */
+.vo-big{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000a;border-radius:12px;pointer-events:none;z-index:2}.vo-big[hidden]{display:none}
+.vo-dot{width:min(42vw,190px);aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 clamp(64px,15vw,120px)/1 system-ui,sans-serif;color:#fff;border:10px solid #fbbf24;background:#0008;box-shadow:0 0 30px #fbbf2466;animation:vo-tick 1s ease-out}
+.vo-dot.go{border-color:#22c55e;background:#22c55e;box-shadow:0 0 60px #22c55e,0 0 120px #22c55e88;font-size:clamp(48px,11vw,88px);animation:vo-go .7s ease-out}
+@keyframes vo-tick{0%{transform:scale(1.25);opacity:.3}25%{transform:scale(1);opacity:1}}@keyframes vo-go{0%{transform:scale(.6)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
+.vo-recpill{position:absolute;bottom:10px;right:12px;z-index:2;padding:7px 14px;border-radius:999px;background:#dc2626;color:#fff;font:700 16px system-ui,sans-serif;font-variant-numeric:tabular-nums;box-shadow:0 2px 10px #0007;pointer-events:none}.vo-recpill[hidden]{display:none}
+.vo-recpill::before{content:'';display:inline-block;width:10px;height:10px;margin-right:7px;border-radius:50%;background:#fff;animation:vo-blink 1s steps(2) infinite;vertical-align:1px}@keyframes vo-blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.vo-dot,.vo-dot.go,.vo-recpill::before{animation:none}}
 .vo-prompter{height:min(46vh,380px);min-height:120px;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:10px;border-radius:12px;background:#0b0b10;color:#fff;line-height:1.3}
 .vo-line{padding:8px 12px;border-radius:10px;opacity:.45;transition:opacity .2s,background .2s;cursor:pointer}
 .vo-line small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
@@ -47,14 +56,15 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 @media (prefers-reduced-motion:reduce){#voRec.vo-live{animation:none}}
 @media (max-width:700px),(pointer:coarse){
   #voDialog[open]{width:100vw;max-width:100vw;height:100vh;height:100dvh;max-height:100dvh;margin:0;inset:0;border-radius:0;border:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
-  .vo-prompter{flex:1 1 auto;height:auto}
+  .vo-stage{flex:1 1 auto}
+  .vo-prompter{flex:1 1 auto;height:auto;min-height:0}
 }`;
 document.head.appendChild(css);
 
 const dlg=document.createElement('dialog');dlg.id='voDialog';dlg.className='closable';dlg.setAttribute('aria-labelledby','voTitle');
 // One screen on phones: the script scrolls, everything else stays put, and the buttons sit at the bottom.
 dlg.innerHTML=`<div class="vo-head"><h2 id="voTitle">🎙️ Voiceover</h2><button type="button" class="vo-x" aria-label="Close" title="Close">×</button></div>
-<div id="voPrompter" class="vo-prompter" aria-live="polite"></div>
+<div class="vo-stage"><div id="voPrompter" class="vo-prompter" aria-live="polite"></div><div id="voBig" class="vo-big" hidden aria-hidden="true"><div class="vo-dot"></div></div><div id="voRecPill" class="vo-recpill" hidden></div></div>
 <details id="voSet" class="vo-set"><summary>⚙️ Prompter settings <span id="voSetSum"></span><small class="vo-set-tip">👆 Too fast? Too small? Tap here to adjust, or edit your script.</small></summary>
 <div class="vo-grid"><label>Text size<input id="voSize" type="range" min="18" max="48" value="28"></label>
 <label id="voSpeedWrap">Speed: <b id="voSpeedV">1.0×</b><input id="voSpeed" type="range" min="0.5" max="2" step="0.1" value="1"></label></div>
@@ -90,7 +100,7 @@ function setScenes(scenes){S.scenes=scenes;S.idx=0;S.marks=[];q('voEdit').value=
 
 function clearTake(){if(S.url)URL.revokeObjectURL(S.url);S.url='';S.take=null;audio.removeAttribute('src');q('voTake').hidden=true;useBtn.hidden=retakeBtn.hidden=true;useBtn.disabled=false;recBtn.hidden=false}
 function stopStream(){S.stream?.getTracks().forEach(t=>t.stop());S.stream=null}
-function idle(){clearInterval(S.timer);recBtn.disabled=false;recBtn.textContent='● Record';recBtn.classList.remove('vo-live');nextBtn.hidden=true}
+function idle(){clearInterval(S.timer);q('voRecPill').hidden=true;q('voBig').hidden=true;recBtn.disabled=false;recBtn.textContent='● Record';recBtn.classList.remove('vo-live');nextBtn.hidden=true}
 
 async function start(){
   if(typeof exporting!=='undefined'&&exporting)return;
@@ -100,7 +110,9 @@ async function start(){
   try{S.stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}})}
   catch{recBtn.disabled=false;status('Allow the microphone to record. Look for the 🔒 or microphone icon next to the web address.');return}
   S.idx=0;S.marks=[];if(small())q('voSet').open=false;paint();
-  for(let n=3;n>0;n--){status('Starting in '+n+'…');await wait(1000);if(!S.stream||S.discard){idle();return}}
+  const big=q('voBig'),dot=big.querySelector('.vo-dot'),show=(t,go)=>{big.hidden=false;dot.className='vo-dot'+(go?' go':'');dot.textContent=t;void dot.offsetWidth};
+  for(let n=3;n>0;n--){status('Starting in '+n+'…');show(n);await wait(1000);if(!S.stream||S.discard){big.hidden=true;idle();return}}
+  show('GO',true);setTimeout(()=>{big.hidden=true},800);
   const type=['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(t=>MediaRecorder.isTypeSupported?.(t));
   S.chunks=[];
   try{S.rec=new MediaRecorder(S.stream,type?{mimeType:type}:undefined)}catch{stopStream();idle();status("Couldn't start recording on this device.");return}
@@ -108,7 +120,8 @@ async function start(){
   S.rec.onstop=finish;
   S.rec.start(250);S.t0=performance.now();S.marks=[0];
   recBtn.disabled=false;recBtn.textContent='■ Stop';recBtn.classList.add('vo-live');nextBtn.hidden=S.scenes.length<2;
-  S.timer=setInterval(()=>{const t=now();status('● Recording '+fmt(t));
+  const pill=q('voRecPill');pill.hidden=false;pill.textContent='REC 0:00';
+  S.timer=setInterval(()=>{const t=now();status('● Recording '+fmt(t));pill.textContent='REC '+fmt(t);
     if(!manual()&&S.idx<S.scenes.length-1&&t-S.marks[S.idx]>=plan(S.scenes[S.idx])/speed())advance()},150);
 }
 const now=()=>(performance.now()-S.t0)/1000;
