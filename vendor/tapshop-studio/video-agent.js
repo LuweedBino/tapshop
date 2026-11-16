@@ -119,7 +119,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-tag button{font-size:12px;padding:2px 8px!important;text-transform:none;letter-spacing:0}
 .ag-scene input,.ag-scene textarea,.ag-scene select{width:100%;margin-top:4px}
 .ag-scene .ag-row{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-top:6px}.ag-scene .ag-row>label{flex:1 1 140px;font-size:12px}
-.ag-shot{font-size:13px;opacity:.85;margin:4px 0}.ag-len{margin:2px 0 8px;font-size:13px;color:#ec4899}.ag-move{margin:0 4px;padding:2px 4px;font-size:12px;border-radius:8px;max-width:96px}
+.ag-shot{font-size:13px;opacity:.85;margin:4px 0}.ag-len{margin:2px 0 8px;font-size:13px;color:#ec4899}.ag-move{margin:0 4px;padding:2px 4px;font-size:12px;border-radius:8px;max-width:96px}.ag-hooks .ag-card small{white-space:normal;font-size:13px;line-height:1.35}
 .ag-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid #8886;border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
 .ag-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.ag-file button{width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:13px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
@@ -167,7 +167,13 @@ script(){const m=S.scriptMode;let h=`<h3>Your script</h3><p class="ag-help">What
   <div class="ag-cards">${card('mode','ai',m==='ai','✨ Write it for me','AI writes it from your product')}${card('mode','own',m==='own','I have my own','Paste your lines')}${card('mode','none',m==='none','No talking','Words on screen only')}</div>`;
   if(m==='own')h+=`<label class="ag-f">One line per scene. The first is your hook, the last your call to action.<textarea data-k="ownLines" rows="6" placeholder="Stop scrolling if your shakes are chalky.&#10;Mine always were…&#10;Then I found this bottle.&#10;Tap the orange cart.">${esc(S.ownLines)}</textarea></label><div class="ag-btns"><button type="button" class="primary" data-act="own">Use my lines</button></div>`;
   else h+=`<div class="ag-btns"><button type="button" class="primary" data-act="write" ${busy?'disabled':''}>${busy?'Writing…':S.scenes.length?'↻ Write a new one':'✨ Write my script'}</button></div>`;
-  if(S.hookOptions.length>1)h+=`<div class="ag-g">Pick your hook</div><div class="ag-chips">${S.hookOptions.map((o,i)=>chip('hook',i,S.hook===i,`${i?String.fromCharCode(64+i):'Original'}: ${esc(o.slice(0,60))}${o.length>60?'…':''}`)).join('')}</div>`;
+  if(S.scenes.length&&m!=='none'){h+=`<div class="ag-g">🎣 Pick your hook</div><p class="ag-help">The first line decides if people keep watching. Tap the one you like best; it becomes scene 1.</p>`;
+    if(S.hookOptions.length>1)h+=`<div class="ag-cards ag-hooks">${S.hookOptions.map((o,i)=>card('hook',i,S.hook===i,i?'Hook '+String.fromCharCode(64+i):'Original',esc(o))).join('')}</div>`;
+    h+=`<div class="ag-btns"><button type="button" data-act="newHooks" ${busy?'disabled':''}>↻ 3 new hooks</button></div>`}
+  if(S.scenes.length){h+=`<div class="ag-g">💬 Change my script</div><p class="ag-help">Tell the AI what to change, like you'd tell a friend. It keeps everything else.</p>
+    <div class="ag-chips">${ASKS.map(a=>`<button type="button" data-act="ask" data-v="${esc(a)}" ${busy?'disabled':''}>${esc(a)}</button>`).join('')}</div>
+    <label class="ag-f"><textarea data-k="ask" rows="2" maxlength="500" placeholder="e.g. make it funnier, or mention it's dishwasher safe">${esc(S.ask||'')}</textarea></label>
+    <div class="ag-btns"><button type="button" class="primary" data-act="askGo" ${busy?'disabled':''}>✨ Change it</button>${S.prev?`<button type="button" data-act="undoAsk" ${busy?'disabled':''}>↩ Undo last change</button>`:''}</div>`}
   if(S.scenes.length)h+=`<div class="ag-g">${esc(S.title||'Your scenes')}</div><p class="ag-help">✏️ Tap any line to change it · <b>✕ Remove</b> deletes a scene · <b>＋ Add a scene</b> at the bottom adds one.</p>`+S.scenes.map((s,i)=>`<div class="ag-scene"><div class="ag-tag"><span>${i+1} · ${esc(s.type)} · ${s.secs}s</span><button type="button" data-act="rmScene" data-i="${i}" aria-label="Remove scene ${i+1}">✕ Remove</button></div>
     ${m==='none'?'':`<label>What you say<textarea data-k="say" data-i="${i}" rows="2">${esc(s.say)}</textarea></label>`}
     <label>Words on screen<input data-k="text" data-i="${i}" maxlength="120" value="${esc(s.text)}"></label></div>`).join('')+`<div class="ag-btns"><button type="button" data-act="addScene">＋ Add a scene</button></div>`;
@@ -250,6 +256,24 @@ async function writeScript(){if(busy)return;busy=true;paint();const b=S.brief,t0
     const sc=data.script;S.title=sc.title||'';S.scenes=sc.scenes.map(scene);S.hookOptions=[S.scenes[0]?.say||'',...(sc.hookVariations||[])].filter(Boolean);S.hook=0;
     pickParts(true);files.clear();status('Script ready. Edit any line, remove scenes with ✕ or add more, then tap Next.')}
   catch(e){status(e?.name==='AbortError'?'The AI took too long. Tap ✨ Write my script to try again.':'Network error. Check your connection and try again.')}
+  finally{clearInterval(timer);clearTimeout(limit);busy=false;save();paint()}}
+// Phase 4: change the script by asking (or get 3 fresh hooks) through /api/edit-script. The scenes keep their
+// look, animation and sound when the change leaves them at the same place; ↩ Undo restores the last version.
+const ASKS=['Make the hook punchier','Make it shorter','More casual and fun','Stronger call to action','Add a little humor','More about the benefits'];
+async function editScript(mode,request){if(busy||!S.scenes.length)return;if(mode==='edit'&&!request){status('Type what you’d like to change first.');return}
+  busy=true;paint();const b=S.brief,t0=Date.now();let chars=0;const tick=()=>status(mode==='hooks'?`Writing new hooks… ${Math.round((Date.now()-t0)/1000)} s`:chars?`Changing your script… ${Math.min(95,Math.round(chars/(400+S.scenes.length*260)*100))}%`:`Thinking… ${Math.round((Date.now()-t0)/1000)} s`);
+  const timer=setInterval(tick,1000),ctl=new AbortController(),limit=setTimeout(()=>ctl.abort(),150000);tick();
+  try{const res=await fetch('/api/edit-script',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctl.signal,body:JSON.stringify({mode,request,product:b.product,benefits:b.benefits,tone:b.tone,title:S.title,
+        hooks:S.hookOptions.slice(1),scenes:S.scenes.map(x=>({sectionType:x.type,durationSeconds:x.secs,visualDirection:x.shot,voiceoverLine:x.say,onScreenText:x.text}))})});
+    const data=(res.headers.get('content-type')||'').includes('ndjson')&&res.body?await readStream(res,ch=>{chars=ch;tick()}):await res.json().catch(()=>null);
+    if(!data){status('The connection dropped before the AI finished. Please try again.');return}
+    if(!data.ok){status(data.error||'Couldn’t change the script. Please try again.');return}
+    const sc=data.script;S.prev={scenes:S.scenes.map(x=>({...x})),hookOptions:S.hookOptions.slice(),hook:S.hook,title:S.title};
+    if(mode==='hooks'){S.hookOptions=[S.scenes[0]?.say||'',...sc.hookVariations].filter(Boolean);S.hook=0;status('🎣 3 fresh hooks. Tap one to use it.')}
+    else{const old=S.scenes;S.scenes=sc.scenes.map((x,i)=>{const n=scene(x),o=old[i];if(o&&o.type===n.type){n.anim=o.anim;n.sfx=o.sfx;n.look=o.look}return n});
+      if(sc.title)S.title=sc.title;S.hookOptions=[S.scenes[0]?.say||'',...(sc.hookVariations||[])].filter(Boolean);S.hook=0;pickParts(false);S.ask='';
+      for(const k of [...files.keys()])if(k>=S.scenes.length)files.delete(k);status('✨ '+(data.summary||'Done.')+' Tap ↩ Undo last change if you liked it better before.')}}
+  catch(e){status(e?.name==='AbortError'?'The AI took too long. Please try again.':'Network error. Check your connection and try again.')}
   finally{clearInterval(timer);clearTimeout(limit);busy=false;save();paint()}}
 function useOwn(){const lines=S.ownLines.split('\n').map(l=>l.trim()).filter(Boolean).slice(0,20);if(!lines.length){status('Type at least one line.');return}
   const n=lines.length;S.scenes=lines.map((l,i)=>({type:i===0?'Hook':i===n-1&&n>1?'CTA':i===1&&n>=4?'Problem':'Demo/Solution',
@@ -396,7 +420,11 @@ body.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||
   switch(b.dataset.act){
     case 'platform':S.brief.platform=v;break;case 'length':S.brief.length=+v;break;case 'story':S.story=v;break;case 'group':S.group=v;break;
     case 'mode':S.scriptMode=v;if(v==='none')S.voice='none';else if(S.voice==='none')S.voice='record';break;
-    case 'write':writeScript();return;case 'own':useOwn();return;
+    case 'write':writeScript();return;
+    case 'newHooks':editScript('hooks');return;
+    case 'ask':editScript('edit',v);return;
+    case 'askGo':editScript('edit',(S.ask||'').trim());return;
+    case 'undoAsk':if(S.prev){Object.assign(S,S.prev);S.prev=null;status('Back to how it was.')}break;case 'own':useOwn();return;
     case 'hook':S.hook=+v;if(S.scenes[0])S.scenes[0].say=S.hookOptions[+v]||S.scenes[0].say;break;
     case 'rmScene':S.scenes.splice(i,1);{const m=new Map();for(const [k,l] of files)if(k!==i)m.set(k>i?k-1:k,l);files.clear();for(const [k,l] of m)files.set(k,l)}break;
     case 'addScene':S.scenes.push({type:'Demo/Solution',secs:3,say:'',text:'',shot:'',anim:'',sfx:''});pickParts(false);break;
