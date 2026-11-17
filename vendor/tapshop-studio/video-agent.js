@@ -335,7 +335,7 @@ function filmSecs(s){const say=nWords(s.say)/2.5;return S.voice==='talking'?Math
 const hasVault=()=>typeof VaultPicker!=='undefined'&&VaultPicker.inTapShop;
 const touch=()=>matchMedia('(pointer:coarse)').matches;
 function camPrompt(i){const s=S.scenes[i]||{},talk=S.voice==='talking';
-  return {facing:talk?'user':'environment',prompt:{label:(talk?'🗣️ Say':'🎥 Film')+` · scene ${i+1} of ${S.scenes.length}`,line:talk?(s.say||s.text||''):(s.shot||'Anything that shows: '+(s.text||s.say||'')),secs:filmSecs(s)}}}
+  return {facing:talk?'user':'environment',prompt:{label:(talk?'🗣️ Say':'🎥 Film')+` · scene ${i+1} of ${S.scenes.length}`,line:talk?(s.say||s.text||''):(s.shot||'Anything that shows: '+(s.text||s.say||'')),say:talk?'':(s.say||''),secs:filmSecs(s)}}}
 function pickVault(i){VaultPicker.open({title:`Clip for scene ${i+1}`,kinds:['video'],onPick:async it=>{try{toast('Loading '+it.name+'…');addTo(i,[await VaultPicker.file(it)])}catch(e){toast(e.message)}if(!dlg.open)dlg.showModal()}})}
 // Moving one clip to another scene with the menu next to it.
 body.addEventListener('change',e=>{const m=e.target.closest?.('.ag-move');if(!m)return;const i=+m.dataset.i,j=+m.dataset.j,to=+m.value,l=(files.get(i)||[]).slice(),[f]=l.splice(j,1);

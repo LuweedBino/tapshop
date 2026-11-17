@@ -16,6 +16,8 @@ const css=`.vc-menu{width:min(340px,92vw);border:1px solid var(--ts-border-stron
 .vc-side{display:flex;gap:8px}.vc-side.vc-end{justify-content:flex-end}.vc-bar button{font:600 14px system-ui,sans-serif;border-radius:10px;padding:10px 14px;cursor:pointer}.vc-bar button[hidden]{display:none}.vc-bar button:disabled{opacity:.4;cursor:default}
 .vc-modes[hidden]{display:none}.vc-modes{display:flex;justify-content:center;gap:4px;grid-column:1/-1}
 .vc-line{position:absolute;left:0;right:0;bottom:0;padding:14px 18px 16px;background:linear-gradient(transparent,#000d 30%);font:600 clamp(17px,2.6vw,26px)/1.35 system-ui,sans-serif;text-align:center;text-shadow:0 1px 3px #000}.vc-line small{display:block;font-size:13px;font-weight:500;opacity:.8;margin-bottom:4px}
+/* The scene's script under the shot, as a second guide: smaller, in a soft pink box. */
+.vc-say{display:block;margin:10px auto 0;max-width:640px;padding:8px 12px;border-radius:12px;background:#ff3ea533;border:1px solid #ff3ea588;font:italic 500 clamp(14px,2vw,19px)/1.35 system-ui,sans-serif;text-align:center}.vc-say[hidden]{display:none}.vc-say b{display:block;font:700 11px system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;opacity:.85;margin-bottom:3px}
 .vc-rec.vc-ok{background:#16a34a}
 /* Countdown towards the suggested length: a big ring of seconds left, then a flashing green "Stop" light. */
 .vc-rec.vc-side-pill{left:14px;transform:none}
@@ -54,11 +56,11 @@ function menu(add){
 // (it turns green once the shot is long enough). facing: 'user' | 'environment' picks the starting camera.
 function webcam(add,only,prompt,facing){
   let d=document.createElement('dialog');d.className='vc-cam';d.setAttribute('aria-label','Camera');
-  d.innerHTML=`<div class="vc-wrap"><div class="vc-stage"><video muted playsinline autoplay></video><div class="vc-status" role="status">Starting your camera…</div><div class="vc-rec" hidden></div><div class="vc-count" hidden><b></b><small></small></div><div class="vc-keep" hidden aria-live="polite"></div><div class="vc-pre" hidden aria-hidden="true"><b></b></div>${prompt?`<div class="vc-line"><small></small><span></span></div>`:''}</div>
+  d.innerHTML=`<div class="vc-wrap"><div class="vc-stage"><video muted playsinline autoplay></video><div class="vc-status" role="status">Starting your camera…</div><div class="vc-rec" hidden></div><div class="vc-count" hidden><b></b><small></small></div><div class="vc-keep" hidden aria-live="polite"></div><div class="vc-pre" hidden aria-hidden="true"><b></b></div>${prompt?`<div class="vc-line"><small></small><span></span><em class="vc-say" hidden></em></div>`:''}</div>
 <div class="vc-bar"><div class="vc-modes"><button type="button" data-mode="video" style="${GHOST}">Video</button><button type="button" data-mode="photo" style="${GHOST}">Photo</button></div>
 <div class="vc-side"><button type="button" class="vc-done" style="${GHOST}">Done</button></div><button type="button" class="vc-shoot" style="background:#fff;border:4px solid #fff" aria-label="Start recording" disabled></button><div class="vc-side vc-end"><button type="button" class="vc-flip" style="${GHOST}" hidden>⟲ Flip</button></div></div></div>`;
   document.body.appendChild(d);d.showModal();
-  const q=s=>d.querySelector(s);if(only)q('.vc-modes').hidden=true;if(prompt){q('.vc-line small').textContent=(prompt.label||'')+(prompt.secs?` · about ${prompt.secs} s`:'');q('.vc-line span').textContent=prompt.line||''}const v=q('video'),status=q('.vc-status'),rec=q('.vc-rec'),shoot=q('.vc-shoot'),flip=q('.vc-flip'),done=q('.vc-done');
+  const q=s=>d.querySelector(s);if(only)q('.vc-modes').hidden=true;if(prompt){q('.vc-line small').textContent=(prompt.label||'')+(prompt.secs?` · about ${prompt.secs} s`:'');q('.vc-line span').textContent=prompt.line||'';const say=q('.vc-say');if(prompt.say&&prompt.say!==prompt.line){say.hidden=false;say.innerHTML='<b>🗣️ Script for this scene</b>';say.append(`“${prompt.say}”`)}}const v=q('video'),status=q('.vc-status'),rec=q('.vc-rec'),shoot=q('.vc-shoot'),flip=q('.vc-flip'),done=q('.vc-done');
   let stream=null,mode='video',recorder=null,tick=null,finished=null,count=0,cams=[],cam=0,closed=false;
   const say=t=>{status.textContent=t;status.hidden=!t};
   const saved=()=>{count++;done.textContent=`Done (${count} added)`};
