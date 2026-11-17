@@ -34,6 +34,8 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-line p{margin:0;font-weight:600}
 .vo-line.on{opacity:1;background:#ff5b8322;box-shadow:inset 3px 0 0 #ff5b83}
 .vo-line.done{opacity:.3}
+/* Countdown under the highlighted line: seconds left for that line, in a ring that fills green clockwise. */
+.vo-cd{display:flex;align-items:center;gap:10px;margin-top:10px}.vo-ring{position:relative;width:54px;height:54px;flex:none}.vo-ring svg{width:100%;height:100%;display:block}.vo-ring circle{fill:none;stroke-width:5}.vo-ring .bg{stroke:currentColor;opacity:.18}.vo-ring .fg{stroke:#22c55e;stroke-linecap:round;transition:stroke-dashoffset .15s linear}.vo-ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:21px;font-weight:800;line-height:1}.vo-cd span{font-size:13px;font-weight:600;opacity:.8}.vo-cd.end .vo-ring b{color:#22c55e}
 /* Light theme: the script box follows it (dark stays the default, also outside the dashboard). */
 html.ts:not(.ts-dark) .vo-prompter{background:#f7f4fb;color:#1d1a26;border:1px solid #e3ddec}
 html.ts:not(.ts-dark) .vo-line.on{background:#ff5b831f}
@@ -112,10 +114,11 @@ if(!small())q('voSet').open=true;
 
 function paint(){
   if(!S.scenes.length)prompter.innerHTML=aiOK()?aiForm():'<p class="vo-empty">No script yet. Type what you want to say below, one line per scene, then tap Use these lines.</p><button type="button" class="vo-write" style="background:#ec489926">✏️ Write my script</button>';
-  else prompter.innerHTML=S.scenes.map((s,i)=>`<div class="vo-line${i===S.idx?' on':''}${i<S.idx?' done':''}" data-i="${i}"><small>${esc(s.sectionType||'Scene '+(i+1))}${s.durationSeconds?' · '+s.durationSeconds+'s':''}</small><p>${esc(s.voiceoverLine)}</p></div>`).join('');
+  else prompter.innerHTML=S.scenes.map((s,i)=>`<div class="vo-line${i===S.idx?' on':''}${i<S.idx?' done':''}" data-i="${i}"><small>${esc(s.sectionType||'Scene '+(i+1))}${s.durationSeconds?' · '+s.durationSeconds+'s':''}</small><p>${esc(s.voiceoverLine)}</p>${i===S.idx?CD:''}</div>`).join('');
   prompter.style.fontSize=q('voSize').value+'px';q('voChatWrap').hidden=!aiOK()||!S.scenes.length;
   q('voTextWrap').hidden=!!S.onTake||!S.scenes.some(s=>s.onScreenText);
   const on=prompter.querySelector('.vo-line.on');
+  countdown();
   if(on)prompter.scrollTo({top:Math.max(0,on.offsetTop-prompter.clientHeight/2+on.offsetHeight/2),behavior:'smooth'});
 }
 function setScenes(scenes){S.scenes=scenes;S.idx=0;S.marks=[];q('voEdit').value=scenes.map(s=>s.voiceoverLine).join('\n');paint()}
@@ -147,10 +150,16 @@ async function begin(){
   S.rec.start(250);S.t0=performance.now();S.marks=[0];
   recBtn.disabled=false;recBtn.textContent='■ Stop';recBtn.classList.add('vo-live');nextBtn.hidden=S.scenes.length<2;
   const pill=q('voRecPill');pill.hidden=false;pill.textContent='REC 0:00';
-  clearInterval(S.timer);S.timer=setInterval(()=>{if(!S.rec||S.rec.state==='inactive'){clearInterval(S.timer);return}const t=now();status('● Recording '+fmt(t));pill.textContent='REC '+fmt(t);
+  clearInterval(S.timer);S.timer=setInterval(()=>{if(!S.rec||S.rec.state==='inactive'){clearInterval(S.timer);return}const t=now();status('● Recording '+fmt(t));pill.textContent='REC '+fmt(t);countdown();
     if(!manual()&&S.idx<S.scenes.length-1&&t-S.marks[S.idx]>=plan(S.scenes[S.idx])/speed())advance()},150);
 }
 const now=()=>(performance.now()-S.t0)/1000;
+const RING=2*Math.PI*21,CD=`<div class="vo-cd" aria-live="off"><div class="vo-ring"><svg viewBox="0 0 54 54" aria-hidden="true"><circle class="bg" cx="27" cy="27" r="21"/><circle class="fg" cx="27" cy="27" r="21" transform="rotate(-90 27 27)" stroke-dasharray="${RING}" stroke-dashoffset="${RING}"/></svg><b></b></div><span></span></div>`;
+// Seconds left for the highlighted line; the ring fills as they run out.
+function countdown(){const el=prompter.querySelector('.vo-line.on .vo-cd'),s=S.scenes[S.idx];if(!el||!s)return;
+  const total=plan(s)/speed(),gone=S.rec?Math.max(0,now()-(S.marks[S.idx]??now())):0,left=Math.max(0,total-gone),p=Math.min(1,gone/total),end=S.rec&&left<=0;
+  el.querySelector('.fg').setAttribute('stroke-dashoffset',String(RING*(1-p)));el.querySelector('b').textContent=end?'✓':String(Math.ceil(left));el.classList.toggle('end',end);
+  el.querySelector('span').textContent=!S.rec?'seconds for this line':end?(S.idx<S.scenes.length-1?(manual()?'Tap Next scene':'Next line…'):'Last line, tap Stop when done'):'seconds left for this line'}
 function advance(to){if(!S.rec||S.idx>=S.scenes.length-1)return;const i=to??S.idx+1;if(i<=S.idx)return;S.idx=i;S.marks[i]=now();paint()}
 function stop(){clearInterval(S.timer);const rec=S.rec;
   if(!rec){stopStream();idle();return}
