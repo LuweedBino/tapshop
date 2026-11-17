@@ -126,6 +126,8 @@ function idle(){clearInterval(S.timer);q('voRecPill').hidden=true;q('voBig').hid
 
 async function start(){
   if(typeof exporting!=='undefined'&&exporting)return;
+  if(S.rec||S.starting)return;S.starting=true;try{await begin()}finally{S.starting=false}}
+async function begin(){
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){status("This browser can't record sound. Try Chrome or Safari.");return}
   try{pause()}catch{}
   clearTake();S.discard=false;recBtn.disabled=true;
@@ -139,20 +141,27 @@ async function start(){
   S.chunks=[];
   try{S.rec=new MediaRecorder(S.stream,type?{mimeType:type}:undefined)}catch{stopStream();idle();status("Couldn't start recording on this device.");return}
   S.rec.ondataavailable=e=>{if(e.data.size)S.chunks.push(e.data)};
-  S.rec.onstop=finish;
+  const me=S.rec,done=()=>{if(S.rec===me)finish()};me.onstop=done;me.onerror=done;
+  // If the microphone goes away mid-take (another app, unplugged), end the take instead of counting forever.
+  S.stream.getAudioTracks().forEach(t=>t.addEventListener('ended',()=>{if(S.rec)stop()}));
   S.rec.start(250);S.t0=performance.now();S.marks=[0];
   recBtn.disabled=false;recBtn.textContent='■ Stop';recBtn.classList.add('vo-live');nextBtn.hidden=S.scenes.length<2;
   const pill=q('voRecPill');pill.hidden=false;pill.textContent='REC 0:00';
-  S.timer=setInterval(()=>{const t=now();status('● Recording '+fmt(t));pill.textContent='REC '+fmt(t);
+  clearInterval(S.timer);S.timer=setInterval(()=>{if(!S.rec||S.rec.state==='inactive'){clearInterval(S.timer);return}const t=now();status('● Recording '+fmt(t));pill.textContent='REC '+fmt(t);
     if(!manual()&&S.idx<S.scenes.length-1&&t-S.marks[S.idx]>=plan(S.scenes[S.idx])/speed())advance()},150);
 }
 const now=()=>(performance.now()-S.t0)/1000;
 function advance(to){if(!S.rec||S.idx>=S.scenes.length-1)return;const i=to??S.idx+1;if(i<=S.idx)return;S.idx=i;S.marks[i]=now();paint()}
-function stop(){clearInterval(S.timer);if(S.rec&&S.rec.state!=='inactive')S.rec.stop();stopStream()}
+function stop(){clearInterval(S.timer);const rec=S.rec;
+  if(!rec){stopStream();idle();return}
+  q('voRecPill').hidden=true;recBtn.disabled=true;recBtn.textContent='Stopping…';recBtn.classList.remove('vo-live');status(S.discard?'':'Stopping…');
+  try{if(rec.state!=='inactive')rec.stop();else finish()}catch{finish()}
+  // Some browsers never say the recording ended: carry on with what was recorded.
+  setTimeout(()=>{if(S.rec===rec)finish()},2000)}
 
 async function finish(){
-  const rec=S.rec;S.rec=null;idle();
-  if(S.discard)return;
+  const rec=S.rec;if(!rec)return;S.rec=null;stopStream();idle();
+  if(S.discard){status('');return}
   status('Getting your take ready…');
   try{
     const blob=new Blob(S.chunks,{type:rec?.mimeType||'audio/webm'});
