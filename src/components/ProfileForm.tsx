@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import type { Creator, Product } from "@prisma/client";
 import { saveProfile } from "@/app/actions/dashboard";
 import type { FormState } from "@/app/actions/auth";
@@ -47,28 +47,30 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
 
   return (
     <div className="lg:flex lg:items-start lg:gap-8">
-      <form action={action} className="min-w-0 flex-1 space-y-5">
+      <form
+        action={action}
+        className="min-w-0 flex-1 space-y-5"
+        // A required field inside a folded section can't be shown, so open its section first.
+        onInvalidCapture={(e) => {
+          const d = (e.target as HTMLElement).closest("details");
+          if (d) d.open = true;
+        }}
+      >
         <button type="button" className="btn-secondary w-full lg:hidden" onClick={() => setShowPreview((v) => !v)}>
           {showPreview ? "Hide preview" : "Show preview"}
         </button>
         {showPreview && <div className="flex justify-center lg:hidden">{preview}</div>}
 
-        <div className="card space-y-5">
-          <h2 className="font-semibold">Profile photo</h2>
+        <Section id="photo" title="Profile photo">
           <FileUpload name="avatarKey" visibility="public" initialKey={creator.avatarKey} accept="image/*" label="Photo" onChange={setAvatarKey} />
           <AvatarEditor avatarKey={avatarKey} accent={design.accentColor} value={avatarStyle} onChange={setAvatarStyle} />
-        </div>
+        </Section>
 
-        <div className="card space-y-5">
-          <div>
-            <h2 className="font-semibold">Banner</h2>
-            <p className="mt-0.5 text-sm text-neutral-500">The wide image across the top of your store. Upload your own or pick one from the gallery.</p>
-          </div>
+        <Section id="banner" title="Banner" hint="The wide image across the top of your store. Upload your own or pick one from the gallery.">
           <BannerEditor initialKey={creator.bannerKey} bannerKey={bannerKey} onKeyChange={setBannerKey} accent={design.accentColor} value={bannerStyle} onChange={setBannerStyle} />
-        </div>
+        </Section>
 
-        <div className="card space-y-5">
-          <h2 className="font-semibold">Profile</h2>
+        <Section id="profile" title="Profile" hint="Your name, handle and bio.">
           <div>
             <label className="label" htmlFor="displayName">Display name</label>
             <input className="input" id="displayName" name="displayName" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
@@ -81,10 +83,9 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
             <label className="label" htmlFor="bio">Bio</label>
             <textarea className="input min-h-24" id="bio" name="bio" value={bio} onChange={(e) => setBio(e.target.value)} maxLength={300} />
           </div>
-        </div>
+        </Section>
 
-        <div className="card space-y-6">
-          <h2 className="font-semibold">Design</h2>
+        <Section id="design" title="Design" hint="Colors, theme, font, buttons and product layout." gap="space-y-6">
           <div>
             <span className="label">Accent color</span>
             <input type="hidden" name="accentColor" value={design.accentColor} />
@@ -106,13 +107,9 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
             {(k) => <span className="mb-2 block h-6 bg-neutral-900" style={{ borderRadius: k === "pill" ? 9999 : k === "square" ? 3 : 8 }} />}
           </Choice>
           <Choice label="Product layout" name="layout" value={design.layout} options={LAYOUTS} onChange={(v) => set("layout", v)} />
-        </div>
+        </Section>
 
-        <div className="card space-y-5">
-          <div>
-            <h2 className="font-semibold">Social links</h2>
-            <p className="mt-0.5 text-sm text-neutral-500">Add your socials, email, and anywhere else followers can find you.</p>
-          </div>
+        <Section id="socials" title="Social links" hint="Add your socials, email, and anywhere else followers can find you.">
           <SocialLinksEditor value={socialLinks} onChange={setSocialLinks} />
           <Choice label="Show links as" name="socialStyle" value={socialStyle} options={SOCIAL_STYLES} onChange={setSocialStyle}>
             {(k) => (
@@ -130,7 +127,7 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
             )}
           </Choice>
           <IconStyleEditor value={iconStyle} onChange={setIconStyle} />
-        </div>
+        </Section>
         <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-neutral-200 bg-white/90 px-4 py-3 backdrop-blur lg:static lg:mx-0 lg:border-0 lg:bg-transparent lg:p-0">
           <Submit>Save changes</Submit>
           {state?.ok && <span className="text-sm font-medium text-green-700">Saved</span>}
@@ -142,6 +139,42 @@ export function ProfileForm({ creator, products }: { creator: Creator; products:
         {preview}
       </aside>
     </div>
+  );
+}
+
+// A store-settings card that folds away. Folded fields stay in the form, so saving still sends them.
+// Which cards are open is remembered on this device.
+const OPEN_KEY = "tapshop-store-open";
+
+function Section({ id, title, hint, gap = "space-y-5", children }: { id: string; title: string; hint?: string; gap?: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(OPEN_KEY) ?? "[]");
+      if (Array.isArray(saved) && saved.includes(id)) setOpen(true);
+    } catch {}
+  }, [id]);
+  const toggle = (next: boolean) => {
+    setOpen(next);
+    try {
+      const saved = JSON.parse(localStorage.getItem(OPEN_KEY) ?? "[]");
+      const list: string[] = Array.isArray(saved) ? saved.filter((s) => s !== id) : [];
+      localStorage.setItem(OPEN_KEY, JSON.stringify(next ? [...list, id] : list));
+    } catch {}
+  };
+  return (
+    <details className="card group p-0" open={open} onToggle={(e) => toggle(e.currentTarget.open)}>
+      <summary className="flex cursor-pointer list-none items-center gap-3 p-5 [&::-webkit-details-marker]:hidden">
+        <div className="min-w-0 flex-1">
+          <h2 className="font-semibold">{title}</h2>
+          {hint && <p className="mt-0.5 text-sm text-neutral-500">{hint}</p>}
+        </div>
+        <span aria-hidden className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 transition-transform group-open:rotate-180">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+        </span>
+      </summary>
+      <div className={`${gap} border-t border-neutral-100 p-5`}>{children}</div>
+    </details>
   );
 }
 
