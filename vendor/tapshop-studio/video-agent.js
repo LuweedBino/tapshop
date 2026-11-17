@@ -198,7 +198,7 @@ footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add c
   return h},
 voice(){const v=S.voice,none=S.scriptMode==='none';let h=`<h3>Voice + captions</h3><p class="ag-help">${none?'You picked no talking, so music and words on screen carry the video.':'How will people hear your script?'}</p>
   <div class="ag-cards">${card('voice','record',v==='record','🎙️ Record a voiceover','With a teleprompter')}${card('voice','talking',v==='talking','🗣️ I\'m talking in my clips','Use the sound from my clips')}${card('voice','none',v==='none','🔇 No voice','Music and text only')}</div>`;
-  if(v==='record')h+=take?`<p class="ag-help">✓ Voiceover ready (${take.dur.toFixed(1)} s). Scenes will line up with when you said them.</p><audio controls src="${esc(take.url)}" style="width:100%"></audio><div class="ag-btns"><button type="button" data-act="record">↺ Record again</button></div>`
+  if(v==='record')h+=take?`<p class="ag-help">✓ Voiceover ready (${take.dur.toFixed(1)} s). Scenes will line up with when you said them.</p><audio controls src="${esc(take.url)}" style="width:100%"></audio>${take.fx?`<p class="ag-help">🎚️ ${esc(fxLabel(take.fx))}</p>`:''}<div class="ag-btns">${window.veVoiceStudio?`<button type="button" class="primary" data-act="voiceFx">🎚️ Edit my voice</button>`:''}<button type="button" data-act="record">↺ Record again</button></div>${window.veVoiceStudio&&!take.fx?`<p class="ag-help">🎚️ <b>Edit my voice</b> removes fan and AC noise and adds effects like podcast, reverb or echo. You can listen before you keep it.</p>`:''}`
     :`<p class="ag-help ag-tip">👇 Tap <b>Open the teleprompter</b> to record. Your script scrolls on screen while you read it out loud.</p><div class="ag-btns"><button type="button" class="primary" data-act="record">🎙️ Open the teleprompter</button></div>`;
   if(v!=='none')h+=`<label class="ag-check"><input type="checkbox" data-k="captions" ${S.captions?'checked':''}> ✨ Auto captions</label>${S.captions?`<label class="ag-f">Caption style<select data-k="capStyle">${opts(CAPS,S.capStyle)}</select></label>`:''}`;
   return h},
@@ -309,6 +309,12 @@ function addTo(i,list){const vids=[...(list||[])].filter(f=>/^video\//.test(f.ty
 fileIn.onchange=()=>{addTo(fileTarget,fileIn.files);fileIn.value=''};
 
 // ---------- voice ----------
+const FX_NAMES={none:'',podcast:'🎙️ Podcast',crisp:'✨ Crisp & clear',warm:'☕ Warm',radio:'📻 Radio host',phone:'☎️ Phone call',megaphone:'📢 Megaphone',room:'🏠 Room',reverb:'🌌 Reverb',hall:'⛪ Concert hall',echo:'🔁 Echo',stadium:'🏟️ Stadium',robot:'🤖 Robot',underwater:'🌊 Underwater',whisper:'🌙 ASMR'};
+const fxLabel=f=>[f.noise!=='off'?`Background noise removed (${f.noise})`:'',FX_NAMES[f.fx]||''].filter(Boolean).join(' · ');
+// Voice studio (video-voicefx.js): always edits the untouched take, so trying again never stacks effects.
+async function editVoice(){if(!take||!window.veVoiceStudio)return;const r=await veVoiceStudio(take.original||take.file,take.fx);if(!r||!take)return;
+  if(!take.original)take.original=take.file;take.file=r.plain?take.original:r.file;take.fx=r.plain?null:r.settings;
+  URL.revokeObjectURL(take.url);take.url=URL.createObjectURL(take.file);paint();status(r.plain?'Back to your original recording.':'🎚️ Voice updated. Tap ▶ to hear it.')}
 function record(){if(!window.veVoiceover){status('The voiceover recorder isn\'t available here.');return}
   veVoiceover({scenes:S.scenes.map(s=>({sectionType:s.type,durationSeconds:s.secs,voiceoverLine:s.say,onScreenText:''}))},
     {onTake:t=>{if(take?.url)URL.revokeObjectURL(take.url);take={...t,url:URL.createObjectURL(t.file)};paint();status('Voiceover saved for this video.')}})}
@@ -444,6 +450,7 @@ body.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||
     case 'platform':S.brief.platform=v;break;case 'length':S.brief.length=+v;break;case 'story':S.story=v;break;case 'group':S.group=v;break;
     case 'mode':S.scriptMode=v;if(v==='none')S.voice='none';else if(S.voice==='none')S.voice='record';break;
     case 'write':writeScript();return;
+    case 'voiceFx':editVoice();return;
     case 'secs':if(S.scenes[i])S.scenes[i].secs=secsOf((+S.scenes[i].secs||0)+(+v));break;
     case 'newHooks':editScript('hooks');return;
     case 'lineAI':lineEdit(i,v);return;
