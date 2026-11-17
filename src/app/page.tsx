@@ -55,7 +55,7 @@ const CREATE: Tool[] = [
 ];
 
 const SELL: Tool[] = [
-  { icon: "🔗", title: "Your store, in your bio", body: "One link for Instagram, TikTok and YouTube that opens a storefront built for phones." },
+  { icon: "🔗", title: "Your own shop, one link away", body: "Put your TapShop link in your Instagram, TikTok or YouTube bio. Fans tap it and land in your shop, ready to buy." },
   { icon: "💸", title: "Sell this", body: "Turn any video, design or file into a product with one tap — straight from the editor." },
   { icon: "🏷️", title: "Discount codes", body: "Percent or dollar off, one product or the whole store, with limits and end dates." },
   { icon: "📬", title: "Grow your email list", body: "Give a freebie for an email. Every lead lands in your dashboard, ready to export." },
