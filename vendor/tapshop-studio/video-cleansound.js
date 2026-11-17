@@ -24,7 +24,7 @@ const WIN=new Float64Array(N);for(let i=0;i<N;i++)WIN[i]=Math.sqrt(.5-.5*Math.co
 // fan or AC sounds like on its own. Each moment then keeps only what rises above it, never dropping below
 // FLOOR (so voices stay natural, no "underwater" sound), smoothed over time and frequency. Rumble under 70 Hz goes.
 const FLOOR=.12,OVER=2.2;
-async function denoise(x,say){const len=x.length,frames=Math.ceil((len+N)/H),re=new Float64Array(N),im=new Float64Array(N);
+async function denoise(x,say,strong){const OV=strong?3.2:OVER,FL=strong?.05:FLOOR;const len=x.length,frames=Math.ceil((len+N)/H),re=new Float64Array(N),im=new Float64Array(N);
   const frameAt=f=>{const at=f*H-N;for(let i=0;i<N;i++){const k=at+i;re[i]=k>=0&&k<len?x[k]*WIN[i]:0;im[i]=0}fft(re,im,false)};
   // Pass 1: noise print from up to 1500 evenly spread moments.
   const every=Math.max(1,Math.floor(frames/1500)),picks=[];for(let f=0;f<frames;f+=every)picks.push(f);
@@ -35,7 +35,7 @@ async function denoise(x,say){const len=x.length,frames=Math.ceil((len+N)/H),re=
   const out=new Float32Array(len),prev=new Float32Array(BINS).fill(1),g=new Float32Array(BINS),lowCut=Math.round(70*N/SR),ramp=Math.round(110*N/SR);
   for(let f=0;f<frames;f++){if(f%400===0){say?.(Math.round(f/frames*100));await new Promise(r=>setTimeout(r))}
     frameAt(f);
-    for(let k=0;k<BINS;k++){const m=Math.hypot(re[k],im[k])+1e-12;let v=Math.max(FLOOR,1-OVER*noise[k]/m);if(k<lowCut)v=0;else if(k<ramp)v*=(k-lowCut)/(ramp-lowCut);
+    for(let k=0;k<BINS;k++){const m=Math.hypot(re[k],im[k])+1e-12;let v=Math.max(FL,1-OV*noise[k]/m);if(k<lowCut)v=0;else if(k<ramp)v*=(k-lowCut)/(ramp-lowCut);
       v=v>prev[k]?v:prev[k]*.55+v*.45;g[k]=v}
     for(let k=0;k<BINS;k++){const s=(g[Math.max(0,k-1)]+2*g[k]+g[Math.min(BINS-1,k+1)])/4;prev[k]=g[k];re[k]*=s;im[k]*=s;if(k&&k<N/2){re[N-k]=re[k];im[N-k]=-im[k]}}
     fft(re,im,true);const at=f*H-N;for(let i=0;i<N;i++){const k=at+i;if(k>=0&&k<len)out[k]+=re[i]*WIN[i]/2}}
@@ -98,4 +98,6 @@ window.veRecleanSound=async function(){const list=assets.filter(a=>!a.cleanFile&
     pause();e.target.disabled=true;let ok=0;try{for(let i=0;i<used.length;i++){ok+=await veCleanSound(used[i],p=>out.textContent=`Cleaning video ${i+1} of ${used.length}… ${p}%`)?1:0}
       out.textContent=ok?`Done! ${ok} video${ok>1?'s':''} cleaned. Press ▶ to hear it.`:'We couldn’t read the sound in these clips.'}finally{e.target.disabled=false}};
   card.querySelector('#cleanUndo').onclick=()=>{let n=0;for(const a of assets)if(a.cleanFile){veOriginalSound(a);n++}out.textContent=n?'Back to the original sound.':'The sound wasn’t cleaned.'}}}
+// For the voice studio (video-voicefx.js): mono 48 kHz samples in, cleaned samples out.
+window.veDenoise=(x,say,strong)=>denoise(x,say,strong);
 })();
