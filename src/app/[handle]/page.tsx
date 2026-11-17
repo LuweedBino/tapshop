@@ -14,7 +14,7 @@ async function load(handle: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const creator = await load((await params).handle);
-  return creator && !creator.pausedAt ? { title: `${creator.displayName} | TapShop`, description: creator.bio || undefined } : {};
+  return creator && !creator.pausedAt ? { title: `${creator.displayName} | TapShopUGC`, description: creator.bio || undefined } : {};
 }
 
 export default async function StorePage({ params }: { params: Promise<{ handle: string }> }) {

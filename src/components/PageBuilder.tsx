@@ -413,7 +413,7 @@ export function PageBuilder({ page, initial, creator, products, appUrl }: {
                 {d.footer.links.length < MAX_FOOTER_LINKS && <button type="button" className="btn-secondary" onClick={() => setFooter({ links: [...d.footer.links, { label: "", url: "" }] })}>+ Add a link</button>}
               </div>
               <Toggle label="Show my social links" checked={d.footer.showSocials} onChange={(v) => setFooter({ showSocials: v })} />
-              <Toggle label='Show "Made with TapShop"' checked={d.footer.madeWith} onChange={(v) => setFooter({ madeWith: v })} />
+              <Toggle label='Show "Made with TapShopUGC"' checked={d.footer.madeWith} onChange={(v) => setFooter({ madeWith: v })} />
             </>
           )}
         </Panel>

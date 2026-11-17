@@ -187,7 +187,7 @@ function Footer({ d, creator }: { d: PageDesign; creator: PageCreator }) {
       )}
       {socials.length > 0 && <SocialLinks links={socials} style={socialStyleOf(creator.socialStyle)} iconStyle={parseIconStyle(creator.socialIconStyle)} accent={look.accentColor} dark={look.theme === "dark"} />}
       {f.text && <p className="whitespace-pre-line">{f.text}</p>}
-      {f.madeWith && <p className="text-xs opacity-80"><Link href="/" className="hover:opacity-70">Made with <span className="font-bold">TapShop</span></Link></p>}
+      {f.madeWith && <p className="text-xs opacity-80"><Link href="/" className="hover:opacity-70">Made with <span className="font-bold">TapShopUGC</span></Link></p>}
     </footer>
   );
 }

@@ -135,7 +135,7 @@ window.veFastExport=async function(){
     say('Finishing up…');
     await output.finalize();output=null;
     done();
-    download(new Blob([target.buffer],{type:kind}),($('projectName').value||'TapShop video')+(mp4?'.mp4':'.webm'));
+    download(new Blob([target.buffer],{type:kind}),($('projectName').value||'TapShopUGC video')+(mp4?'.mp4':'.webm'));
     say('Saved! Your MP4 is ready to post anywhere.');
     window.veSavedClose?.();
     return true;

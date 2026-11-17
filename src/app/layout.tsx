@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TapShop: sell from your link in bio",
+  title: "TapShopUGC: sell from your link in bio",
   description: "A mobile-first storefront for creators to sell digital products and grow their email list.",
 };
 

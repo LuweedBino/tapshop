@@ -5,7 +5,7 @@ import { stripe, stripeEnabled } from "./stripe";
 import { affiliateEmail, escape, sendEmail } from "./email";
 import { money } from "./format";
 
-// Creator affiliate programs: other TapShop users share /r/<code> links to a creator's store or
+// Creator affiliate programs: other TapShopUGC users share /r/<code> links to a creator's store or
 // products and earn a cut of the sales they bring in. The cut is taken from each sale as the
 // Stripe application fee (so it lands in the platform balance), held for HOLD_DAYS in case of a
 // refund, then sent to the affiliate's own connected Stripe account by payCommissions().
@@ -134,7 +134,7 @@ export async function payCommissions(limit = 50) {
           currency: order.currency,
           destination: member.stripeAccountId,
           transfer_group: order.id,
-          description: `TapShop affiliate commission: ${order.creator.displayName}`,
+          description: `TapShopUGC affiliate commission: ${order.creator.displayName}`,
           metadata: { orderId: order.id, affiliateId: order.affiliate.id },
         },
         { idempotencyKey: `commission-${order.id}` },

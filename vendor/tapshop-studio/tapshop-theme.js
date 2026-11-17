@@ -1,4 +1,4 @@
-// TapShop look (tapshop-theme.css) for both editors. Marks <html> with .ts and mirrors the editor's
+// TapShopUGC look (tapshop-theme.css) for both editors. Marks <html> with .ts and mirrors the editor's
 // own dark mode as .ts-dark. Inside the dashboard the editor follows the dashboard's light/dark
 // switch (tapshop_theme cookie) and hides its own switch so there is only one.
 (()=>{

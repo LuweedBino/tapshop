@@ -406,7 +406,7 @@ function build(){
   let drop=$$('vsDrop');
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};drop.ondragleave=()=>drop.classList.remove('over');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');addFiles(e.dataTransfer.files)};
-  if($$('vsVault'))$$('vsVault').onclick=()=>{if(typeof VaultPicker==='undefined'){toast('Media Vault is only available inside TapShop.');return}VaultPicker.open({title:'Add from your Media Vault',kinds:['video','image'],onPick:async it=>{try{toast('Loading '+it.name+'…');addFiles([await VaultPicker.file(it)])}catch(e){toast(e.message)}}})};
+  if($$('vsVault'))$$('vsVault').onclick=()=>{if(typeof VaultPicker==='undefined'){toast('Media Vault is only available inside TapShopUGC.');return}VaultPicker.open({title:'Add from your Media Vault',kinds:['video','image'],onPick:async it=>{try{toast('Loading '+it.name+'…');addFiles([await VaultPicker.file(it)])}catch(e){toast(e.message)}}})};
   $$('vsFiles').onclick=e=>{let b=e.target.closest('.x');if(!b)return;let i=+b.dataset.i,[gone]=pending.splice(i,1);if(gone?.url)URL.revokeObjectURL(gone.url);sync()};
   $$('vsBlank').onclick=()=>{applyAspect();close()};
   // The three paths in the intro: jump to the quick makers, jump to step 1, or open the editor.

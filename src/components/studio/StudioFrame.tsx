@@ -197,7 +197,7 @@ export function StudioFrame({ products, vault, folders, handle, hasPayments }: {
     <>
       <iframe
         ref={frame}
-        title="TapShop Studio"
+        title="TapShopUGC Studio"
         src="/dashboard/studio/assets/index.html"
         sandbox="allow-scripts allow-same-origin allow-downloads allow-forms allow-modals"
         allow="camera; microphone"

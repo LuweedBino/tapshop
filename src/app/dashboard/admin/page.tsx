@@ -101,7 +101,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
   return (
     <>
-      <PageHeader title="Admin" subtitle="Everyone who has signed up for TapShop. Click a column title to sort by it. Use the buttons under each creator for quick edits, or click the name for everything else. Only you can see this page." />
+      <PageHeader title="Admin" subtitle="Everyone who has signed up for TapShopUGC. Click a column title to sort by it. Use the buttons under each creator for quick edits, or click the name for everything else. Only you can see this page." />
       <div className="mb-6 grid grid-cols-2 gap-3 md:grid-cols-4">
         {tiles.map(([label, value]) => (
           <div key={label} className="card p-4">

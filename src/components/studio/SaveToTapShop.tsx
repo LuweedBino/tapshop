@@ -85,7 +85,7 @@ export function SaveToTapShop({ image, products, onClose }: { image: StudioImage
       >
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
-            <h2 id="save-to-tapshop" className="text-lg font-bold tracking-tight">Save to TapShop</h2>
+            <h2 id="save-to-tapshop" className="text-lg font-bold tracking-tight">Save to TapShopUGC</h2>
             <p className="text-sm text-neutral-500">{image.name} · {image.width}×{image.height}</p>
           </div>
           <button type="button" onClick={onClose} disabled={status === "saving"} className="text-2xl leading-none text-neutral-400 hover:text-neutral-900" aria-label="Close">×</button>

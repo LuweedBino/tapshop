@@ -160,7 +160,7 @@ async function finish(){
     const buf=await ctx.decodeAudioData(await blob.arrayBuffer());ctx.close?.();
     if(buf.duration<.3)throw Error('too short');
     S.takeDur=buf.duration;
-    S.take=new File([wav(buf)],'TapShop voiceover.wav',{type:'audio/wav'});
+    S.take=new File([wav(buf)],'TapShopUGC voiceover.wav',{type:'audio/wav'});
     S.url=URL.createObjectURL(S.take);audio.src=S.url;
     q('voTake').hidden=false;recBtn.hidden=true;useBtn.hidden=retakeBtn.hidden=false;
     status(`Take ready (${S.takeDur<60?S.takeDur.toFixed(1)+' s':fmt(S.takeDur)}). Listen back, then add it or retake it.`);
@@ -224,7 +224,7 @@ dlg.addEventListener('close',()=>{if(S.rec||S.stream){S.discard=true;stop()}clea
 // No script yet: open the settings and the script box so there's somewhere to type straight away.
 function openEditor(focus){q('voSet').open=true;q('voEditWrap').open=true;if(!focus)return;const t=q('voEdit');t.scrollIntoView({block:'center',behavior:'smooth'});t.focus({preventScroll:true})}
 q('voPrompter').addEventListener('click',e=>{if(e.target.closest('.vo-write'))openEditor(true)});
-// ✨ AI script help (inside TapShop, where /api/edit-script lives): write a script from a topic, a style and a
+// ✨ AI script help (inside TapShopUGC, where /api/edit-script lives): write a script from a topic, a style and a
 // length (mode "write"), then change it by chatting (mode "edit"). The style chosen is kept for the changes.
 const STYLES=[['friendly','😊 Friendly','friendly and warm, like talking to a friend'],['funny','😂 Funny','funny and playful, with light jokes'],['hype','⚡ Hype','high energy, excited and punchy'],['calm','😌 Calm','calm, soft and slow'],['pro','💼 Professional','clear, confident and professional'],['story','📖 Storytime','storytime: a personal little story'],['heart','💗 Heartfelt','heartfelt and emotional'],['bold','🔥 Bold','bold, direct and a little edgy']];
 const ASKS=['Make it shorter','Make it funnier','Punchier hook','Simpler words','Stronger ending','More friendly'];

@@ -73,7 +73,7 @@ export function StripeForm({ creator }: { creator: AdminCreator }) {
       </p>
       {creator.stripeAccountId && (
         <>
-          <p className="mt-2 text-sm text-neutral-500">Disconnecting unlinks this Stripe account from TapShop. The creator&apos;s Stripe account and its money stay with them.</p>
+          <p className="mt-2 text-sm text-neutral-500">Disconnecting unlinks this Stripe account from TapShopUGC. The creator&apos;s Stripe account and its money stay with them.</p>
           <Submit className="btn-secondary mt-4" pendingText="Disconnecting…">Disconnect Stripe</Submit>
         </>
       )}

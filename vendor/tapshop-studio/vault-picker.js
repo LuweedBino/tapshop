@@ -1,4 +1,4 @@
-// Media Vault picker shared by the design and video studios (only inside TapShop).
+// Media Vault picker shared by the design and video studios (only inside TapShopUGC).
 // Lists the signed-in creator's Vault files and hands the chosen one to the page's
 // importVaultItem(item). The dashboard's "Use in Studio" arrives as tapshop:vault-import.
 (function(){
