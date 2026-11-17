@@ -42,6 +42,7 @@ const FILES = new Set([
   "video-export.js",
   "video-frame.js",
   "video-cleansound.js",
+  "video-smartfix.js",
   "video-sfx.js",
   "audio-search.js",
   "video-bpm.js",
