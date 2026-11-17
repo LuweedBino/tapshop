@@ -146,29 +146,14 @@ export default async function Home() {
             <div className="lp-hero-art lp-rise" style={{ "--d": "200ms" } as React.CSSProperties} aria-hidden>
               <div className="lp-phone">
                 <div className="lp-phone-notch" />
-                <div className="lp-screen">
-                  <div className="lp-scr-banner" />
-                  <div className="lp-scr-avatar" />
-                  <p className="lp-scr-name">@yourname</p>
-                  <p className="lp-scr-bio">UGC creator · honest reviews</p>
-                  <div className="lp-scr-video">
-                    <span className="lp-scr-play">▶</span>
-                    <span className="lp-scr-cap">this changed my <b>morning</b> ✨</span>
-                  </div>
-                  <div className="lp-scr-prod">
-                    <span className="lp-scr-thumb" />
-                    <span className="lp-scr-lines"><i /><i /></span>
-                    <span className="lp-scr-price">$19</span>
-                  </div>
-                  <div className="lp-scr-prod">
-                    <span className="lp-scr-thumb lp-scr-thumb-b" />
-                    <span className="lp-scr-lines"><i /><i /></span>
-                    <span className="lp-scr-price">$29</span>
-                  </div>
-                  <div className="lp-scr-btn">Get my free guide</div>
+                <div className="lp-screen lp-screen-shots">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/landing/editor.webp" alt="" className="lp-shot lp-shot-a" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/landing/store.webp" alt="" className="lp-shot lp-shot-b" />
                 </div>
               </div>
-              <div className="lp-chip lp-chip-a"><span className="lp-chip-ic">💸</span><span><b>New sale</b><small>Preset pack · $19.00</small></span></div>
+              <div className="lp-chip lp-chip-a"><span className="lp-chip-ic">💸</span><span><b>New sale</b><small>Workout plan · $19.00</small></span></div>
               <div className="lp-chip lp-chip-b"><span className="lp-chip-ic">✨</span><span><b>Captions ready</b><small>42 words · Pop style</small></span></div>
               <div className="lp-chip lp-chip-c"><span className="lp-chip-ic">📬</span><span><b>+1 new lead</b><small>from your freebie</small></span></div>
             </div>
