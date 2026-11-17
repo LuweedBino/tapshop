@@ -8,6 +8,7 @@ import { DeleteButton } from "@/components/DeleteButton";
 import { CopyLink } from "@/components/CopyLink";
 import { env } from "@/lib/env";
 import { ProductsTip } from "@/components/ProductsTip";
+import { canSell } from "@/lib/orders";
 
 const TYPE_LABEL = { DIGITAL: "Digital product", LEAD_MAGNET: "Lead magnet", LINK: "Link", AFFILIATE: "Affiliate link" } as const;
 
@@ -23,9 +24,17 @@ export default async function Products({ searchParams }: { searchParams: Promise
     orderBy: [{ position: "asc" }, { createdAt: "asc" }],
     include: { _count: { select: { orders: { where: { status: "PAID" } }, leads: true } } },
   });
+  // Paid products can't be bought until Stripe is connected, so say so where products are made.
+  const needsStripe = !canSell(creator) && (await db.product.count({ where: { creatorId: creator.id, archived: false, type: "DIGITAL", priceCents: { gt: 0 } } })) > 0;
   return (
     <>
       <PageHeader title="Products" subtitle="Your main store, plus any extra pages. Each page has its own link and shows only its own products." action={<Link href={addHref} className="btn">+ Add</Link>} />
+      {needsStripe && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
+          <p><b>Your paid products can&apos;t be bought yet.</b> Connect Stripe so buyers can pay you and the money goes to your bank.</p>
+          <Link href="/dashboard/payments" className="btn shrink-0">Connect Stripe</Link>
+        </div>
+      )}
       <ProductsTip link={false} />
       <nav className="mb-4 flex flex-wrap gap-2" aria-label="Pages">
         {[{ id: null, title: "Main store" }, ...pages].map((p) => (
