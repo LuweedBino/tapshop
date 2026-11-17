@@ -17,6 +17,8 @@ export const env = {
   // Optional: a Gemini model id to try before the built-in list.
   geminiModel: process.env.GEMINI_MODEL ?? "",
   resendApiKey: process.env.RESEND_API_KEY ?? "",
+  // Vercel Cron sends this as a bearer token; the daily affiliate payout job refuses calls without it.
+  cronSecret: process.env.CRON_SECRET ?? "",
   emailFrom: process.env.EMAIL_FROM ?? "TapShop <onboarding@resend.dev>",
   s3: {
     bucket: process.env.S3_BUCKET ?? "",

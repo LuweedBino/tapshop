@@ -7,6 +7,6 @@ export function fileUrl(key: string | null | undefined) {
 }
 
 export const RESERVED_HANDLES = new Set([
-  "api", "dashboard", "login", "signup", "logout", "thanks", "d", "admin", "settings", "about", "pricing", "_next",
+  "api", "dashboard", "r", "login", "signup", "logout", "thanks", "d", "admin", "settings", "about", "pricing", "_next",
 ]);
 

@@ -9,6 +9,12 @@ import { RESERVED_HANDLES } from "@/lib/format";
 
 export type FormState = { error?: string; ok?: string } | undefined;
 
+/** Where to go after signing in: a path on this site (like an affiliate sign-up page), else the dashboard. */
+function nextPath(form: FormData) {
+  const next = String(form.get("next") ?? "");
+  return next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : "/dashboard";
+}
+
 const Signup = z.object({
   displayName: z.string().trim().min(1, "Enter your name").max(80),
   handle: z
@@ -31,7 +37,7 @@ export async function signup(_: FormState, form: FormData): Promise<FormState> {
     data: { displayName, handle, email, passwordHash: await bcrypt.hash(password, 10) },
   });
   await createSession(creator.id);
-  redirect("/dashboard");
+  redirect(nextPath(form));
 }
 
 export async function login(_: FormState, form: FormData): Promise<FormState> {
@@ -40,7 +46,7 @@ export async function login(_: FormState, form: FormData): Promise<FormState> {
   const creator = await db.creator.findUnique({ where: { email } });
   if (!creator || !(await bcrypt.compare(password, creator.passwordHash))) return { error: "Wrong email or password" };
   await createSession(creator.id);
-  redirect("/dashboard");
+  redirect(nextPath(form));
 }
 
 export async function logout() {

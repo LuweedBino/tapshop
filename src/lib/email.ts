@@ -12,7 +12,7 @@ export async function sendEmail(mail: Mail) {
   if (error) console.error("[email] send failed", error);
 }
 
-function escape(s: string) {
+export function escape(s: string) {
   return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 }
 
@@ -33,5 +33,15 @@ export function inquiryEmail(opts: { name: string; email: string; company: strin
 ${row("Name", opts.name)}${row("Email", opts.email)}${row("Company", opts.company)}${row("Budget", opts.budget)}
 <p style="white-space:pre-line;background:#f5f5f5;padding:12px 16px;border-radius:10px">${escape(opts.message)}</p>
 <p>Reply to <a href="mailto:${escape(opts.email)}">${escape(opts.email)}</a>, or see all inquiries in <a href="${opts.link}">your dashboard</a>.</p>
+</div>`;
+}
+
+/** Emails to affiliates and to creators about their program. `lines` are HTML: escape anything a user typed. */
+export function affiliateEmail(opts: { name: string; lines: string[]; quote?: string; cta?: { label: string; url: string } }) {
+  return `<div style="font-family:system-ui,sans-serif;max-width:520px;margin:auto;padding:24px">
+<p>Hi ${escape(opts.name)},</p>
+${opts.lines.map((l) => `<p>${l}</p>`).join("\n")}
+${opts.quote ? `<p style="white-space:pre-line;background:#f5f5f5;padding:12px 16px;border-radius:10px">${escape(opts.quote)}</p>` : ""}
+${opts.cta ? `<p><a href="${opts.cta.url}" style="display:inline-block;background:#111;color:#fff;padding:12px 20px;border-radius:10px;text-decoration:none">${escape(opts.cta.label)}</a></p>` : ""}
 </div>`;
 }

@@ -25,6 +25,15 @@ enum OrderStatus {
   REFUNDED
 }
 
+// An affiliate's cut of one order. HELD: waiting out the refund window (or for the affiliate's
+// Stripe); PAID: sent to their Stripe account; CANCELED: refunded or blocked.
+enum CommissionStatus {
+  NONE
+  HELD
+  PAID
+  CANCELED
+}
+
 model Creator {
   id              String         @id @default(cuid())
   email           String         @unique
@@ -51,6 +60,12 @@ model Creator {
   stripeReady     Boolean        @default(false)
   // Set by an admin: the store goes offline and can't take new sales until it's cleared.
   pausedAt        DateTime?
+  // Affiliate program: other TapShop users promote this creator's products for a cut (lib/affiliates.ts).
+  affiliateOn      Boolean @default(false)
+  affiliatePercent Int     @default(20)
+  // How many days after a click a sale still counts for the affiliate.
+  affiliateDays    Int     @default(30)
+  affiliateNote    String  @default("")
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   products        Product[]
@@ -62,6 +77,9 @@ model Creator {
   orders          Order[]
   leads           Lead[]
   discountCodes   DiscountCode[]
+  affiliates        Affiliate[]        @relation("ProgramOwner")
+  affiliateOf       Affiliate[]        @relation("ProgramMember")
+  affiliateMessages AffiliateMessage[]
 }
 
 // A creator's portfolio for brands at /<handle>/media-kit. Stats, audience, past
@@ -130,6 +148,8 @@ model Product {
   extras        Json        @default("{}")
   // Times visitors followed an affiliate page's links.
   clicks        Int         @default(0)
+  // Affiliate commission for this product: null = the program's, 0 = left out of the program.
+  affiliatePercent Int?
   published     Boolean     @default(true)
   // Archived products disappear from the store and dashboard but keep past buyers' downloads working.
   archived      Boolean     @default(false)
@@ -189,9 +209,50 @@ model Order {
   emailSentAt     DateTime?
   paidAt          DateTime?
   createdAt       DateTime    @default(now())
+  // The affiliate whose link brought the buyer, and their cut (taken as the Stripe application fee).
+  affiliateId          String?
+  affiliate            Affiliate?       @relation(fields: [affiliateId], references: [id], onDelete: SetNull)
+  commissionCents      Int              @default(0)
+  commissionStatus     CommissionStatus @default(NONE)
+  commissionTransferId String?
+  commissionPaidAt     DateTime?
+  // Why the last payout attempt didn't go through, shown to the creator and the affiliate.
+  commissionNote       String           @default("")
 
   @@index([creatorId, createdAt])
   @@index([discountId])
+  @@index([affiliateId])
+  @@index([commissionStatus, paidAt])
+}
+
+// One TapShop user (member) promoting another creator's products.
+model Affiliate {
+  id        String    @id @default(cuid())
+  creatorId String
+  creator   Creator   @relation("ProgramOwner", fields: [creatorId], references: [id], onDelete: Cascade)
+  memberId  String
+  member    Creator   @relation("ProgramMember", fields: [memberId], references: [id], onDelete: Cascade)
+  // Used in links: /r/<code>.
+  code      String    @unique
+  clicks    Int       @default(0)
+  blockedAt DateTime?
+  createdAt DateTime  @default(now())
+  orders    Order[]
+
+  @@unique([creatorId, memberId])
+  @@index([memberId])
+}
+
+// A message a creator sent to all their affiliates (also emailed).
+model AffiliateMessage {
+  id        String   @id @default(cuid())
+  creatorId String
+  creator   Creator  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  subject   String
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([creatorId, createdAt])
 }
 
 model Lead {

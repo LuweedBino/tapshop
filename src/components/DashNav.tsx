@@ -8,6 +8,8 @@ const ITEMS = [
   { href: "/dashboard/store", label: "Store" },
   { href: "/dashboard/products", label: "Products" },
   { href: "/dashboard/discounts", label: "Discounts" },
+  { href: "/dashboard/affiliates", label: "Affiliates" },
+  { href: "/dashboard/promote", label: "Promote" },
   { href: "/dashboard/orders", label: "Orders" },
   { href: "/dashboard/leads", label: "Leads" },
   { href: "/dashboard/portfolio", label: "Portfolio" },

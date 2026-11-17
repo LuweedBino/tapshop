@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { money } from "@/lib/format";
 import { PageHeader } from "@/components/PageHeader";
 import { QuickActions } from "@/components/AdminCreatorForms";
+import { HOLD_DAYS } from "@/lib/affiliates";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,27 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
     return (dir === "asc" ? cmp : -cmp) || b.createdAt.getTime() - a.createdAt.getTime();
   });
 
+  // Creator affiliate programs: how many run, and commissions the daily payout job hasn't been able to send.
+  const due = new Date(Date.now() - HOLD_DAYS * 24 * 3600 * 1000);
+  const [programs, affiliateCount, commissions, stuck] = await Promise.all([
+    db.creator.count({ where: { affiliateOn: true } }),
+    db.affiliate.count({ where: { blockedAt: null } }),
+    db.order.groupBy({ by: ["commissionStatus"], where: { commissionCents: { gt: 0 }, status: "PAID" }, _sum: { commissionCents: true } }),
+    db.order.findMany({
+      where: { commissionStatus: "HELD", status: "PAID", paidAt: { lte: due }, commissionCents: { gt: 0 } },
+      orderBy: { paidAt: "asc" },
+      take: 10,
+      include: { creator: { select: { handle: true } }, affiliate: { include: { member: { select: { displayName: true, handle: true } } } } },
+    }),
+  ]);
+  const commission = (status: string) => commissions.find((c) => c.commissionStatus === status)?._sum.commissionCents ?? 0;
+  const affiliateTiles = [
+    ["Affiliate programs on", String(programs)],
+    ["Active affiliates", String(affiliateCount)],
+    ["Commission waiting", money(commission("HELD"))],
+    ["Commission paid", money(commission("PAID"))],
+  ];
+
   const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000);
   const tiles = [
     ["Creators", String(creators.length)],
@@ -88,6 +110,29 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           </div>
         ))}
       </div>
+      <h2 className="mb-2 font-semibold">Affiliates</h2>
+      <div className="mb-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+        {affiliateTiles.map(([label, value]) => (
+          <div key={label} className="card p-4">
+            <p className="text-xs font-medium text-neutral-500">{label}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums md:text-2xl">{value}</p>
+          </div>
+        ))}
+      </div>
+      {stuck.length > 0 && (
+        <div className="card mb-6 p-0">
+          <p className="border-b border-neutral-100 px-4 py-3 text-sm font-semibold">Commissions past {HOLD_DAYS} days that haven&apos;t been sent</p>
+          <ul className="divide-y divide-neutral-100">
+            {stuck.map((o) => (
+              <li key={o.id} className="px-4 py-2.5 text-sm">
+                <span className="font-medium">{money(o.commissionCents, o.currency)}</span> to {o.affiliate?.member.displayName ?? "a removed affiliate"} (@{o.affiliate?.member.handle ?? "?"}) for a /{o.creator.handle} sale
+                <p className="text-xs text-neutral-500">{o.commissionNote || "Waiting for the next daily payout run."}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="mb-6" />
       {creators.length === 0 ? (
         <div className="card py-12 text-center text-sm text-neutral-500">No creators yet.</div>
       ) : (

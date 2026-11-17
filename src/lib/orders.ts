@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { cookies } from "next/headers";
 import { nanoid } from "nanoid";
 import { db } from "./db";
 import { env } from "./env";
@@ -6,6 +7,7 @@ import { stripe, stripeEnabled } from "./stripe";
 import { deliveryEmail, sendEmail } from "./email";
 import { CHECKOUT_MINUTES, checkCode, discountCents, normalizeCode, STRIPE_MIN_CENTS } from "./discounts";
 import { money } from "./format";
+import { affiliateForCheckout, commissionCents, commissionPercent, notifyCommission, refCookie } from "./affiliates";
 
 /** An error whose message is safe to show the buyer. */
 export class CheckoutError extends Error {}
@@ -31,6 +33,11 @@ export async function startCheckout(productId: string, buyer: { email: string; n
   if (product.collectEmails) await saveLead(product, buyer);
 
   const code = product.priceCents > 0 ? normalizeCode(rawCode) : "";
+  // An affiliate's cut is taken as the Stripe application fee, so it needs a direct charge on the creator's account.
+  const percent = stripeAccountFor(product.creator) ? commissionPercent(product.creator, product) : 0;
+  const affiliate = percent > 0
+    ? await affiliateForCheckout(product.creatorId, (await cookies()).get(refCookie(product.creatorId))?.value, buyer.email)
+    : null;
   const order = await db.$transaction(async (tx) => {
     // Locks the code, so two buyers can't both take its last use.
     if (code) await tx.$queryRaw`SELECT 1 FROM "DiscountCode" WHERE "creatorId" = ${product.creatorId} AND "code" = ${code} FOR UPDATE`;
@@ -52,6 +59,8 @@ export async function startCheckout(productId: string, buyer: { email: string; n
         discountId: discount?.id,
         discountCode: discount?.code,
         discountCents: off,
+        affiliateId: affiliate?.id,
+        commissionCents: affiliate ? commissionCents(amountCents, percent) : 0,
       },
     });
   });
@@ -81,7 +90,10 @@ export async function startCheckout(productId: string, buyer: { email: string; n
       metadata: { orderId: order.id },
       // A checkout with a code holds one of its uses, so it can't stay open for Stripe's default 24 hours.
       ...(order.discountId ? { expires_at: Math.floor(Date.now() / 1000) + CHECKOUT_MINUTES * 60 } : {}),
-      payment_intent_data: { metadata: { orderId: order.id } },
+      payment_intent_data: {
+        metadata: { orderId: order.id },
+        ...(order.commissionCents > 0 ? { application_fee_amount: order.commissionCents } : {}),
+      },
       success_url: `${env.appUrl}/thanks/${order.id}?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${env.appUrl}/${product.creator.handle}/${product.id}`,
     },
@@ -114,6 +126,11 @@ export async function markPaid(orderId: string, session: Stripe.Checkout.Session
     }),
   });
   await db.order.update({ where: { id: orderId }, data: { emailSentAt: new Date() } });
+  // The affiliate's cut now waits out the refund window before payCommissions sends it.
+  if (order.affiliateId && order.commissionCents > 0) {
+    const held = await db.order.updateMany({ where: { id: orderId, commissionStatus: "NONE" }, data: { commissionStatus: "HELD" } });
+    if (held.count) await notifyCommission(orderId).catch((e) => console.error("[affiliates] notify failed", e));
+  }
 }
 
 /** Confirms a Checkout Session with Stripe before trusting it. */
