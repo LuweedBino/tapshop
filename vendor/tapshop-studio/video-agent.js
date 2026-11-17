@@ -9,7 +9,7 @@
 const KEY='tapshop-agent-draft';
 const byId=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const STEPS=[['about','About'],['story','Story'],['script','Script'],['footage','Footage'],['voice','Voice'],['parts','Graphics'],['build','Build']];
+const STEPS=[['about','About'],['story','Story'],['script','Script'],['voice','Voice'],['footage','Footage'],['parts','Text + FX'],['build','Build']];
 const PLATFORMS=[['tiktok','TikTok','9:16'],['shorts','YouTube Shorts','9:16'],['reels','Instagram Reels','9:16'],['stories','Stories','9:16'],['youtube','YouTube video','16:9'],['square','Square post','1:1'],['feed','Feed post','4:5']];
 const TONES=['Casual & Authentic','High Energy','ASMR / Calm','Storytime'];
 // [id, group, label, blurb, music style]. Ids match STORY_TYPES in src/types/script.ts.
@@ -76,10 +76,10 @@ function chooseLooks(){let last='';return S.scenes.map(s=>{let k=s.look;if(!TLOO
 const LOOK={Hook:['pop','whoosh',30],Problem:['shake','buzz',22],Agitate:['wobble','scratch',22],'Demo/Solution':['slide','ding',22],'Social Proof':['bounce','sparkle',22],CTA:['elastic','click',72]};
 const CAPS=[['pop','Word pop'],['karaoke','Karaoke'],['classic','Classic'],['boxed','Bold box'],['bounce','Bounce'],['reveal','Type on'],['neon','Neon'],['highlight','Highlight']];
 
-const fresh=()=>({step:0,max:0,brief:{product:'',benefits:'',audience:'',platform:'tiktok',length:30,tone:'Casual & Authentic'},
+const fresh=()=>({order:2,step:0,max:0,brief:{product:'',benefits:'',audience:'',platform:'tiktok',length:30,tone:'Casual & Authentic'},
   story:'AUTO',group:'',scriptMode:'ai',ownLines:'',title:'',hookOptions:[],hook:0,scenes:[],
   footage:'clips',voice:'record',captions:true,capStyle:'pop',brand:true,music:'auto',built:false});
-let S=(()=>{try{const d=JSON.parse(localStorage.getItem(KEY)||'null');return d&&d.brief?{...fresh(),...d}:fresh()}catch{return fresh()}})();
+let S=(()=>{try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(!d||!d.brief)return fresh();if(d.order!==2){if(d.step===3||d.step===4)d.step=7-d.step;d.order=2}return {...fresh(),...d}}catch{return fresh()}})();
 const files=new Map();let take=null,busy=false,musicPlayer=null;
 let saveT=0;const save=()=>{clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch{}},300)};
 const scene=x=>({type:x.sectionType||'Demo/Solution',secs:Math.max(1,+x.durationSeconds||3),say:String(x.voiceoverLine||''),text:String(x.onScreenText||''),shot:String(x.visualDirection||''),anim:'',sfx:''});
@@ -202,7 +202,7 @@ voice(){const v=S.voice,none=S.scriptMode==='none';let h=`<h3>Voice + captions</
   return h},
 parts(){const sx=[['','None'],...sfxList().map(([k,e,n])=>[k,e+' '+n])],an=anims(),groups=window.veMusicGroups?veMusicGroups():[];
   const music=[['auto','✨ Pick for me'],['','No music'],...groups.flatMap(([l,ks])=>ks.filter(k=>window.veMoods?.[k]).map(k=>[k,l.split(' ')[0]+' '+veMoods[k].name]))];
-  return `<h3>Graphics + sounds</h3><p class="ag-help">For each part: the words, their look, how they animate and the sound they make. 🎲 Surprise me gives every part a different, eye-catching style. Change anything later in the editor.</p>
+  return `<h3>🎨 Text, graphics + sounds</h3><p class="ag-help">This step adds the fun stuff on top of your video: words on screen, emoji, call-to-action buttons (like “Shop now”), animations, sound effects and music. Tap ✨ Pick for me, or choose each part yourself. 🎲 Surprise me gives every part its own eye-catching style. You can change anything later in the editor.</p>
   <div class="ag-btns"><button type="button" data-act="pick">✨ Pick for me</button></div>
   ${hasBrand()?`<label class="ag-check"><input type="checkbox" data-k="brand" ${S.brand?'checked':''}> ★ Use my brand kit (fonts and colours)</label>`:''}
   ${S.scenes.map((s,i)=>`<div class="ag-scene"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}</span></div>
@@ -474,7 +474,7 @@ byId('agSteps').addEventListener('click',e=>{const b=e.target.closest('[data-ste
 nextBtn.onclick=()=>{if(S.step!==STEPS.length-1)return go(S.step+1);
   // A draft reopened after a reload has its words but not its clips or voice take, which live in memory only.
   if(!S.scenes.length){S.step=2;paint();return status('Your script is missing. Write or paste it first.')}
-  if(S.voice==='record'&&!take){S.step=4;paint();return status('Tap 🎙️ Open the teleprompter to record your voiceover, or pick another option.')}
+  if(S.voice==='record'&&!take){S.step=STEPS.findIndex(x=>x[0]==='voice');paint();return status('Tap 🎙️ Open the teleprompter to record your voiceover, or pick another option.')}
   build()};
 backBtn.onclick=()=>go(S.step-1);
 dlg.querySelector('.ag-x').onclick=()=>dlg.close();
