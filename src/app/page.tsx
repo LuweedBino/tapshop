@@ -8,10 +8,10 @@ const serif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["nor
 const MARQUEE = [
   "Design Studio", "Video Editor", "Build My Video with AI", "B-roll Builder", "Auto captions", "Photo Lab",
   "Free music", "Sound effects", "Review showcase", "Media Vault", "Link-in-bio store", "Digital products",
-  "Discount codes", "Email leads", "Portfolio", "Sell this",
+  "Discount codes", "Affiliates", "Email leads", "Portfolio", "Sell this",
 ];
 
-type Tool = { icon: string; title: string; body: string; tags?: string[]; big?: boolean };
+type Tool = { icon: string; title: string; body: string; tags?: string[]; big?: boolean; wide?: boolean };
 
 const CREATE: Tool[] = [
   {
@@ -61,6 +61,10 @@ const SELL: Tool[] = [
   { icon: "📬", title: "Grow your email list", body: "Give a freebie for an email. Every lead lands in your dashboard, ready to export." },
   { icon: "💼", title: "Portfolio for brands", body: "A polished page that shows brands your best work, your numbers and how to book you." },
   { icon: "🏦", title: "Keep what you earn", body: "0% platform fees. Card, Apple Pay and Google Pay, paid out to your own Stripe account." },
+  {
+    icon: "🤝", title: "Your own affiliate team", wide: true,
+    body: "Let other creators sell your products for a cut. They join in one tap and get their own links. You see every click and sale, message them all at once, and Stripe pays them automatically.",
+  },
 ];
 
 const STEPS = [
@@ -209,7 +213,7 @@ export default async function Home() {
             </div>
             <div className="lp-sell">
               {SELL.map((t, i) => (
-                <article key={t.title} className="lp-sell-card" data-reveal style={{ "--d": `${(i % 3) * 80}ms` } as React.CSSProperties}>
+                <article key={t.title} className={`lp-sell-card${t.wide ? " lp-sell-wide" : ""}`} data-reveal style={{ "--d": `${(i % 3) * 80}ms` } as React.CSSProperties}>
                   <span className="lp-sell-ic" aria-hidden>{t.icon}</span>
                   <div>
                     <h3>{t.title}</h3>
