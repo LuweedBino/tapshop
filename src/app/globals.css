@@ -407,3 +407,5 @@ body:has(.tapshop-dark){background:#0f0f13;color:#eeeef2}
 .lp-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .lp-shot-b { animation: lp-swap 10s ease-in-out infinite; }
 @keyframes lp-swap { 0%, 42% { opacity: 0; } 50%, 92% { opacity: 1; } 100% { opacity: 0; } }
+/* The demo video sits on top; the screenshots underneath show if it can't play. */
+.lp-demo { z-index: 1; background: #111; }

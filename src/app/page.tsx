@@ -151,6 +151,7 @@ export default async function Home() {
                   <img src="/landing/editor.webp" alt="" className="lp-shot lp-shot-a" />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src="/landing/store.webp" alt="" className="lp-shot lp-shot-b" />
+                  <video className="lp-shot lp-demo" src="/landing/demo.mp4" poster="/landing/poster.webp" autoPlay muted loop playsInline preload="metadata" />
                 </div>
               </div>
               <div className="lp-chip lp-chip-a"><span className="lp-chip-ic">💸</span><span><b>New sale</b><small>Workout plan · $19.00</small></span></div>
