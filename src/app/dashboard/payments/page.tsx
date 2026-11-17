@@ -38,6 +38,9 @@ export default async function Payments() {
             <p className="mt-1 text-sm text-neutral-500">
               You&apos;ll be sent to Stripe to verify your details. It takes a few minutes. Lead magnets and free products work without it.
             </p>
+            <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800">
+              ⏳ <b>Heads-up:</b> after you finish the Stripe steps, it can take a while for Stripe to check your details and make your account active. Your paid products go live as soon as it&apos;s active. You can come back to this page anytime to check.
+            </p>
             {creator.stripeAccountId ? (
               <ConnectStripeButton label="Continue setup" />
             ) : (
