@@ -29,6 +29,7 @@ export function explainGeminiError(err: unknown, what = "generate a script"): st
   if (e?.status === 404) return `None of these Gemini models are available for this API key: ${GEMINI_MODELS.join(", ")}. Set GEMINI_MODEL in Vercel to one that is.`;
   if (e?.status === 429) return "Gemini's usage limit was hit. Wait a minute and try again, or check your quota in Google AI Studio.";
   if (/location|region|not supported/i.test(msg)) return "Gemini isn't available from this server's region.";
+  if (isPassingGeminiError(err)) return "The AI got cut off before it finished. Please try again.";
   if (e?.status && e.status >= 500) return "Gemini is having trouble right now. Please try again in a minute.";
   const detail = msg.match(/"message"\s*:\s*"([^"]+)"/)?.[1] ?? msg;
   return detail ? `Couldn't ${what}: ${detail.slice(0, 160)}` : `Couldn't ${what} right now. Please try again.`;
@@ -41,6 +42,60 @@ type Result = { ok: boolean; [k: string]: unknown };
  * every 4 s while it thinks, so phones and proxies keep the connection), then one "result" line made
  * by `finish(parsed)`. Tries each model on 404, and retries without the schema on a 400.
  */
+// Gemini sometimes cuts a streamed answer short (the SDK then throws "Incomplete JSON segment at
+// the end"), or is briefly overloaded. Those are worth another try: once more on the same model,
+// then on the next one, while there's time left. A missing model (404) moves on straight away.
+export function isPassingGeminiError(err: unknown) {
+  const e = err as { status?: number; message?: string };
+  if (e?.status && (e.status >= 500 || e.status === 408)) return true;
+  return /incomplete json|unexpected end|terminated|socket|ECONNRESET|fetch failed|network|premature/i.test(e?.message ?? "");
+}
+
+type GeminiStream = AsyncIterable<{ text?: string; candidates?: { finishReason?: string }[] }>;
+
+export async function readGemini(opts: {
+  tag: string;
+  deadline: number;
+  start: (model: string) => Promise<GeminiStream>;
+  onChars: (n: number) => void;
+  onProgress: () => void;
+  models?: string[];
+}): Promise<{ text: string; finishReason?: string }> {
+  const { tag, deadline, start, onChars, onProgress, models = GEMINI_MODELS } = opts;
+  let lastErr: unknown;
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (lastErr && Date.now() > deadline - 20_000) throw lastErr;
+      try {
+        const gen = await start(model);
+        let text = "";
+        let finishReason: string | undefined;
+        let sentAt = 0;
+        for await (const chunk of gen) {
+          text += chunk.text ?? "";
+          onChars(text.length);
+          finishReason = chunk.candidates?.[0]?.finishReason ?? finishReason;
+          if (Date.now() - sentAt > 600) {
+            onProgress();
+            sentAt = Date.now();
+          }
+        }
+        return { text, finishReason };
+      } catch (err) {
+        lastErr = err;
+        onChars(0);
+        if ((err as { status?: number })?.status === 404) {
+          console.warn(`[${tag}] ${model} not available, trying the next model.`);
+          break;
+        }
+        if (!isPassingGeminiError(err)) throw err;
+        console.warn(`[${tag}] ${model} attempt ${attempt + 1} failed, trying again:`, (err as Error)?.message);
+      }
+    }
+  }
+  throw lastErr;
+}
+
 export function streamGeminiJson(opts: {
   tag: string;
   ai: GoogleGenAI;
@@ -84,31 +139,11 @@ export function streamGeminiJson(opts: {
       send({ type: "progress", chars });
       const beat = setInterval(() => send({ type: "progress", chars }), 4_000);
       try {
-        let gen: Awaited<ReturnType<typeof call>> | undefined;
-        let lastErr: unknown;
-        for (const model of GEMINI_MODELS) {
-          try {
-            gen = await tryModel(model);
-            break;
-          } catch (err) {
-            lastErr = err;
-            if ((err as { status?: number })?.status !== 404) throw err;
-            console.warn(`[${tag}] ${model} not available, trying the next model.`);
-          }
-        }
-        if (!gen) throw lastErr;
-        let text = "";
-        let finishReason: string | undefined;
-        let sentAt = 0;
-        for await (const chunk of gen) {
-          text += chunk.text ?? "";
-          chars = text.length;
-          finishReason = chunk.candidates?.[0]?.finishReason ?? finishReason;
-          if (Date.now() - sentAt > 600) {
-            send({ type: "progress", chars });
-            sentAt = Date.now();
-          }
-        }
+        const { text, finishReason } = await readGemini({
+          tag, deadline, start: tryModel,
+          onChars: (n: number) => { chars = n; },
+          onProgress: () => send({ type: "progress", chars }),
+        });
         if (!text) {
           console.error(`[${tag}] Empty response. finishReason:`, finishReason);
           return result({ ok: false, error: finishReason === "SAFETY" ? "The AI declined this request. Try rewording it." : "The AI returned an empty response. Please try again." });

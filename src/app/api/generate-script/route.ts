@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenAI, ThinkingLevel, Type, type Schema } from "@google/genai";
 import { getCreator } from "@/lib/auth";
 import { env } from "@/lib/env";
+import { isPassingGeminiError, readGemini } from "@/lib/gemini";
 import {
   DURATIONS,
   FRAMEWORK_LABELS,
@@ -321,32 +322,11 @@ export async function POST(req: Request) {
       send({ type: "progress", chars });
       const beat = setInterval(() => send({ type: "progress", chars }), 4_000);
       try {
-        let gen: Awaited<ReturnType<typeof call>> | undefined;
-        let lastErr: unknown;
-        for (const model of MODELS) {
-          try {
-            gen = await tryModel(model);
-            break;
-          } catch (err) {
-            lastErr = err;
-            if ((err as { status?: number })?.status !== 404) throw err;
-            console.warn(`[generate-script] ${model} not available, trying the next model.`);
-          }
-        }
-        if (!gen) throw lastErr;
-
-        let text = "";
-        let finishReason: string | undefined;
-        let sentAt = 0;
-        for await (const chunk of gen) {
-          text += chunk.text ?? "";
-          chars = text.length;
-          finishReason = chunk.candidates?.[0]?.finishReason ?? finishReason;
-          if (Date.now() - sentAt > 600) {
-            send({ type: "progress", chars });
-            sentAt = Date.now();
-          }
-        }
+        const { text, finishReason } = await readGemini({
+          tag: "generate-script", deadline, start: tryModel, models: MODELS,
+          onChars: (n: number) => { chars = n; },
+          onProgress: () => send({ type: "progress", chars }),
+        });
 
         if (!text) {
           console.error("[generate-script] Empty response. finishReason:", finishReason);
@@ -397,6 +377,7 @@ function explainGeminiError(err: unknown): string {
   if (e?.status === 404) return `None of these Gemini models are available for this API key: ${MODELS.join(", ")}. Set GEMINI_MODEL in Vercel to one that is.`;
   if (e?.status === 429) return "Gemini's usage limit was hit. Wait a minute and try again, or check your quota in Google AI Studio.";
   if (/location|region|not supported/i.test(msg)) return "Gemini isn't available from this server's region.";
+  if (isPassingGeminiError(err)) return "The AI got cut off before it finished. Please tap Write my script again.";
   if (e?.status && e.status >= 500) return "Gemini is having trouble right now. Please try again in a minute.";
   const detail = msg.match(/"message"\s*:\s*"([^"]+)"/)?.[1] ?? msg;
   return detail ? `Couldn't generate a script: ${detail.slice(0, 160)}` : "Couldn't generate a script right now. Please try again.";
