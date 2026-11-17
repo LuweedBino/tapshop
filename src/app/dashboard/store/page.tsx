@@ -2,6 +2,7 @@ import { requireCreator } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { PageHeader } from "@/components/PageHeader";
 import { ProfileForm } from "@/components/ProfileForm";
+import { ProductsTip } from "@/components/ProductsTip";
 
 export default async function StoreSettings() {
   const creator = await requireCreator();
@@ -12,6 +13,7 @@ export default async function StoreSettings() {
   return (
     <div>
       <PageHeader title="Your store" subtitle="How your page looks to followers. Changes show in the preview right away." />
+      <ProductsTip />
       <ProfileForm creator={creator} products={products} />
     </div>
   );
