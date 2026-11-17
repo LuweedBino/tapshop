@@ -7,6 +7,7 @@ import { priceLabel } from "@/components/Storefront";
 import { DeleteButton } from "@/components/DeleteButton";
 import { CopyLink } from "@/components/CopyLink";
 import { env } from "@/lib/env";
+import { ProductsTip } from "@/components/ProductsTip";
 
 const TYPE_LABEL = { DIGITAL: "Digital product", LEAD_MAGNET: "Lead magnet", LINK: "Link", AFFILIATE: "Affiliate link" } as const;
 
@@ -25,6 +26,7 @@ export default async function Products({ searchParams }: { searchParams: Promise
   return (
     <>
       <PageHeader title="Products" subtitle="Your main store, plus any extra pages. Each page has its own link and shows only its own products." action={<Link href={addHref} className="btn">+ Add</Link>} />
+      <ProductsTip link={false} />
       <nav className="mb-4 flex flex-wrap gap-2" aria-label="Pages">
         {[{ id: null, title: "Main store" }, ...pages].map((p) => (
           <Link
