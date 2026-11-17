@@ -231,6 +231,14 @@ async function createConnectedAccount(creator: { id: string; email: string; disp
   return account.id;
 }
 
+// The saved account was made with other Stripe keys (test vs live, or another platform account),
+// so these keys can never reach it. Forgetting it lets the creator start a fresh one.
+function unreachableAccount(e: unknown) {
+  const msg = e instanceof Error ? e.message : "";
+  const code = (e as { code?: string } | null)?.code;
+  return code === "account_invalid" || /does not have permission to access account|no such account/i.test(msg);
+}
+
 export async function connectStripe(_: FormState, formData: FormData): Promise<FormState> {
   const creator = await requireCreator();
   let url: string;
@@ -260,6 +268,12 @@ export async function connectStripe(_: FormState, formData: FormData): Promise<F
     url = link.url;
   } catch (e) {
     console.error("[stripe connect]", e);
+    if (creator.stripeAccountId && unreachableAccount(e)) {
+      await db.creator.update({ where: { id: creator.id }, data: { stripeAccountId: null, stripeReady: false } });
+      revalidatePath("/dashboard/payments");
+      revalidatePath("/dashboard/promote");
+      return { error: "Your old Stripe connection was made with a different Stripe setup and can't be used anymore, so we cleared it. Choose your country and tap Connect with Stripe to start fresh." };
+    }
     // Shown to the creator only; Stripe's message says what to fix (keys, Connect settings...).
     return { error: `Stripe couldn't start onboarding: ${e instanceof Error ? e.message : "unknown error"}` };
   }
