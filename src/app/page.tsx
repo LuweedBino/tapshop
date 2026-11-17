@@ -7,7 +7,7 @@ const serif = Instrument_Serif({ subsets: ["latin"], weight: "400", style: ["nor
 
 const MARQUEE = [
   "Design Studio", "Video Editor", "Build My Video with AI", "B-roll Builder", "Auto captions", "Photo Lab",
-  "Free music", "Sound effects", "Review showcase", "Media Vault", "Link-in-bio store", "Digital products",
+  "Free music", "Sound effects", "Review showcase", "Media Vault", "Link-in-bio store", "Page builder", "Digital products",
   "Discount codes", "Affiliates", "Email leads", "Portfolio", "Sell this",
 ];
 
@@ -61,6 +61,10 @@ const SELL: Tool[] = [
   { icon: "📬", title: "Grow your email list", body: "Give a freebie for an email. Every lead lands in your dashboard, ready to export." },
   { icon: "💼", title: "Portfolio for brands", body: "A polished page that shows brands your best work, your numbers and how to book you." },
   { icon: "🏦", title: "Keep what you earn", body: "0% platform fees. Card, Apple Pay and Google Pay, paid out to your own Stripe account." },
+  {
+    icon: "🧩", title: "As many pages as you want", wide: true,
+    body: "Build a separate page for each product, collection or idea, each with its own link and fully customizable, so your bio never feels like one big sales pitch. A page doesn't even need a product: share a video, an article, reviews, an FAQ, or whatever you want it to be.",
+  },
   {
     icon: "🤝", title: "Your own affiliate team", wide: true,
     body: "Let other creators sell your products for a cut. They join in one tap and get their own links. You see every click and sale, message them all at once, and Stripe pays them automatically.",
