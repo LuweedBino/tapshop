@@ -21,34 +21,27 @@ const DUST = Array.from({ length: 24 }, (_, i) => {
   };
 });
 
-// One flowing sequence, each step starting while the last one settles:
-// buttons glide open, glide shut, a breeze ripples out of the toggle, then sweeps across the logo.
-const SHOW_MS = 1300;
-const BREEZE_AFTER_FOLD = 260;
-const BREEZE_MS = 900;
-const POP_AFTER_BREEZE = 380;
+const GLINT_AFTER_MS = 400;
 const POP_MS = 1100;
-const WELCOME_MS = 5 * 60 * 1000;
-const WELCOME_KEY = "tapshop-nav-welcome";
+const FOLDED_KEY = "tapshop-nav-folded";
 // Every 30 s (while the page buttons are folded) a gold shine sweeps the logo, then its label
 // rolls like a slot machine to "Tap here for menu" for 5 s and rolls back.
 const HINT_EVERY_MS = 30_000;
 const HINT_SHINE_MS = 1000;
 const HINT_HOLD_MS = 5000;
 
-// The dashboard header, on phones and computers alike: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons,
-// which fold away. Tapping the logo or the toggle shows them. On every page load the buttons glide open and
-// shut, a soft breeze ripples out of the toggle, then flows across the logo as a shine and sparkles
-// (no press; the logo only presses in when it's tapped).
+// The dashboard header, on phones and computers alike: a glossy 3D logo button, a small toggle on its lower-left corner, and the page buttons.
+// The buttons stay open; tapping the logo or the toggle folds or shows them, and that choice is remembered.
+// Each page load gives the logo a shine and sparkles (no press; the logo only presses in when it's tapped).
 export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.ReactNode }) {
   const path = usePathname();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [shake, setShake] = useState(false);
   // "glint" = shine and sparkles only (after a page opens); "tap" also presses the logo in.
   const [pop, setPop] = useState<false | "glint" | "tap">(false);
   // The toggle's arrow always turns counter-clockwise, half a turn each time the buttons open or close.
-  const [spin, setSpin] = useState(0);
-  const lastOpen = useRef(false);
+  const [spin, setSpin] = useState(-180);
+  const lastOpen = useRef(true);
   const [gold, setGold] = useState(false);
   const [hint, setHint] = useState(false);
   // The logo keeps the width of "TapShop"; the hint is drawn in a smaller font so it fits that width.
@@ -71,36 +64,22 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
     setSpin((d) => d - 180);
   }, [open]);
 
+  // The page buttons stay open unless the creator folds them; that choice is remembered on this device.
   useEffect(() => {
+    try {
+      if (localStorage.getItem(FOLDED_KEY) === "1") setOpen(false);
+    } catch {}
+  }, []);
+
+  // A page opening gives the logo its shine and sparkles; the buttons don't move.
+  useEffect(() => {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ids: number[] = [];
     timers.current = ids;
-    const later = (fn: () => void, ms: number) => {
-      ids.push(window.setTimeout(fn, ms));
-    };
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    // The first dashboard page after signing in (this browser session) keeps the buttons open for
-    // WELCOME_MS, so new visitors see everything. Tapping a page button or the toggle ends that early.
-    let welcome = false;
-    try {
-      if (!sessionStorage.getItem(WELCOME_KEY)) {
-        sessionStorage.setItem(WELCOME_KEY, "1");
-        welcome = true;
-      }
-    } catch {}
-    const foldAt = welcome ? WELCOME_MS : 50 + SHOW_MS;
-    const breezeAt = foldAt + BREEZE_AFTER_FOLD;
-    const popAt = breezeAt + POP_AFTER_BREEZE;
-    later(() => setOpen(true), 50);
-    later(() => setOpen(false), foldAt);
-    if (!still) {
-      later(() => setShake(true), breezeAt);
-      later(() => setShake(false), breezeAt + BREEZE_MS);
-      later(() => setPop("glint"), popAt);
-      later(() => setPop(false), popAt + POP_MS);
-    }
+    ids.push(window.setTimeout(() => setPop("glint"), GLINT_AFTER_MS));
+    ids.push(window.setTimeout(() => setPop(false), GLINT_AFTER_MS + POP_MS));
     return () => {
       ids.forEach(clearTimeout);
-      setShake(false);
       setPop(false);
     };
   }, [path]);
@@ -138,7 +117,12 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
 
   function toggle() {
     stopIntro();
-    setOpen((o) => !o);
+    setOpen((o) => {
+      try {
+        localStorage.setItem(FOLDED_KEY, o ? "1" : "0");
+      } catch {}
+      return !o;
+    });
   }
 
   // Restart the press-and-sparkle: switch it off, then on again two frames later so the animation replays.
