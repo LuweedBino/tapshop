@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { getCreator } from "@/lib/auth";
 import { fileUrl } from "@/lib/format";
 import { canSell } from "@/lib/orders";
 import { designOf } from "@/lib/design";
@@ -127,6 +128,12 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
                   disabledReason={paid && !canSell(creator) ? "This product isn't available for purchase yet." : undefined}
                 />
                 {paid && <p className="mt-3 text-center text-xs text-[var(--card-muted)]">Secure checkout by Stripe. Apple Pay and Google Pay supported.</p>}
+                {paid && !canSell(creator) && (await getCreator())?.id === creator.id && (
+                  <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-center text-sm text-amber-900">
+                    <b>Only you see this:</b> visitors can&apos;t buy yet because Stripe isn&apos;t connected.{" "}
+                    <Link href="/dashboard/payments" className="font-semibold underline">Connect Stripe to start selling →</Link>
+                  </p>
+                )}
               </div>
             )}
             {extras && extras.buttons.length > 0 && (
