@@ -15,6 +15,7 @@ import { parseBannerStyle, type BannerStyle } from "@/lib/banner";
 import { parseAvatarStyle, type AvatarStyle } from "@/lib/avatar";
 import { parseIconStyle, type IconStyle } from "@/lib/iconStyle";
 import { MAX_BUTTONS, MAX_GALLERY, normalizeUrl, videoEmbed, type AffiliateExtras } from "@/lib/affiliate";
+import { MAX_PERCENT } from "@/lib/affiliates";
 import type { FormState } from "./auth";
 
 
@@ -91,6 +92,7 @@ const ProductInput = z.object({
   collectEmails: z.string().optional(),
   video: z.string().trim().max(500).default(""),
   code: z.string().trim().max(40).default(""),
+  affiliatePercent: z.string().trim().max(5).default(""),
 });
 
 /** The video, extra images, extra buttons and discount code of an affiliate page. */
@@ -124,6 +126,8 @@ export async function saveProduct(productId: string | null, _: FormState, form: 
   if (!Number.isFinite(price) || price < 0 || price > 100000) return { error: "Enter a valid price" };
   const priceCents = Math.round(price * 100);
   if (priceCents > 0 && priceCents < 50) return { error: "Paid products must cost at least $0.50" };
+  const pct = d.type === "DIGITAL" && d.affiliatePercent !== "" ? Number(d.affiliatePercent.replace("%", "")) : null;
+  if (pct !== null && (!Number.isInteger(pct) || pct < 0 || pct > MAX_PERCENT)) return { error: `Affiliate commission must be a whole number from 0 to ${MAX_PERCENT}` };
 
   let url: string | null = null;
   if (d.type === "LINK" || d.type === "AFFILIATE") {
@@ -157,6 +161,7 @@ export async function saveProduct(productId: string | null, _: FormState, form: 
     published: d.published === "on",
     collectEmails: d.type !== "LEAD_MAGNET" && d.collectEmails === "on",
     extras: extras ?? {},
+    affiliatePercent: pct,
   };
 
   if (productId) {
@@ -209,6 +214,9 @@ async function stripeV2<T>(path: string, params: Record<string, unknown>) {
   return (await stripe().rawRequest("POST", path, params, { apiVersion: STRIPE_V2_VERSION })) as unknown as T;
 }
 
+// Lets the account receive transfers from the platform: affiliate commissions (lib/affiliates.ts).
+const RECIPIENT = { capabilities: { stripe_balance: { stripe_transfers: { requested: true } } } };
+
 // Same setup as a v1 Standard account: full Stripe Dashboard, Stripe collects fees and covers losses.
 async function createConnectedAccount(creator: { id: string; email: string; displayName: string }, country: string) {
   const account = await stripeV2<{ id: string }>("/v2/core/accounts", {
@@ -216,7 +224,7 @@ async function createConnectedAccount(creator: { id: string; email: string; disp
     display_name: creator.displayName,
     dashboard: "full",
     identity: { country: country.toLowerCase() },
-    configuration: { merchant: { capabilities: { card_payments: { requested: true } } } },
+    configuration: { merchant: { capabilities: { card_payments: { requested: true } } }, recipient: RECIPIENT },
     defaults: { responsibilities: { fees_collector: "stripe", losses_collector: "stripe" } },
     metadata: { creatorId: creator.id },
   });
@@ -233,6 +241,11 @@ export async function connectStripe(_: FormState, formData: FormData): Promise<F
       if (!(country in STRIPE_COUNTRIES)) return { error: "Choose the country where you live or run your business." };
       accountId = await createConnectedAccount(creator, country);
       await db.creator.update({ where: { id: creator.id }, data: { stripeAccountId: accountId } });
+    } else {
+      // Accounts made before affiliate payouts existed can't receive commissions until they ask for it.
+      await stripeV2(`/v2/core/accounts/${accountId}`, { configuration: { recipient: RECIPIENT } }).catch((e) =>
+        console.error("[stripe connect] recipient", e instanceof Error ? e.message : e),
+      );
     }
     const link = await stripeV2<{ url: string }>("/v2/core/account_links", {
       account: accountId,

@@ -5,7 +5,8 @@ import { useActionState, useEffect } from "react";
 import { login, signup, type FormState } from "@/app/actions/auth";
 import { Submit } from "./Submit";
 
-export function AuthForm({ mode }: { mode: "login" | "signup" }) {
+export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: string }) {
+  const keep = next ? `?next=${encodeURIComponent(next)}` : "";
   const [state, action] = useActionState<FormState, FormData>(mode === "login" ? login : signup, undefined);
   // Each new sign-in gets the dashboard's "page buttons stay open for a while" welcome again (DashTopNav).
   useEffect(() => {
@@ -21,6 +22,7 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
         {mode === "login" ? "Sign in to manage your store." : "Free to start. Your store is live in a minute."}
       </p>
       <form action={action} className="mt-6 space-y-4">
+        {next && <input type="hidden" name="next" value={next} />}
         {mode === "signup" && (
           <>
             <div>
@@ -49,9 +51,9 @@ export function AuthForm({ mode }: { mode: "login" | "signup" }) {
       </form>
       <p className="mt-6 text-center text-sm text-neutral-500">
         {mode === "login" ? (
-          <>New here? <Link className="font-semibold text-neutral-900" href="/signup">Create a store</Link></>
+          <>New here? <Link className="font-semibold text-neutral-900" href={`/signup${keep}`}>Create a store</Link></>
         ) : (
-          <>Have an account? <Link className="font-semibold text-neutral-900" href="/login">Sign in</Link></>
+          <>Have an account? <Link className="font-semibold text-neutral-900" href={`/login${keep}`}>Sign in</Link></>
         )}
       </p>
     </main>

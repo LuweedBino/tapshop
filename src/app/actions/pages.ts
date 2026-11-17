@@ -16,7 +16,8 @@ const PageInput = z.object({
     .trim()
     .toLowerCase()
     .regex(SLUG_RE, "Use 1-40 lowercase letters, numbers and dashes for the link")
-    .refine((s) => s !== KIT_SLUG && s !== OLD_KIT_SLUG, "That link is used by your portfolio"),
+    .refine((s) => s !== KIT_SLUG && s !== OLD_KIT_SLUG, "That link is used by your portfolio")
+    .refine((s) => s !== "affiliates", "That link is used by your affiliate sign-up page"),
   description: z.string().trim().max(300).default(""),
 });
 

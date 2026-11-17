@@ -65,6 +65,13 @@ export function ProductForm({ product, initialType, pages = [], initialPageId }:
                 <input className="input" id="price" name="price" inputMode="decimal" defaultValue={product ? (product.priceCents / 100).toFixed(2) : "9.00"} placeholder="0 for free" />
               </div>
             )}
+            {type === "DIGITAL" && (
+              <div>
+                <label className="label" htmlFor="affiliatePercent">Affiliate commission (%)</label>
+                <input className="input" id="affiliatePercent" name="affiliatePercent" inputMode="numeric" defaultValue={product?.affiliatePercent ?? ""} placeholder="Same as your program" />
+                <p className="mt-1 text-xs text-neutral-500">What affiliates earn when they sell this. Leave empty to use your program&apos;s rate, or 0 to leave this product out.</p>
+              </div>
+            )}
             <div>
               <label className="label" htmlFor="ctaLabel">Button label</label>
               <input className="input" id="ctaLabel" name="ctaLabel" defaultValue={product?.ctaLabel} maxLength={40} placeholder={type === "LEAD_MAGNET" ? "Get it free" : type === "AFFILIATE" ? "Shop now" : "Buy now"} />

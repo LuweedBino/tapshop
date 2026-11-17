@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 import { markPaid } from "@/lib/orders";
+import { cancelCommission } from "@/lib/affiliates";
 import { stripe } from "@/lib/stripe";
 
 // Register this endpoint in Stripe for events on connected accounts
@@ -41,9 +42,13 @@ export async function POST(req: Request) {
       break;
     }
     case "charge.refunded": {
-      const orderId = event.data.object.metadata?.orderId;
-      if (orderId && event.data.object.refunded)
+      const charge = event.data.object;
+      const orderId = charge.metadata?.orderId;
+      if (orderId && charge.refunded) {
         await db.order.updateMany({ where: { id: orderId }, data: { status: "REFUNDED" } });
+        const fee = typeof charge.application_fee === "string" ? charge.application_fee : charge.application_fee?.id;
+        await cancelCommission(orderId, fee ?? null);
+      }
       break;
     }
   }
