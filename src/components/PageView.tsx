@@ -78,14 +78,16 @@ function Header({ d, creator, title, description }: { d: PageDesign; creator: Pa
   );
 }
 
-function BlockView({ b, d, creator, products }: { b: Block; d: PageDesign; creator: PageCreator; products: Product[] }) {
+function BlockView({ b, d, creator, products, preview }: { b: Block; d: PageDesign; creator: PageCreator; products: Product[]; preview: boolean }) {
   switch (b.type) {
     case "products":
+      if (!products.length && !preview) return null;
       return (
         <div className="space-y-3">
           {b.title && <h2 className="text-center text-lg font-bold">{b.title}</h2>}
           {products.map((p) => <ProductCard key={p.id} product={p} handle={creator.handle} layout={pageLook(d, creator).layout} />)}
-          {products.length === 0 && <p className="py-8 text-center text-sm text-[var(--page-muted)]">Products you add to this page show here.</p>}
+          {/* Pages don't need products, so visitors never see an empty-shelf message; only the builder hints. */}
+          {products.length === 0 && preview && <p className="py-8 text-center text-sm text-[var(--page-muted)]">Products you add to this page show here.</p>}
         </div>
       );
     case "heading":
@@ -191,13 +193,14 @@ function Footer({ d, creator }: { d: PageDesign; creator: PageCreator }) {
 }
 
 /** One extra store page, drawn from its design. Used by the public page and the builder's live preview. */
-export function PageView({ design, creator, title, description, products, className = "min-h-dvh" }: {
+export function PageView({ design, creator, title, description, products, className = "min-h-dvh", preview = false }: {
   design: PageDesign;
   creator: PageCreator;
   title: string;
   description: string;
   products: Product[];
   className?: string;
+  preview?: boolean;
 }) {
   const look = pageLook(design, creator);
   return (
@@ -205,7 +208,7 @@ export function PageView({ design, creator, title, description, products, classN
       <main className="mx-auto max-w-md">
         {design.header.show && <Header d={design} creator={creator} title={title} description={description} />}
         <div className="mt-8 space-y-5 px-4">
-          {design.blocks.map((b) => <BlockView key={b.id} b={b} d={design} creator={creator} products={products} />)}
+          {design.blocks.map((b) => <BlockView key={b.id} b={b} d={design} creator={creator} products={products} preview={preview} />)}
         </div>
         <Footer d={design} creator={creator} />
       </main>
