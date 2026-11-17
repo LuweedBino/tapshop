@@ -118,6 +118,8 @@ model Page {
   slug        String
   title       String
   description String    @default("")
+  // Page builder: look, background, header, sections and footer (lib/pageDesign.ts).
+  design      Json      @default("{}")
   createdAt   DateTime  @default(now())
   products    Product[]
 

@@ -5,12 +5,14 @@ import { db } from "@/lib/db";
 import { fileUrl } from "@/lib/format";
 import { canSell } from "@/lib/orders";
 import { designOf } from "@/lib/design";
-import { Avatar, defaultCta, priceLabel, StoreFooter, StoreHeader, StoreProducts, StoreShell } from "@/components/Storefront";
+import { Avatar, defaultCta, priceLabel, StoreFooter, StoreShell } from "@/components/Storefront";
 import { BuyForm } from "@/components/BuyForm";
 import { CopyCode } from "@/components/CopyCode";
 import { parseExtras, videoEmbed } from "@/lib/affiliate";
 import { KIT_SLUG, OLD_KIT_SLUG, parseKit } from "@/lib/mediaKit";
 import { MediaKitView } from "@/components/MediaKitView";
+import { PageView } from "@/components/PageView";
+import { parsePageDesign } from "@/lib/pageDesign";
 
 // This segment is the portfolio (/maya/portfolio), one of the creator's extra pages
 // (/maya/summer-sale), or a product (/maya/<id>).
@@ -57,16 +59,7 @@ export default async function ProductPage({ params }: { params: Promise<{ handle
   }
   const page = await loadPage(handle, productId);
   if (page) {
-    const design = designOf(page.creator);
-    return (
-      <StoreShell design={design}>
-        <main className="mx-auto max-w-md">
-          <StoreHeader creator={page.creator} page={page} />
-          <StoreProducts products={page.products} handle={page.creator.handle} layout={design.layout} />
-          <StoreFooter />
-        </main>
-      </StoreShell>
-    );
+    return <PageView design={parsePageDesign(page.design, page.creator)} creator={page.creator} title={page.title} description={page.description} products={page.products} />;
   }
   const product = await load(handle, productId);
   if (!product) notFound();

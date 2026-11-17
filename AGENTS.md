@@ -48,6 +48,10 @@ Import with the `@/` alias (`@/lib/db`, `@/components/...`).
 - **Images:** plain `<img>` with `// eslint-disable-next-line @next/next/no-img-element` is the existing pattern for user uploads.
 - Match the surrounding style: small focused files, named exports, few comments, and the ones that exist explain *why*.
 
+## Page builder (extra store pages)
+
+Extra pages (`Page`, `/<handle>/<slug>`) are designed in the page builder (`/dashboard/products/pages/[id]`, `PageBuilder.tsx`; a new page is created with `PageForm` and then opens there). Everything except name, link and description lives in `Page.design` and always goes through `parsePageDesign()` (`lib/pageDesign.ts`): `look` (`custom: false` = the store's own theme/colors/font/buttons/layout), `background` (theme, color, gradient, or an uploaded image with `dim`), `header` (banner same as store / its own via `BannerEditor` / none, photo, name, socials, title size, align), `blocks` (ordered sections: products, heading, text, image, gallery, video, button, testimonial, FAQ, countdown, divider, space; add new types to `BLOCK_TYPES`, `Block`, `newBlock`, `parseBlock`, `BlockView` and `BlockFields`) and `footer` (note, links, socials, "Made with TapShop"). `PageView.tsx` draws a page for both the public route and the builder's live preview, so they always match. `savePageBuilder` checks every picture with `ownKey(…, "public")` (`pageDesignKeys`) and normalizes links. Only the creator fields the page shows are passed to the builder (never the whole Creator).
+
 ## Naming gotcha: Portfolio = media kit
 
 The feature is called **Portfolio** in the UI, but the code still uses `mediaKit` (`src/lib/mediaKit.ts`, `MediaKitBuilder`, `MediaKitView`, `actions/mediaKit.ts`, the `KIT_SLUG` / `OLD_KIT_SLUG` constants). `/dashboard/media-kit` permanently redirects to `/dashboard/portfolio`. Use "Portfolio" in anything users see. Don't rename the code unless asked.
