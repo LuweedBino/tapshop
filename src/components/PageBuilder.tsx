@@ -248,7 +248,7 @@ export function PageBuilder({ page, initial, creator, products, appUrl }: {
   const preview = (
     <div className="h-[640px] w-[320px] overflow-hidden rounded-[2.5rem] border-[10px] border-neutral-900 bg-neutral-900 shadow-xl theme-light" onClickCapture={(e) => e.preventDefault()}>
       <div className="si-force-motion h-full overflow-y-auto rounded-[1.8rem]">
-        <PageView design={d} creator={creator} title={title} description={description} products={products} className="min-h-full" />
+        <PageView design={d} creator={creator} title={title} description={description} products={products} className="min-h-full" preview />
       </div>
     </div>
   );
