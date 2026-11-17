@@ -35,7 +35,13 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-line.on{opacity:1;background:#ff5b8322;box-shadow:inset 3px 0 0 #ff5b83}
 .vo-line.done{opacity:.3}
 /* Countdown under the highlighted line: seconds left for that line, in a ring that fills green clockwise. */
-.vo-cd{display:flex;align-items:center;gap:10px;margin-top:10px}.vo-ring{position:relative;width:54px;height:54px;flex:none}.vo-ring svg{width:100%;height:100%;display:block}.vo-ring circle{fill:none;stroke-width:5}.vo-ring .bg{stroke:currentColor;opacity:.18}.vo-ring .fg{stroke:#22c55e;stroke-linecap:round;transition:stroke-dashoffset .15s linear}.vo-ring b{position:absolute;inset:0;display:grid;place-items:center;font-size:21px;font-weight:800;line-height:1}.vo-cd span{font-size:13px;font-weight:600;opacity:.8}.vo-cd.end .vo-ring b{color:#22c55e}
+/* Words light up like a progress bar: read ones turn green, the one to say now fills green as time runs, the rest wait dimmed. */
+.vo-w{border-radius:6px;padding:0 .06em;transition:color .2s,opacity .2s}.vo-going .vo-line.on .vo-w{opacity:.45}
+.vo-going .vo-line.on .vo-w.lit{opacity:1;color:#4ade80}
+.vo-going .vo-line.on .vo-w.now{opacity:1;color:#fff;background:linear-gradient(90deg,#22c55e var(--f,0%),#22c55e33 var(--f,0%));box-shadow:0 0 0 2px #22c55e}
+html.ts:not(.ts-dark) .vo-going .vo-line.on .vo-w.lit{color:#15803d}html.ts:not(.ts-dark) .vo-going .vo-line.on .vo-w.now{color:#052e16}
+.vo-cd{display:flex;align-items:center;gap:8px;margin-top:10px}.vo-cd b{padding:4px 12px;border-radius:999px;background:#22c55e22;border:1px solid #22c55e88;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}.vo-cd span{font-size:13px;font-weight:600;opacity:.8}.vo-cd.end b{background:#22c55e;color:#fff}
+@media (prefers-reduced-motion:reduce){.vo-w{transition:none}}
 /* Light theme: the script box follows it (dark stays the default, also outside the dashboard). */
 html.ts:not(.ts-dark) .vo-prompter{background:#f7f4fb;color:#1d1a26;border:1px solid #e3ddec}
 html.ts:not(.ts-dark) .vo-line.on{background:#ff5b831f}
@@ -114,7 +120,7 @@ if(!small())q('voSet').open=true;
 
 function paint(){
   if(!S.scenes.length)prompter.innerHTML=aiOK()?aiForm():'<p class="vo-empty">No script yet. Type what you want to say below, one line per scene, then tap Use these lines.</p><button type="button" class="vo-write" style="background:#ec489926">✏️ Write my script</button>';
-  else prompter.innerHTML=S.scenes.map((s,i)=>`<div class="vo-line${i===S.idx?' on':''}${i<S.idx?' done':''}" data-i="${i}"><small>${esc(s.sectionType||'Scene '+(i+1))}${s.durationSeconds?' · '+s.durationSeconds+'s':''}</small><p>${esc(s.voiceoverLine)}</p>${i===S.idx?CD:''}</div>`).join('');
+  else prompter.innerHTML=S.scenes.map((s,i)=>`<div class="vo-line${i===S.idx?' on':''}${i<S.idx?' done':''}" data-i="${i}"><small>${esc(s.sectionType||'Scene '+(i+1))}${s.durationSeconds?' · '+s.durationSeconds+'s':''}</small><p>${i===S.idx?words(s.voiceoverLine):esc(s.voiceoverLine)}</p>${i===S.idx?CD:''}</div>`).join('');
   prompter.style.fontSize=q('voSize').value+'px';q('voChatWrap').hidden=!aiOK()||!S.scenes.length;
   q('voTextWrap').hidden=!!S.onTake||!S.scenes.some(s=>s.onScreenText);
   const on=prompter.querySelector('.vo-line.on');
@@ -125,7 +131,7 @@ function setScenes(scenes){S.scenes=scenes;S.idx=0;S.marks=[];q('voEdit').value=
 
 function clearTake(){if(S.url)URL.revokeObjectURL(S.url);S.url='';S.take=null;audio.removeAttribute('src');q('voTake').hidden=true;useBtn.hidden=retakeBtn.hidden=true;useBtn.disabled=false;recBtn.hidden=false}
 function stopStream(){S.stream?.getTracks().forEach(t=>t.stop());S.stream=null}
-function idle(){clearInterval(S.timer);q('voRecPill').hidden=true;q('voBig').hidden=true;recBtn.disabled=false;recBtn.textContent='● Record';recBtn.classList.remove('vo-live');nextBtn.hidden=true}
+function idle(){clearInterval(S.timer);q('voRecPill').hidden=true;q('voBig').hidden=true;recBtn.disabled=false;recBtn.textContent='● Record';recBtn.classList.remove('vo-live');nextBtn.hidden=true;prompter.classList.remove('vo-going')}
 
 async function start(){
   if(typeof exporting!=='undefined'&&exporting)return;
@@ -154,12 +160,17 @@ async function begin(){
     if(!manual()&&S.idx<S.scenes.length-1&&t-S.marks[S.idx]>=plan(S.scenes[S.idx])/speed())advance()},150);
 }
 const now=()=>(performance.now()-S.t0)/1000;
-const RING=2*Math.PI*21,CD=`<div class="vo-cd" aria-live="off"><div class="vo-ring"><svg viewBox="0 0 54 54" aria-hidden="true"><circle class="bg" cx="27" cy="27" r="21"/><circle class="fg" cx="27" cy="27" r="21" transform="rotate(-90 27 27)" stroke-dasharray="${RING}" stroke-dashoffset="${RING}"/></svg><b></b></div><span></span></div>`;
+const CD=`<div class="vo-cd" aria-live="off"><b></b><span></span></div>`;
+// Each word gets a share of the line's time by its length (plus a little for the gap), so long words take longer.
+function words(line){const ws=String(line).split(/\s+/).filter(Boolean),wt=ws.map(w=>w.replace(/[^\p{L}\p{N}]/gu,'').length+1.5),sum=wt.reduce((a,b)=>a+b,0)||1;let at=0;
+  return ws.map((w,k)=>{const a=at/sum;at+=wt[k];return `<span class="vo-w" data-a="${a.toFixed(4)}" data-b="${(at/sum).toFixed(4)}">${esc(w)}</span>`}).join(' ')}
 // Seconds left for the highlighted line; the ring fills as they run out.
 function countdown(){const el=prompter.querySelector('.vo-line.on .vo-cd'),s=S.scenes[S.idx];if(!el||!s)return;
   const total=plan(s)/speed(),gone=S.rec?Math.max(0,now()-(S.marks[S.idx]??now())):0,left=Math.max(0,total-gone),p=Math.min(1,gone/total),end=S.rec&&left<=0;
-  el.querySelector('.fg').setAttribute('stroke-dashoffset',String(RING*(1-p)));el.querySelector('b').textContent=end?'✓':String(Math.ceil(left));el.classList.toggle('end',end);
-  el.querySelector('span').textContent=!S.rec?'seconds for this line':end?(S.idx<S.scenes.length-1?(manual()?'Tap Next scene':'Next line…'):'Last line, tap Stop when done'):'seconds left for this line'}
+  prompter.classList.toggle('vo-going',!!S.rec);
+  for(const w of prompter.querySelectorAll('.vo-line.on .vo-w')){const a=+w.dataset.a,b=+w.dataset.b,now=S.rec&&p>=a&&p<b;w.classList.toggle('lit',!!S.rec&&p>=b);w.classList.toggle('now',now);if(now)w.style.setProperty('--f',Math.round((p-a)/(b-a)*100)+'%')}
+  el.querySelector('b').textContent=end?'✓ Done':S.rec?Math.ceil(left)+'s left':Math.round(total*10)/10+'s';el.classList.toggle('end',end);
+  el.querySelector('span').textContent=!S.rec?'for this line. The words light up green as you go.':end?(S.idx<S.scenes.length-1?(manual()?'Tap Next scene':'Next line…'):'Last line, tap Stop when done'):'Read along with the green.'}
 function advance(to){if(!S.rec||S.idx>=S.scenes.length-1)return;const i=to??S.idx+1;if(i<=S.idx)return;S.idx=i;S.marks[i]=now();paint()}
 function stop(){clearInterval(S.timer);const rec=S.rec;
   if(!rec){stopStream();idle();return}
