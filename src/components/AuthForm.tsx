@@ -17,7 +17,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5 py-12">
       <Link href="/" className="mb-8 text-xl font-black tracking-tight">TapShop</Link>
-      <h1 className="text-2xl font-bold">{mode === "login" ? "Welcome back" : "Create your store"}</h1>
+      <h1 className="text-2xl font-bold">{mode === "login" ? "Welcome back" : "Create your store and more"}</h1>
       <p className="mt-1 text-sm text-neutral-500">
         {mode === "login" ? "Sign in to manage your store." : "Free to start. Your store is live in a minute."}
       </p>
@@ -47,7 +47,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
           <input className="input" id="password" name="password" type="password" required minLength={mode === "signup" ? 8 : undefined} autoComplete={mode === "login" ? "current-password" : "new-password"} />
         </div>
         {state?.error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">{state.error}</p>}
-        <Submit className="btn w-full" pendingText="One moment…">{mode === "login" ? "Sign in" : "Create store"}</Submit>
+        <Submit className="btn w-full" pendingText="One moment…">{mode === "login" ? "Sign in" : "Let the creations begin"}</Submit>
       </form>
       <p className="mt-6 text-center text-sm text-neutral-500">
         {mode === "login" ? (
