@@ -19,7 +19,7 @@ export const env = {
   resendApiKey: process.env.RESEND_API_KEY ?? "",
   // Vercel Cron sends this as a bearer token; the daily affiliate payout job refuses calls without it.
   cronSecret: process.env.CRON_SECRET ?? "",
-  emailFrom: process.env.EMAIL_FROM ?? "TapShop <onboarding@resend.dev>",
+  emailFrom: process.env.EMAIL_FROM ?? "TapShopUGC <onboarding@resend.dev>",
   s3: {
     bucket: process.env.S3_BUCKET ?? "",
     region: process.env.S3_REGION ?? "auto",

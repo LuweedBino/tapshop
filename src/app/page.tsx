@@ -55,7 +55,7 @@ const CREATE: Tool[] = [
 ];
 
 const SELL: Tool[] = [
-  { icon: "🔗", title: "Your own shop, one link away", body: "Put your TapShop link in your Instagram, TikTok or YouTube bio. Fans tap it and land in your shop, ready to buy." },
+  { icon: "🔗", title: "Your own shop, one link away", body: "Put your TapShopUGC link in your Instagram, TikTok or YouTube bio. Fans tap it and land in your shop, ready to buy." },
   { icon: "💸", title: "Sell this", body: "Turn any video, design or file into a product with one tap — straight from the editor." },
   { icon: "🏷️", title: "Discount codes", body: "Percent or dollar off, one product or the whole store, with limits and end dates." },
   { icon: "📬", title: "Grow your email list", body: "Give a freebie for an email. Every lead lands in your dashboard, ready to export." },
@@ -98,8 +98,8 @@ export default async function Home() {
 
       <header className="lp-nav">
         <div className="lp-wrap lp-nav-in">
-          <Link href="/" className="lp-logo" aria-label="TapShop home">
-            <span className="lp-logo-dot" aria-hidden />TapShop
+          <Link href="/" className="lp-logo" aria-label="TapShopUGC home">
+            <span className="lp-logo-dot" aria-hidden />TapShopUGC
           </Link>
           <nav className="lp-nav-links" aria-label="Sections">
             <a href="#create">Create</a>
@@ -137,7 +137,7 @@ export default async function Home() {
                 <em className={`${serif.className} lp-shine`}>Sell it.</em>
               </h1>
               <p className="lp-lead lp-rise" style={{ "--d": "180ms" } as React.CSSProperties}>
-                TapShop is your whole creator studio and your store in one place. Make scroll-stopping videos and designs,
+                TapShopUGC is your whole creator studio and your store in one place. Make scroll-stopping videos and designs,
                 then sell them from your link in bio — all from your phone.
               </p>
               <div className="lp-hero-ctas lp-rise" style={{ "--d": "270ms" } as React.CSSProperties}>
@@ -298,14 +298,14 @@ export default async function Home() {
 
       <footer className="lp-foot">
         <div className="lp-wrap lp-foot-in">
-          <span className="lp-logo"><span className="lp-logo-dot" aria-hidden />TapShop</span>
+          <span className="lp-logo"><span className="lp-logo-dot" aria-hidden />TapShopUGC</span>
           <nav aria-label="Footer">
             <a href="#create">Create</a>
             <a href="#sell">Sell</a>
             <a href="#how">How it works</a>
             {creator ? <Link href="/dashboard">Dashboard</Link> : <Link href="/login">Sign in</Link>}
           </nav>
-          <small>© {new Date().getFullYear()} TapShop</small>
+          <small>© {new Date().getFullYear()} TapShopUGC</small>
         </div>
       </footer>
     </div>

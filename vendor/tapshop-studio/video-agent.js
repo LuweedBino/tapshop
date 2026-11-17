@@ -322,7 +322,7 @@ function musicKey(){if(S.music!=='auto')return S.music;const st=STORIES.find(s=>
 // whichever is longer, plus 2 s to trim from. Talking to camera: the line's own length plus a breath.
 const nWords=t=>String(t||'').split(/\s+/).filter(Boolean).length;
 function filmSecs(s){const say=nWords(s.say)/2.5;return S.voice==='talking'?Math.max(2,Math.ceil(say+1)):Math.ceil(Math.max(s.secs||0,say,2)+2)}
-// Footage helpers: the Media Vault (inside TapShop only), and the in-page camera with the scene's line on screen:
+// Footage helpers: the Media Vault (inside TapShopUGC only), and the in-page camera with the scene's line on screen:
 // talking to camera shows what to say on the front camera; b-roll shows what to film on the back camera.
 const hasVault=()=>typeof VaultPicker!=='undefined'&&VaultPicker.inTapShop;
 const touch=()=>matchMedia('(pointer:coarse)').matches;

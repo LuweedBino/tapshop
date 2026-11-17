@@ -1,4 +1,4 @@
-// TapShop colour picker: replaces the browser's own picker (which on phones only offers a few
+// TapShopUGC colour picker: replaces the browser's own picker (which on phones only offers a few
 // colours) for every <input type="color"> on the page. It writes back through the input itself
 // (value + input/change events), so existing handlers keep working. When the colour has a
 // see-through slider next to it, the picker shows a Transparency slider that drives that slider.

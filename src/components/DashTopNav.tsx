@@ -44,7 +44,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
   const lastOpen = useRef(true);
   const [gold, setGold] = useState(false);
   const [hint, setHint] = useState(false);
-  // The logo keeps the width of "TapShop"; the hint is drawn in a smaller font so it fits that width.
+  // The logo keeps the width of "TapShopUGC"; the hint is drawn in a smaller font so it fits that width.
   const [label, setLabel] = useState<{ w: number; alt: number } | null>(null);
   const labelA = useRef<HTMLSpanElement>(null);
   const labelB = useRef<HTMLSpanElement>(null);
@@ -84,7 +84,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
     };
   }, [path]);
 
-  // Measure both labels once fonts load: the hint's font size is set so it's exactly as wide as "TapShop".
+  // Measure both labels once fonts load: the hint's font size is set so it's exactly as wide as "TapShopUGC".
   useEffect(() => {
     const measure = () => {
       const a = labelA.current, b = labelB.current;
@@ -143,7 +143,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
           <Link
             href="/dashboard"
             className={`dash-logo${gold ? " dash-gold" : ""}`}
-            aria-label="TapShop, tap for the menu"
+            aria-label="TapShopUGC, tap for the menu"
             onClick={(e) => {
               // The logo is the big button for the page buttons.
               e.preventDefault();
@@ -153,11 +153,11 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
           >
             <span
               className={`dash-slot${hint ? " alt" : ""}`}
-              style={{ width: label ? `${label.w}px` : "4.15em", ...(label ? { "--alt": label.alt } : {}) } as React.CSSProperties}
+              style={{ width: label ? `${label.w}px` : "6.1em", ...(label ? { "--alt": label.alt } : {}) } as React.CSSProperties}
               aria-hidden="true"
             >
               <span className="dash-slot-reel">
-                <span ref={labelA}>TapShop</span>
+                <span ref={labelA}>TapShopUGC</span>
                 <span ref={labelB} className="dash-slot-alt">Tap here for menu</span>
               </span>
             </span>

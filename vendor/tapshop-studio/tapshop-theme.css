@@ -1,4 +1,4 @@
-/* TapShop look for the Studio and Video Editor: the dashboard's neutral palette, system font,
+/* TapShopUGC look for the Studio and Video Editor: the dashboard's neutral palette, system font,
    rounded-xl controls, black primary buttons (white in dark mode) and flat white cards.
    Loaded last on both pages; tapshop-theme.js sets html.ts (always) and html.ts-dark.
    Buttons carrying an inline background (colour swatches, presets) keep their own colour. */
@@ -35,14 +35,14 @@ html.ts body .format b{background:var(--ts-soft)!important;color:var(--ts-text)!
 html.ts body .live-dot{background:var(--ts-text)!important;box-shadow:none!important}
 html.ts body .workspace-initial{background:var(--ts-soft)!important;color:var(--ts-text)!important}
 
-/* Headings and logo in TapShop's bold sans */
+/* Headings and logo in TapShopUGC's bold sans */
 html.ts body :is(h1,h2,h3,.logo,.brand){font-family:inherit!important;color:var(--ts-text)!important;letter-spacing:-.02em}
 html.ts body .hero h1 em{font-family:inherit!important;font-style:normal;color:var(--ts-muted)!important}
 html.ts body :is(.logo,.brand){font-weight:800!important}
 html.ts body :is(.logo span,.brand em){color:var(--ts-text)!important;font-style:normal}
 html.ts body .badge{background:var(--ts-soft)!important;color:var(--ts-muted)!important;border-color:var(--ts-border)!important}
 
-/* Light/dark switch: TapShop's pill with a violet track when on */
+/* Light/dark switch: TapShopUGC's pill with a violet track when on */
 html.ts body .theme-toggle{background:var(--ts-surface)!important;color:var(--ts-text)!important;border:1px solid var(--ts-border-strong)!important;box-shadow:none!important;border-radius:999px}
 html.ts body .theme-track{background:var(--ts-border-strong)!important;border:0!important;box-shadow:none!important}
 html.ts body .theme-toggle[aria-checked="true"] .theme-track{background:#f8f8fa!important}
@@ -105,3 +105,6 @@ html.ts body .ts-shake{animation:ts-shake 1s ease-in-out .25s}
 html.ts #empty{max-width:calc(var(--ew,320px) * .86);color:#fff}
 html.ts #empty b{color:#fff;font-size:clamp(16px,calc(var(--ew,320px) * .11),34px);line-height:1.2}
 html.ts #empty span{color:#b8b8c4;font-size:clamp(10px,calc(var(--ew,320px) * .04),12px)}
+/* "TapShopUGC" is longer than the old name, so the Studio sidebar logo is a little smaller to stay on one line. */
+.logo{font-size:24px!important;white-space:nowrap}
+@media(max-width:1100px){.logo{font-size:20px!important}}

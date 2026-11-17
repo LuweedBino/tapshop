@@ -21,7 +21,7 @@ async function load(handle: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ handle: string }> }): Promise<Metadata> {
   const creator = await load((await params).handle);
-  return creator && !creator.pausedAt ? { title: `Become an affiliate for ${creator.displayName} | TapShop` } : {};
+  return creator && !creator.pausedAt ? { title: `Become an affiliate for ${creator.displayName} | TapShopUGC` } : {};
 }
 
 const BUTTON = "block w-full rounded-[var(--btn-radius)] bg-[var(--accent)] py-3 text-center text-sm font-semibold text-[var(--on-accent)]";
@@ -76,7 +76,7 @@ export default async function JoinAffiliates({ params }: { params: Promise<{ han
                 <>
                   <Link href={`/signup?next=${encodeURIComponent(here)}`} className={BUTTON}>Create a free account to join</Link>
                   <p className="text-center text-sm text-[var(--page-muted)]">
-                    Have a TapShop account? <Link href={`/login?next=${encodeURIComponent(here)}`} className="font-semibold underline">Sign in</Link>
+                    Have a TapShopUGC account? <Link href={`/login?next=${encodeURIComponent(here)}`} className="font-semibold underline">Sign in</Link>
                   </p>
                 </>
               )}

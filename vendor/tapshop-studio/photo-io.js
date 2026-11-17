@@ -12,7 +12,7 @@ $('layerIn').onchange=e=>{addAsLayers([...e.target.files]);e.target.value=''};
 stage.addEventListener('dragover',e=>{e.preventDefault()});
 stage.addEventListener('drop',e=>{e.preventDefault();let fs=[...e.dataTransfer.files].filter(f=>f.type.startsWith('image/'));if(!fs.length)return;if(doc)addAsLayers(fs);else openFile(fs[0])});
 document.addEventListener('paste',e=>{if(e.target.closest&&e.target.closest('input,textarea'))return;let f=[...(e.clipboardData||{}).files||[]].find(f=>f.type.startsWith('image/'));if(!f)return;e.preventDefault();loadImage(f).then(im=>{let c=mk(im.width,im.height);g2(c).drawImage(im,0,0);if(doc&&$('start').hidden)pasteCanvas(c);else docFromImage(c,'Pasted image')}).catch(err=>toast(err.message))});
-function openVaultPicker(){if(!VaultPicker.inTapShop)return toast('The Media Vault works inside your TapShop dashboard.');VaultPicker.open({title:'Open from your Media Vault',kinds:['image'],accept:i=>!/svg/.test(i.contentType),onPick:importVaultItem})}
+function openVaultPicker(){if(!VaultPicker.inTapShop)return toast('The Media Vault works inside your TapShopUGC dashboard.');VaultPicker.open({title:'Open from your Media Vault',kinds:['image'],accept:i=>!/svg/.test(i.contentType),onPick:importVaultItem})}
 // Called by the picker and by the dashboard's "Use in Studio" (tapshop:vault-import).
 async function importVaultItem(item){
   if(item.kind!=='image')return toast('Photo Lab opens pictures. Use the Video Editor for videos.');
@@ -28,7 +28,7 @@ function exportCanvas(fmt,scale){let f=flattened();if(fmt!=='image/png'){let o=m
 function download(blob,name){let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000)}
 function openExport(){if(!doc)return;openDialog({title:'Export image',modal:true,okText:'Download',fields:[{key:'name',type:'text',label:'File name',value:outName()},{key:'fmt',type:'select',label:'Format',value:'image/png',options:[['image/png','PNG (keeps see-through parts)'],['image/jpeg','JPEG (smaller, for photos)'],['image/webp','WebP (smallest)']]},{key:'q',type:'range',label:'Quality (JPEG and WebP)',min:40,max:100,value:90,unit:'%'},{key:'s',type:'range',label:'Size',min:10,max:200,value:100,unit:'%'},{key:'note',type:'note',label:'JPEG has no see-through parts; they become white.'}],
   ok:v=>later(async()=>{let c=exportCanvas(v.fmt,v.s/100),b=await canvasBlob(c,v.fmt,v.q/100),ext={'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[v.fmt];if(b.type!==v.fmt&&v.fmt==='image/webp'){ext='png';toast('This browser can’t make WebP, so it saved a PNG.')}download(b,(v.name||outName()).replace(/[^\w .-]/g,'')+'.'+ext)},'Exporting…')})}
-async function sendToVault(sell){if(!doc)return;if(!inTapShop)return toast('Saving to the Media Vault works inside your TapShop dashboard.');
+async function sendToVault(sell){if(!doc)return;if(!inTapShop)return toast('Saving to the Media Vault works inside your TapShopUGC dashboard.');
   await later(async()=>{let b=await canvasBlob(flattened());window.parent.postMessage({type:'tapshop:vault-save',version:1,items:[{blob:b,name:outName()+'.png',source:'design'}],sell:!!sell},location.origin)},'Preparing…')}
 $('exportBtn').onclick=openExport;$('vaultBtn').onclick=()=>sendToVault(false);$('sellBtn').onclick=()=>sendToVault(true);
 if(!inTapShop){$('vaultBtn').hidden=true;$('sellBtn').hidden=true;$('openVault').hidden=true}

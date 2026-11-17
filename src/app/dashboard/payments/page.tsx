@@ -22,7 +22,7 @@ export default async function Payments() {
 
   return (
     <div className="max-w-xl">
-      <PageHeader title="Payments" subtitle="TapShop takes 0% of your sales. Stripe's standard processing fees apply." />
+      <PageHeader title="Payments" subtitle="TapShopUGC takes 0% of your sales. Stripe's standard processing fees apply." />
       <div className="card">
         {!stripeEnabled() ? (
           <p className="text-sm text-neutral-600">Stripe isn&apos;t configured on this server yet. Set <code>STRIPE_SECRET_KEY</code> to enable payments.</p>

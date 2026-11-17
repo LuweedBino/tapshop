@@ -52,7 +52,7 @@ export async function adminSetPassword(id: string, _: FormState, form: FormData)
   return { ok: "Password changed. Share it with the creator so they can log in." };
 }
 
-// Unlinks the Stripe account from TapShop only; the creator's Stripe account itself stays as it is.
+// Unlinks the Stripe account from TapShopUGC only; the creator's Stripe account itself stays as it is.
 export async function adminDisconnectStripe(id: string): Promise<FormState> {
   await requireAdmin();
   const creator = await target(id);

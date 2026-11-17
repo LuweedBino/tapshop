@@ -27,7 +27,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="min-w-0 px-4 py-6 md:px-6 md:py-8">
         {creator.pausedAt && (
           <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Your store is paused, so visitors can&apos;t see it or buy. Your past buyers can still download what they bought. Contact TapShop support to turn it back on.
+            Your store is paused, so visitors can&apos;t see it or buy. Your past buyers can still download what they bought. Contact TapShopUGC support to turn it back on.
           </p>
         )}
         {children}

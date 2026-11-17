@@ -16,7 +16,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
   }, []);
   return (
     <main className="mx-auto flex min-h-dvh max-w-sm flex-col justify-center px-5 py-12">
-      <Link href="/" className="mb-8 text-xl font-black tracking-tight">TapShop</Link>
+      <Link href="/" className="mb-8 text-xl font-black tracking-tight">TapShopUGC</Link>
       <h1 className="text-2xl font-bold">{mode === "login" ? "Welcome back" : "Create your store and more"}</h1>
       <p className="mt-1 text-sm text-neutral-500">
         {mode === "login" ? "Sign in to manage your store." : "Free to start. Your store is live in a minute."}
@@ -32,7 +32,7 @@ export function AuthForm({ mode, next }: { mode: "login" | "signup"; next?: stri
             <div>
               <label className="label" htmlFor="handle">Store handle</label>
               <div className="flex items-center rounded-xl border border-neutral-300 bg-white pl-3.5 focus-within:border-neutral-900">
-                <span className="text-neutral-400">tapshop/</span>
+                <span className="text-neutral-400">tapshopugc.com/</span>
                 <input className="w-full bg-transparent py-2.5 pr-3.5 text-[16px] outline-none" id="handle" name="handle" required pattern="[A-Za-z0-9_]{3,30}" autoCapitalize="none" />
               </div>
             </div>

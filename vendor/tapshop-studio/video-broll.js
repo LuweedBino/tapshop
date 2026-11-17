@@ -417,7 +417,7 @@ async function makeBeat(seconds,moodKey,opt={}){
       // The tune: from the second bar (the first is an intro; fromStart = straight away), phrases A A B A unless melOrder says otherwise.
       if(M.resp&&(bar>0||M.fromStart)){const ph=M.resp[bar%M.resp.length],tok=ph[s];if(tok!=null&&tok!=='.'&&tok!=='-'){let v=+tok,hold=1;while(ph[s+hold]==='-')hold++;pluck(t,tones[((v%L)+L)%L]+12*Math.floor(v/L)+mo,F.call||.6,M.melAmp||1.15,hold*step,M.respLead||M.lead)}}
       if(M.mel&&lay('mel')&&(bar>0||M.fromStart)){const ph=M.mel[order[bar%order.length]],tok=ph[s];if(tok!=null&&tok!=='.'&&tok!=='-'){let v=+tok,hold=1;while(ph[s+hold]==='-')hold++;const note=tones[((v%L)+L)%L]+12*Math.floor(v/L)+mo;pluck(t,note,F.call?-F.call:F.pan?(side++%2?-F.pan:F.pan):0,M.melAmp||1.15,hold*step,M.melLead||M.lead)}}}}
-  const buf=await oc.startRendering();return new File([wav(buf)],`TapShop beat · ${M.name} ${M.bpm} BPM.wav`,{type:'audio/wav'})}
+  const buf=await oc.startRendering();return new File([wav(buf)],`TapShopUGC beat · ${M.name} ${M.bpm} BPM.wav`,{type:'audio/wav'})}
 
 function wav(buf){const ch=buf.numberOfChannels,n=buf.length,out=new DataView(new ArrayBuffer(44+n*ch*2)),w=(o,s)=>{for(let i=0;i<s.length;i++)out.setUint8(o+i,s.charCodeAt(i))};
   w(0,'RIFF');out.setUint32(4,36+n*ch*2,true);w(8,'WAVE');w(12,'fmt ');out.setUint32(16,16,true);out.setUint16(20,1,true);out.setUint16(22,ch,true);out.setUint32(24,buf.sampleRate,true);out.setUint32(28,buf.sampleRate*ch*2,true);out.setUint16(32,ch*2,true);out.setUint16(34,16,true);w(36,'data');out.setUint32(40,n*ch*2,true);

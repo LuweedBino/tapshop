@@ -241,7 +241,7 @@ window.TapSFX={list:LIST,fx:FX,
     const d=f(oc,leveled(oc,backChain(oc,oc.destination,k),key),0);const b=await oc.startRendering(),n=Math.min(b.length,Math.ceil(Math.max(d+tail+.03,.15)*SR)),o=new AudioBuffer({length:n,numberOfChannels:2,sampleRate:SR});
     for(let c=0;c<2;c++){const a=b.getChannelData(c).slice(0,n),fade=Math.round(SR*.05);for(let i=0;i<fade&&i<n;i++)a[n-1-i]*=i/fade;o.copyToChannel(a,c)}
     even(o);this._cache.set(id,o);return o},
-  async file(key,space){const it=LIST.find(x=>x[0]===key);return new File([wav(await this.render(key,space))],`TapShop sound · ${it?it[2]:key}.wav`,{type:'audio/wav'})},
+  async file(key,space){const it=LIST.find(x=>x[0]===key);return new File([wav(await this.render(key,space))],`TapShopUGC sound · ${it?it[2]:key}.wav`,{type:'audio/wav'})},
   // Put one on the timeline (at the playhead unless o.at), on a "Sound effects" row (all effects share it when they don't overlap). Undo-able.
   // o.forId ties it to a strip: it then starts when that strip starts (plus o.rel seconds) and goes away with it.
   async add(key,o={}){if(exporting)return;const it=LIST.find(x=>x[0]===key);if(!it)return;const at=+(o.at??playhead).toFixed(2);if(!o.noSnap)snapshot();addTrack('audio');const t=extraTracks.at(-1);

@@ -228,7 +228,7 @@ export function StoreProducts({ products, handle, layout }: { products: Product[
 export function StoreFooter() {
   return (
     <footer className="py-10 text-center text-xs text-[var(--page-muted)] opacity-80">
-      <Link href="/" className="hover:opacity-70">Made with <span className="font-bold">TapShop</span></Link>
+      <Link href="/" className="hover:opacity-70">Made with <span className="font-bold">TapShopUGC</span></Link>
     </footer>
   );
 }

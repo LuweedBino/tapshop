@@ -13,7 +13,7 @@ export function AffiliateProgramForm({ on, percent, days, note }: { on: boolean;
         <input type="checkbox" name="affiliateOn" defaultChecked={on} className="mt-1 h-4 w-4" />
         <span>
           <span className="block font-semibold">Let people promote my products</span>
-          <span className="block text-sm text-neutral-500">Anyone with a TapShop account can join from your sign-up page and start sharing right away.</span>
+          <span className="block text-sm text-neutral-500">Anyone with a TapShopUGC account can join from your sign-up page and start sharing right away.</span>
         </span>
       </label>
       <div className="grid gap-4 sm:grid-cols-2">

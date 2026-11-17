@@ -2,7 +2,7 @@
 // the device's own camera app (best quality, real MP4s) through a capture file input. Computers
 // have no such app (browsers ignore capture there), so they get a small webcam screen instead.
 window.VideoCamera=(()=>{
-// Colours on the webcam screen's buttons are inline: the TapShop theme leaves buttons with an
+// Colours on the webcam screen's buttons are inline: the TapShopUGC theme leaves buttons with an
 // inline background alone, and this screen stays dark whatever the page theme is.
 const GHOST='background:#fff2;color:#fff;border:0';
 const css=`.vc-menu{width:min(340px,92vw);border:1px solid var(--ts-border-strong,#d4d4d4);border-radius:16px;padding:18px;background:var(--ts-surface,#fff);color:var(--ts-text,#171717);font:15px system-ui,sans-serif}
