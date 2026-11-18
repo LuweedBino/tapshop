@@ -246,7 +246,7 @@ footage(){let h=`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film s
     <p class="ag-need">⏱️ <b>About ${filmSecs(s)} seconds</b> ${S.voice==='talking'?'· say your line in one take, with a breath before and after':'· a little extra is fine, we trim it to fit'}</p>
     ${filmed(fl,filmSecs(s))}
     ${fl.map((x,j)=>`<div class="ag-clip"><div class="ag-clipname">🎞️ <span>${esc(x.name)}</span>${clipDur(x)?`<em>${fmtS(clipDur(x))}</em>`:''}</div><div class="ag-clipbtns">${window.VideoCamera?`<button type="button" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove this clip">✕ Remove</button></div></div>`).join('')}
-    <button type="button" class="ag-action" data-act="${touch()?'filmLine':'film'}" data-i="${i}" style="${fl.length?'background:transparent!important;color:#ec4899!important;border:2px solid #ec4899!important;box-shadow:none':'background:linear-gradient(135deg,#ec4899,#f43f5e)!important;color:#fff!important;border:none!important'}">${fl.length?'🎬 Film more':'🎬 Lights, camera, action!'}</button></div>`}).join('');
+    <button type="button" class="ag-action" data-act="${touch()?'filmLine':'film'}" data-i="${i}" style="${fl.length?'background:transparent!important;color:#ec4899!important;border:2px solid #ec4899!important;box-shadow:none':'background:linear-gradient(135deg,#ec4899,#f43f5e)!important;color:#fff!important;border:none!important'}">${fl.length?(isFull(fl,filmSecs(s))?'🎬 Bonus take':'🎬 Film more'):'🎬 Lights, camera, action!'}</button></div>`}).join('');
   return h},
 voice(){const v=S.voice,none=S.scriptMode==='none';
   const sec=(n,title,body,sum='')=>`<section class="ag-sec"><div class="ag-sh"><span class="ag-num">${n}</span><b>${title}</b>${sum}</div>${body}</section>`;
@@ -402,6 +402,7 @@ function clipDur(f){if(DUR.has(f))return DUR.get(f);DUR.set(f,null);
   v.onloadedmetadata=()=>{if(isFinite(v.duration)&&v.duration>0)end(v.duration);else{v.ontimeupdate=()=>{if(isFinite(v.duration)){v.ontimeupdate=null;end(v.duration)}};try{v.currentTime=1e9}catch{end(0)}}};
   v.onerror=()=>end(0);setTimeout(()=>end(0),8000);v.src=url;return null}
 const fmtS=x=>x>=60?Math.floor(x/60)+':'+String(Math.round(x%60)).padStart(2,'0'):(Math.round(x*10)/10)+' s';
+const isFull=(fl,goal)=>{const ds=fl.map(clipDur);return ds.length>0&&ds.every(d=>d!==null)&&ds.reduce((a,d)=>a+d,0)>goal-1};
 function filmed(fl,goal){if(!fl.length)return '';const ds=fl.map(clipDur),known=ds.every(d=>d!==null),tot=ds.reduce((a,d)=>a+(d||0),0),ok=known&&tot>=goal,pct=Math.min(100,goal?tot/goal*100:100);
   return `<div class="ag-meter${ok?' ok':''}"><div class="ag-mtop"><b>🎞️ Filmed: ${known?fmtS(tot):'…'}</b><span>${fl.length} clip${fl.length===1?'':'s'} · ${known?(ok?'✓ enough for this scene':'about '+fmtS(Math.max(.1,goal-tot))+' more to go'):'checking…'}</span></div><div class="ag-bar"><i style="width:${pct}%"></i></div></div>`}
 function filmSecs(s){const say=nWords(s.say)/2.5;return S.voice==='talking'?Math.max(2,Math.ceil(say+1)):Math.ceil(Math.max(s.secs||0,say,2)+2)}
@@ -412,8 +413,8 @@ const touch=()=>matchMedia('(pointer:coarse)').matches;
 // The recording countdown is what's still missing for the scene: its full length minus the clips already filmed
 // (leaving out the clip being retaken). Once a scene has enough, an extra take gets the full length again.
 function camPrompt(i,skip=-1){const s=S.scenes[i]||{},talk=S.voice==='talking',goal=filmSecs(s);
-  const had=(files.get(i)||[]).reduce((a,f,j)=>a+(j===skip?0:(clipDur(f)||0)),0),left=goal-had,secs=had>0&&left>=1?Math.ceil(left):goal;
-  return {facing:talk?'user':'environment',prompt:{label:(talk?'🗣️ Say':'🎥 Film')+` · scene ${i+1} of ${S.scenes.length}`+(secs<goal?` · ${secs} s left`:''),line:talk?(s.say||s.text||''):(s.shot||'Anything that shows: '+(s.text||s.say||'')),say:talk?'':(s.say||''),secs}}}
+  const had=(files.get(i)||[]).reduce((a,f,j)=>a+(j===skip?0:(clipDur(f)||0)),0),left=goal-had,bonus=had>0&&left<1,secs=bonus?0:had>0?Math.ceil(left):goal;
+  return {facing:talk?'user':'environment',prompt:{bonus,label:(talk?'🗣️ Say':'🎥 Film')+` · scene ${i+1} of ${S.scenes.length}`+(bonus?' · bonus take':secs<goal?` · ${secs} s left`:''),line:talk?(s.say||s.text||''):(s.shot||'Anything that shows: '+(s.text||s.say||'')),say:talk?'':(s.say||''),secs}}}
 function pickVault(i){VaultPicker.open({title:`Clip for scene ${i+1}`,kinds:['video'],onPick:async it=>{try{toast('Loading '+it.name+'…');addTo(i,[await VaultPicker.file(it)])}catch(e){toast(e.message)}if(!dlg.open)dlg.showModal()}})}
 // Moving one clip to another scene with the menu next to it.
 body.addEventListener('toggle',e=>{const f=e.target.dataset?.fold;if(f)UI[f]=e.target.open},true);

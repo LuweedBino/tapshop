@@ -27,6 +27,7 @@ const css=`.vc-menu{width:min(340px,92vw);border:1px solid var(--ts-border-stron
 .vc-keep{position:absolute;top:calc(14px + clamp(96px,22vw,140px) + 8px);left:50%;transform:translateX(-50%);padding:6px 16px;border-radius:999px;background:#000b;color:#fff;font:800 clamp(16px,4vw,22px) system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 10px #0008;pointer-events:none}.vc-keep[hidden]{display:none}.vc-keep.vc-go{background:#16a34a}
 .vc-pre{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#0007;pointer-events:none;z-index:2}.vc-pre[hidden]{display:none}
 .vc-pre b{width:min(46vw,200px);aspect-ratio:1;border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 clamp(72px,18vw,128px)/1 system-ui,sans-serif;color:#fff;border:10px solid #fbbf24;background:#000a;box-shadow:0 0 30px #fbbf2466;animation:vc-tick 1s ease-out}
+.vc-keep.vc-bonus{top:64px}
 .vc-pre b.vc-gogo{border-color:#22c55e;background:#22c55e;box-shadow:0 0 60px #22c55e,0 0 120px #22c55e88;font-size:clamp(54px,13vw,96px);animation:vc-pop .6s ease-out}
 @keyframes vc-tick{0%{transform:scale(1.25);opacity:.3}25%{transform:scale(1);opacity:1}}@keyframes vc-pop{0%{transform:scale(.6)}40%{transform:scale(1.08)}100%{transform:scale(1)}}
 .vc-count.vc-go{background:#22c55e;box-shadow:0 0 40px #22c55e,0 0 90px #22c55e88;animation:vc-flash .5s ease-in-out 4 alternate}.vc-count.vc-go::before{background:#16a34a}
@@ -97,6 +98,8 @@ function webcam(add,only,prompt,facing){
       if(ok){if(!went){went=true;count.classList.add('vc-go');shoot.classList.add('vc-go');shoot.setAttribute('aria-label','Stop recording: you have enough');navigator.vibrate?.([120,80,120])}count.querySelector('b').textContent='✓';count.querySelector('small').textContent='';keep.textContent='✅ Done! Tap stop';keep.classList.add('vc-go')}
       else{count.querySelector('b').textContent=Math.ceil(goal-t);count.querySelector('small').textContent='';keep.textContent='🎬 Keep recording…'}};
     rec.classList.toggle('vc-side-pill',!!goal);count.hidden=keep.hidden=!goal;count.classList.remove('vc-go');keep.classList.remove('vc-go');
+    // Bonus take (the scene already has enough): no countdown, just a steady green note while recording.
+    if(prompt?.bonus){keep.hidden=false;keep.textContent="✓ Scene's full · bonus take";keep.classList.add('vc-go','vc-bonus')}else keep.classList.remove('vc-bonus');
     r.start(1000);recorder=r;rec.hidden=false;show();tick=setInterval(show,100);paint();
   }
   async function endRecording(){if(!recorder)return;recorder.stop();recorder=null;clearInterval(tick);rec.hidden=true;q('.vc-count').hidden=q('.vc-keep').hidden=true;q('.vc-count').classList.remove('vc-go');shoot.classList.remove('vc-go');await finished;paint()}
@@ -108,7 +111,7 @@ function webcam(add,only,prompt,facing){
   function preRoll(){const steps=['1','2','3','GO'];let n=0;pre={};shoot.classList.add('vc-on');shoot.setAttribute('aria-label','Cancel');flip.disabled=true;
     const step=()=>{if(!pre)return;const b=preEl.querySelector('b'),go=steps[n]==='GO';preEl.hidden=false;b.className=go?'vc-gogo':'';b.textContent=steps[n];void b.offsetWidth;
       if(go){navigator.vibrate?.(60);record();pre.t=setTimeout(()=>{preEl.hidden=true;pre=null},700);return}n++;pre.t=setTimeout(step,900)};step()}
-  shoot.onclick=()=>{if(!stream)return;if(mode==='photo')photo();else if(recorder){if(pre){clearTimeout(pre.t);pre=null;preEl.hidden=true}endRecording()}else if(pre){stopPre();paint()}else if(prompt?.secs)preRoll();else record()};
+  shoot.onclick=()=>{if(!stream)return;if(mode==='photo')photo();else if(recorder){if(pre){clearTimeout(pre.t);pre=null;preEl.hidden=true}endRecording()}else if(pre){stopPre();paint()}else if(prompt?.secs||prompt?.bonus)preRoll();else record()};
   for(const b of d.querySelectorAll('[data-mode]'))b.onclick=()=>{mode=b.dataset.mode;paint()};
   flip.onclick=()=>{cam=(cam+1)%cams.length;connect()};
   done.onclick=close;d.addEventListener('cancel',e=>{e.preventDefault();close()});
