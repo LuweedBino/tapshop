@@ -150,7 +150,8 @@ async function begin(){
   S.idx=0;S.marks=[];if(small())q('voSet').open=false;paint();
   const big=q('voBig'),dot=big.querySelector('.vo-dot'),show=(t,go)=>{big.hidden=false;dot.className='vo-dot'+(go?' go':'');dot.textContent=t;void dot.offsetWidth};
   for(let n=3;n>0;n--){status('Starting in '+n+'…');show(n);await wait(1000);if(!S.stream||S.discard){big.hidden=true;idle();return}}
-  show('GO',true);setTimeout(()=>{big.hidden=true},800);
+  // GO shows for 0.8 s; recording starts 1 s after it's gone, so the first word isn't rushed or clipped.
+  show('GO',true);status('Get ready…');await wait(800);big.hidden=true;await wait(1000);if(!S.stream||S.discard){idle();return}
   const type=['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(t=>MediaRecorder.isTypeSupported?.(t));
   S.chunks=[];
   try{S.rec=new MediaRecorder(S.stream,type?{mimeType:type}:undefined)}catch{stopStream();idle();status("Couldn't start recording on this device.");return}
