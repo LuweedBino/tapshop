@@ -50,6 +50,20 @@ async function autosave(){
 async function loadSaved(){try{return await idb('readonly',st=>st.get('current'))}catch{return null}}
 async function resume(rec){await later(async()=>{makeDoc(rec.w,rec.h,rec.name);for(const L of rec.layers){let bm=await createImageBitmap(L.blob),l=newLayer(L.name,bm.width,bm.height,L.x,L.y);g2(l.canvas).drawImage(bm,0,0);Object.assign(l,{visible:L.visible,opacity:L.opacity,blend:L.blend,lockAlpha:!!L.lockAlpha,text:L.text||null});doc.layers.push(l)}doc.active=clamp(rec.active|0,0,doc.layers.length-1);opened('Reopen image')},'Opening…')}
 
+// ---- Leaving an image (← Studio, Close image): ask to save it or leave without saving.
+async function forgetSaved(){clearTimeout(saveT);try{await idb('readwrite',st=>st.delete('current'))}catch{}lastSaved=-1}
+function leaveImage(then,verb='Exit'){if(!doc)return then();
+  let D=openDialog({title:'Save your image before you go?',modal:true,fields:[{key:'n',type:'note',label:inTapShop?'Save it to your Media Vault to keep it, or leave without saving.':'Download it to keep it, or leave without saving.'}],
+    extra:box=>{const row=$('dlg').querySelector('.row');row.style.display='none';
+      const btn=(t,primary,fn)=>{let b=document.createElement('button');b.type='button';b.textContent=t;if(primary)b.className='primary';b.style.cssText='display:block;width:100%;min-height:46px;margin-top:8px;border-radius:12px;font-weight:600';b.onclick=fn;box.appendChild(b);return b};
+      if(inTapShop)btn('💾 Save to Media Vault and '+verb.toLowerCase(),true,async()=>{closeDialog(true);await sendToVault(false);setTimeout(then,600)});
+      else btn('⬇ Download and '+verb.toLowerCase(),true,async()=>{closeDialog(true);await later(async()=>download(await canvasBlob(flattened()),outName()+'.png'),'Preparing…');then()});
+      btn('🗑 '+verb+' without saving',false,async()=>{closeDialog(true);await forgetSaved();doc=null;then()});
+      btn('Cancel',false,()=>closeDialog(false))}});
+  return D}
+function closeImage(){leaveImage(()=>{doc=null;showStart()},'Close')}
+function exitToStudio(){leaveImage(()=>location.href='index.html')}
+$('backBtn').onclick=exitToStudio;
 function renameImage(){openDialog({title:'Rename image',fields:[{key:'n',type:'text',label:'Name',value:doc.name}],ok:v=>{doc.name=(v.n||'Untitled image').slice(0,80);$('docName').value=doc.name;onChange.forEach(f=>f())}})}
 
 // ---- Start screen
@@ -61,11 +75,11 @@ function showStart(){
 }
 $('openDevice').onclick=()=>$('fileIn').click();$('openCamera').onclick=()=>$('camIn').click();$('openVault').onclick=openVaultPicker;
 $('customBtn').onclick=()=>startDoc(clamp(+$('cw').value||1080,1,MAX_SIDE),clamp(+$('ch').value||1080,1,MAX_SIDE),$('cfill').value,'Untitled image');
-$('startClose').onclick=()=>{$('start').hidden=true;render()};
+$('startBack').onclick=exitToStudio;$('startClose').onclick=()=>{$('start').hidden=true;render()};
 
 // ---- Menus
 MENUS={
- File:[['New image…',showStart,'Ctrl+N',false],['Open a photo…',()=>$('fileIn').click(),'Ctrl+O',false],['Open from Media Vault…',openVaultPicker,'',false],['Take a photo…',()=>$('camIn').click(),'',false],['Open as layers…',()=>$('layerIn').click()],['Rename image…',renameImage],'-',['Export as PNG / JPEG / WebP…',openExport,'Ctrl+E'],['Save to Media Vault',()=>sendToVault(false)],['Sell this on my store',()=>sendToVault(true)],'-',['Back to Studio',()=>location.href='index.html','',false]],
+ File:[['New image…',showStart,'Ctrl+N',false],['Open a photo…',()=>$('fileIn').click(),'Ctrl+O',false],['Open from Media Vault…',openVaultPicker,'',false],['Take a photo…',()=>$('camIn').click(),'',false],['Open as layers…',()=>$('layerIn').click()],['Rename image…',renameImage],['Close image…',closeImage],'-',['Export as PNG / JPEG / WebP…',openExport,'Ctrl+E'],['Save to Media Vault',()=>sendToVault(false)],['Sell this on my store',()=>sendToVault(true)],'-',['Back to Studio',exitToStudio,'',false]],
  Edit:[['Undo',undo,'Ctrl+Z'],['Redo',redo,'Ctrl+Y'],'-',['Cut',cutSel,'Ctrl+X'],['Copy',()=>copySel(false),'Ctrl+C'],['Copy what you see (all layers)',()=>copySel(true),'Ctrl+Shift+C'],['Paste as new layer',pasteClip,'Ctrl+V'],['Clear',()=>clearSel(),'Delete'],'-',['Fill with foreground colour',()=>fillSel('fg'),'Ctrl+,'],['Fill with background colour',()=>fillSel('bg'),'Ctrl+.'],['Stroke selection…',strokeSel]],
  Select:[['All',selectAll,'Ctrl+A'],['None',selectNone,'Ctrl+Shift+A'],['Invert',selectInvert,'Ctrl+I'],'-',['Feather (soften edges)…',featherSel],['Grow…',()=>growSel(1)],['Shrink…',()=>growSel(-1)],['Border…',borderSel],'-',['Select by colour (tool)',()=>setTool('bycolor')],['Magic wand (tool)',()=>setTool('wand')],['From layer’s see-through parts',alphaToSel],'-',['Copy selection to new layer',()=>floatSelection(false)],['Cut selection to new layer',()=>floatSelection(true)]],
  Image:[['Canvas size…',canvasSize],['Scale image…',scaleImage],'-',['Crop (tool)',()=>setTool('crop')],['Crop to selection',cropToSelection],['Crop to content',cropToContent],'-',['Flip sideways',()=>flipImage(true)],['Flip upside down',()=>flipImage(false)],['Rotate 90° right',()=>rotateImage(90)],['Rotate 90° left',()=>rotateImage(-90)],['Rotate 180°',()=>rotateImage(180)],['Rotate by angle…',rotateArbitrary],'-',['Merge visible layers',mergeVisible],['Flatten image',flattenImage]],
