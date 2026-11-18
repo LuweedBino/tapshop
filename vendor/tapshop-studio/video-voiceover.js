@@ -136,8 +136,11 @@ function setScenes(scenes){S.scenes=scenes;S.idx=0;S.marks=[];q('voEdit').value=
 
 function clearTake(){if(S.url)URL.revokeObjectURL(S.url);S.url='';S.take=null;audio.removeAttribute('src');q('voTake').hidden=true;useBtn.hidden=retakeBtn.hidden=true;useBtn.disabled=false;recBtn.hidden=false}
 function stopStream(){S.stream?.getTracks().forEach(t=>t.stop());S.stream=null}
-function idle(){clearInterval(S.timer);q('voRecPill').hidden=true;q('voBig').hidden=true;recBtn.disabled=false;recBtn.textContent='● Record';recBtn.classList.remove('vo-live');nextBtn.hidden=true;prompter.classList.remove('vo-going','vo-paused');const pb=q('voPause');if(pb)pb.hidden=true;S.pausedAt=0}
+function idle(){clearInterval(S.timer);q('voRecPill').hidden=true;q('voBig').hidden=true;recBtn.disabled=false;recBtn.textContent='● Record';recBtn.classList.remove('vo-live');nextBtn.hidden=true;prompter.classList.remove('vo-going','vo-paused');const pb=q('voPause');if(pb)pb.hidden=true;S.pausedAt=0;S.cdHold=false}
 
+// The countdown's waits stop while it's on hold (a tap on the script), and the number starts over on the next tap.
+async function cdWait(ms,again){let left=ms,held=false;while(left>0){if(!S.stream||S.discard)return;await wait(50);
+    if(S.cdHold){held=true;continue}if(held){held=false;left=ms;again?.();continue}left-=50}}
 async function start(){
   if(typeof exporting!=='undefined'&&exporting)return;
   if(S.rec||S.starting)return;S.starting=true;try{await begin()}finally{S.starting=false}}
@@ -149,9 +152,10 @@ async function begin(){
   catch{recBtn.disabled=false;status('Allow the microphone to record. Look for the 🔒 or microphone icon next to the web address.');return}
   S.idx=0;S.marks=[];if(small())q('voSet').open=false;paint();
   const big=q('voBig'),dot=big.querySelector('.vo-dot'),show=(t,go)=>{big.hidden=false;dot.className='vo-dot'+(go?' go':'');dot.textContent=t;void dot.offsetWidth};
-  for(let n=3;n>0;n--){status('Starting in '+n+'…');show(n);await wait(1000);if(!S.stream||S.discard){big.hidden=true;idle();return}}
+  S.cdHold=false;
+  for(let n=3;n>0;n--){status('Starting in '+n+'…');show(n);await cdWait(1000,()=>{status('Starting in '+n+'…');show(n)});if(!S.stream||S.discard){big.hidden=true;S.cdHold=false;q('voPause').hidden=true;idle();return}}
   // GO shows for 0.8 s; recording starts 1 s after it's gone, so the first word isn't rushed or clipped.
-  show('GO',true);status('Get ready…');await wait(800);big.hidden=true;await wait(1000);if(!S.stream||S.discard){idle();return}
+  show('GO',true);status('Get ready…');await cdWait(800,()=>show('GO',true));big.hidden=true;await cdWait(1000);if(!S.stream||S.discard){S.cdHold=false;q('voPause').hidden=true;idle();return}
   const type=['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(t=>MediaRecorder.isTypeSupported?.(t));
   S.chunks=[];
   try{S.rec=new MediaRecorder(S.stream,type?{mimeType:type}:undefined)}catch{stopStream();idle();status("Couldn't start recording on this device.");return}
@@ -253,11 +257,17 @@ q('voApply').onclick=()=>{if(S.rec)return;const lines=q('voEdit').value.split('\
 prompter.onclick=e=>{const lb=e.target.closest('[data-len]');if(lb){if(S.rec)return;const i=+lb.dataset.i,s=S.scenes[i];if(!s)return;
     s.durationSeconds=Math.min(60,Math.max(1,Math.round((plan(s)+(+lb.dataset.len))*2)/2));S.onLen?.(i,s.durationSeconds);paint();return}
   if(S.rec&&S.rec.state!=='inactive'){togglePause();return}
+  if(S.starting){togglePause();return}
   const el=e.target.closest('.vo-line');if(!el)return;S.idx=+el.dataset.i;paint()};
 q('voPause').onclick=()=>togglePause();
+const PAUSE_HTML='<div>⏸ Paused<small>Tap anywhere to keep recording</small></div>';
 // Tap the script while recording to pause; tap again to carry on. Paused time is left out of the clock, so the
 // line timings and scene marks still match the recording.
-function togglePause(){const r=S.rec;if(!r)return;const box=q('voPause'),pill=q('voRecPill');
+function togglePause(){const r=S.rec,box=q('voPause'),pill=q('voRecPill');
+  // During the 3-2-1 countdown a tap holds it instead of jumping lines.
+  if(!r&&S.starting){S.cdHold=!S.cdHold;box.innerHTML=S.cdHold?'<div>⏸ Countdown paused<small>Tap anywhere to carry on</small></div>':PAUSE_HTML;box.hidden=!S.cdHold;if(S.cdHold)q('voBig').hidden=true;
+    status(S.cdHold?'⏸ Countdown paused. Tap the script to carry on.':'Starting…');return}
+  if(!r)return;box.innerHTML=PAUSE_HTML;
   if(r.state==='recording'){try{r.pause()}catch{return}S.pausedAt=performance.now();box.hidden=false;prompter.classList.add('vo-paused');pill.textContent='⏸ PAUSED';status('⏸ Paused. Tap the script to keep recording.')}
   else if(r.state==='paused'){S.t0+=performance.now()-S.pausedAt;S.pausedAt=0;try{r.resume()}catch{}box.hidden=true;prompter.classList.remove('vo-paused')}}
 dlg.addEventListener('keydown',e=>{if(S.rec&&(e.key==='ArrowRight'||e.key==='ArrowDown')){e.preventDefault();advance()}});
