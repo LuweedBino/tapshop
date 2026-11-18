@@ -142,6 +142,13 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .ag-best{position:relative;border:2px solid #ec4899!important;background:#ec489926!important;font-weight:700}.ag-best::after{content:'⭐ Best';position:absolute;top:-9px;right:-6px;padding:1px 7px;border-radius:999px;background:#ec4899;color:#fff;font-size:10px;font-weight:800;line-height:16px}
 .ag-rec{margin:4px 0 12px;padding:12px 14px;border-radius:14px;border:2px solid #ec4899;background:linear-gradient(90deg,#ec489922,#fbbf2418);font-size:14px;line-height:1.45}.ag-rec b{color:#ec4899}
+.ag-take{display:flex;align-items:center;gap:10px;margin:2px 0 10px}.ag-take b{display:block;font-size:15px}.ag-take small{display:block;font-size:12px;opacity:.7;margin-top:1px}
+.ag-ok{flex:none;display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#22c55e;color:#fff;font-weight:800;font-size:17px}
+.ag-audio{display:block;width:100%;margin:0 0 4px}
+.ag-fxpill{display:inline-block;margin:6px 0 0;padding:4px 10px;border-radius:999px;background:#ff3ea51f;color:#ff3ea5;font-size:12px;font-weight:700}
+.ag-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.ag-row2.ag-one{grid-template-columns:1fr}.ag-row2 button{min-height:46px;border-radius:12px!important;font-weight:700}
+.ag-note{margin:12px 0 0;padding:10px 12px;border-radius:12px;background:#8881;font-size:13px;line-height:1.45;opacity:.9}
+.ag-dim{font-size:12px;opacity:.6;font-weight:400}.ag-sec .ag-cards{margin:0}.ag-sec .ag-check{margin:2px 0 4px}.ag-sec label.ag-f{margin-bottom:0}
 .ag-check{display:flex!important;align-items:center;gap:8px;font-size:14px;margin:10px 0}.ag-check input{width:20px;height:20px;flex:none}
 .ag-sum{margin:6px 0;padding-left:18px;line-height:1.7}.ag-done{text-align:center;padding:24px 8px}.ag-done b{display:block;font-size:22px;margin-bottom:6px}
 .ag-status{margin:0;font-size:13px;min-height:1.2em;opacity:.85}
@@ -223,11 +230,19 @@ footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add c
     ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span><select class="ag-move" data-i="${i}" data-j="${j}" aria-label="Move to scene">${S.scenes.map((_,k)=>`<option value="${k}"${k===i?' selected':''}>Scene ${k+1}</option>`).join('')}</select>${window.VideoCamera?`<button type="button" class="ag-retake" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip" title="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
     <div class="ag-btns"><button type="button" class="ag-best" data-act="${touch()?'filmLine':'film'}" data-i="${i}">🎬 Film with my line</button><button type="button" data-act="add" data-i="${i}">📁 Add clip</button>${hasVault()?`<button type="button" data-act="vault" data-i="${i}">🗄️ From Vault</button>`:''}${touch()?`<button type="button" data-act="film" data-i="${i}">📷 Camera app</button>`:''}</div></div>`}).join('');
   return h},
-voice(){const v=S.voice,none=S.scriptMode==='none';let h=`<h3>Voice + captions</h3><p class="ag-help">${none?'You picked no talking, so music and words on screen carry the video.':'How will people hear your script?'}</p>
-  <div class="ag-cards">${card('voice','record',v==='record','🎙️ Record a voiceover','With a teleprompter')}${card('voice','talking',v==='talking','🗣️ I\'m talking in my clips','Use the sound from my clips')}${card('voice','none',v==='none','🔇 No voice','Music and text only')}</div>`;
-  if(v==='record')h+=take?`<p class="ag-help">✓ Voiceover ready (${take.dur.toFixed(1)} s). Scenes will line up with when you said them.</p><audio controls src="${esc(take.url)}" style="width:100%"></audio>${take.fx?`<p class="ag-help">🎚️ ${esc(fxLabel(take.fx))}</p>`:''}<div class="ag-btns">${window.veVoiceStudio?`<button type="button" class="primary" data-act="voiceFx">🎚️ Edit my voice</button>`:''}<button type="button" data-act="record">↺ Record again</button></div>${window.veVoiceStudio&&!take.fx?`<p class="ag-help">🎚️ <b>Edit my voice</b> removes fan and AC noise and adds effects like podcast, reverb or echo. You can listen before you keep it.</p>`:''}`
-    :`<p class="ag-help ag-tip">👇 Tap <b>Open the teleprompter</b> to record. Your script scrolls on screen while you read it out loud.</p><div class="ag-btns"><button type="button" class="primary" data-act="record">🎙️ Open the teleprompter</button></div>`;
-  if(v!=='none')h+=`<label class="ag-check"><input type="checkbox" data-k="captions" ${S.captions?'checked':''}> ✨ Auto captions</label>${S.captions?`<label class="ag-f">Caption style<select data-k="capStyle">${opts(CAPS,S.capStyle)}</select></label>`:''}`;
+voice(){const v=S.voice,none=S.scriptMode==='none';
+  const sec=(n,title,body,sum='')=>`<section class="ag-sec"><div class="ag-sh"><span class="ag-num">${n}</span><b>${title}</b>${sum}</div>${body}</section>`;
+  let h=`<h3>Voice + captions</h3><p class="ag-help">${none?'You picked no talking, so music and words on screen carry the video.':'How will people hear your script?'}</p>`;
+  h+=sec(1,'How you\'ll be heard',`<div class="ag-cards">${card('voice','record',v==='record','🎙️ Record a voiceover','With a teleprompter')}${card('voice','talking',v==='talking','🗣️ I\'m talking in my clips','Use the sound from my clips')}${card('voice','none',v==='none','🔇 No voice','Music and text only')}</div>`);
+  let n=2;
+  if(v==='record')h+=sec(n++,'Your voiceover',take
+    ?`<div class="ag-take"><span class="ag-ok">✓</span><div><b>Voiceover ready</b><small>${take.dur.toFixed(1)} s · scenes line up with when you said them</small></div></div>
+      <audio controls src="${esc(take.url)}" class="ag-audio"></audio>
+      ${take.fx?`<p class="ag-fxpill">🎚️ ${esc(fxLabel(take.fx))}</p>`:''}
+      <div class="ag-row2">${window.veVoiceStudio?`<button type="button" class="primary" data-act="voiceFx">🎚️ Edit my voice</button>`:''}<button type="button" data-act="record">↺ Record again</button></div>
+      ${window.veVoiceStudio&&!take.fx?`<p class="ag-note">🎚️ <b>Edit my voice</b> removes fan and AC noise and adds effects like podcast, reverb or echo. You can listen before you keep it.</p>`:''}`
+    :`<p class="ag-help ag-tip">👇 Tap <b>Open the teleprompter</b> to record. Your script scrolls on screen while you read it out loud.</p><div class="ag-row2 ag-one"><button type="button" class="primary" data-act="record">🎙️ Open the teleprompter</button></div>`);
+  if(v!=='none')h+=sec(n,'Captions',`<label class="ag-check"><input type="checkbox" data-k="captions" ${S.captions?'checked':''}> ✨ Auto captions <small class="ag-dim">words appear as you speak</small></label>${S.captions?`<label class="ag-f">Caption style<select data-k="capStyle">${opts(CAPS,S.capStyle)}</select></label>`:''}`);
   return h},
 parts(){const sx=[['','None'],...sfxList().map(([k,e,n])=>[k,e+' '+n])],an=anims(),groups=window.veMusicGroups?veMusicGroups():[];
   const music=[['auto','✨ Pick for me'],['','No music'],...groups.flatMap(([l,ks])=>ks.filter(k=>window.veMoods?.[k]).map(k=>[k,l.split(' ')[0]+' '+veMoods[k].name]))];
