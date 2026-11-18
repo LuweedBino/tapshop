@@ -142,7 +142,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .ag-meter{margin:6px 0 2px;padding:10px 12px;border-radius:14px;border:2px solid #ec4899;background:#ec489914}.ag-meter.ok{border-color:#22c55e;background:#22c55e14}
 .ag-mtop{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}.ag-mtop b{font-size:16px}.ag-mtop span{font-size:12px;opacity:.8}
-.ag-bar{height:8px;margin-top:8px;border-radius:99px;background:#8883;overflow:hidden}.ag-bar i{display:block;height:100%;border-radius:inherit;background:#ec4899;transition:width .3s}.ag-meter.ok .ag-bar i{background:#22c55e}.ag-meter.ok .ag-mtop span{color:#22c55e;opacity:1;font-weight:700}
+.ag-mbar{height:8px;margin-top:8px;border-radius:99px;background:#8883;overflow:hidden}.ag-mbar i{display:block;height:100%;border-radius:inherit;background:#ec4899;transition:width .3s}.ag-meter.ok .ag-mbar i{background:#22c55e}.ag-meter.ok .ag-mtop span{color:#22c55e;opacity:1;font-weight:700}
 .ag-clipname em{flex:none;font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:#8882}
 .ag-clip{margin:10px 0 0;padding:10px;border:1px solid #8886;border-radius:14px;background:#8881}
 .ag-clipname{display:flex;align-items:center;gap:6px;font-size:13px;min-width:0}.ag-clipname span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85}
@@ -289,7 +289,7 @@ function paint(){const i=S.step;
   body.innerHTML=VIEWS[STEPS[i][0]]();
   backBtn.hidden=i===0||(S.built&&i===STEPS.length-1);nextBtn.hidden=S.built&&i===STEPS.length-1;
   nextBtn.disabled=busy;nextBtn.textContent=i===STEPS.length-1?'🎬 Build my video':'Next →';
-  byId('agSteps').querySelector('.on')?.scrollIntoView({inline:'nearest',block:'nearest'})}
+  byId('agSteps').querySelector('.on')?.scrollIntoView({inline:'nearest',block:'nearest'});try{fitScreen()}catch{}}
 
 function check(){const k=STEPS[S.step][0];
   if(k==='about'&&(!S.brief.product.trim()||!S.brief.benefits.trim()))return 'Add the product name and its key benefits first.';
@@ -404,7 +404,7 @@ function clipDur(f){if(DUR.has(f))return DUR.get(f);DUR.set(f,null);
 const fmtS=x=>x>=60?Math.floor(x/60)+':'+String(Math.round(x%60)).padStart(2,'0'):(Math.round(x*10)/10)+' s';
 const isFull=(fl,goal)=>{const ds=fl.map(clipDur);return ds.length>0&&ds.every(d=>d!==null)&&ds.reduce((a,d)=>a+d,0)>goal-1};
 function filmed(fl,goal){if(!fl.length)return '';const ds=fl.map(clipDur),known=ds.every(d=>d!==null),tot=ds.reduce((a,d)=>a+(d||0),0),ok=known&&tot>=goal,pct=Math.min(100,goal?tot/goal*100:100);
-  return `<div class="ag-meter${ok?' ok':''}"><div class="ag-mtop"><b>🎞️ Filmed: ${known?fmtS(tot):'…'}</b><span>${fl.length} clip${fl.length===1?'':'s'} · ${known?(ok?'✓ enough for this scene':'about '+fmtS(Math.max(.1,goal-tot))+' more to go'):'checking…'}</span></div><div class="ag-bar"><i style="width:${pct}%"></i></div></div>`}
+  return `<div class="ag-meter${ok?' ok':''}"><div class="ag-mtop"><b>🎞️ Filmed: ${known?fmtS(tot):'…'}</b><span>${fl.length} clip${fl.length===1?'':'s'} · ${known?(ok?'✓ enough for this scene':'about '+fmtS(Math.max(.1,goal-tot))+' more to go'):'checking…'}</span></div><div class="ag-mbar"><i style="width:${pct}%"></i></div></div>`}
 function filmSecs(s){const say=nWords(s.say)/2.5;return S.voice==='talking'?Math.max(2,Math.ceil(say+1)):Math.ceil(Math.max(s.secs||0,say,2)+2)}
 // Footage helpers: the Media Vault (inside TapShopUGC only), and the in-page camera with the scene's line on screen:
 // talking to camera shows what to say on the front camera; b-roll shows what to film on the back camera.
@@ -571,11 +571,25 @@ nextBtn.onclick=()=>{if(S.step!==STEPS.length-1)return go(S.step+1);
 backBtn.onclick=()=>go(S.step-1);
 dlg.querySelector('.ag-x').onclick=()=>dlg.close();
 dlg.addEventListener('close',()=>{stopMusic();save()});
+// Phones: inside the dashboard the editor is an iframe that can reach past the bottom of the screen (browser bars,
+// a scrolled page), so a full-screen dialog's Back / Next bar ended up out of reach. Fit the dialog to the part of
+// the iframe that is really on screen, read from the dashboard page's visual viewport (same origin).
+const fullMQ=matchMedia('(max-width:700px),(pointer:coarse)');
+function fitScreen(){const set=(k,v)=>v?dlg.style.setProperty(k,v,'important'):dlg.style.removeProperty(k);let top=0,h=0;
+  if(dlg.open&&fullMQ.matches)try{const pw=window.parent,pv=pw!==window&&pw.visualViewport,fe=window.frameElement;
+    if(pv&&fe){const r=fe.getBoundingClientRect();top=Math.max(0,pv.offsetTop-r.top);h=Math.min(innerHeight,pv.offsetTop+pv.height-r.top)-top}
+    else if(window.visualViewport){top=visualViewport.offsetTop;h=visualViewport.height}}catch{}
+  const fit=h>=200&&(top>1||h<innerHeight-1);
+  set('top',fit?top+'px':'');set('bottom',fit?'auto':'');set('margin',fit?'0':'');set('height',fit?h+'px':'');set('max-height',fit?h+'px':'')}
+for(const [w,evs] of [[window,['resize','focus']],[window.visualViewport,['resize','scroll']],[(()=>{try{return window.parent!==window?window.parent:null}catch{return null}})(),['resize','scroll']],[(()=>{try{return window.parent!==window&&window.parent.visualViewport}catch{return null}})(),['resize','scroll']]])
+  if(w)for(const ev of evs)w.addEventListener(ev,()=>{if(dlg.open)fitScreen()},{passive:true});
+document.addEventListener('visibilitychange',()=>{if(dlg.open)setTimeout(fitScreen,300)});
+dlg.addEventListener('close',()=>fitScreen());
 
 window.veBuildMyVideo=function(){if(typeof exporting!=='undefined'&&exporting)return;
   if(S.built){S=fresh();files.clear();take=null}
   const st=byId('veStart');if(st&&!st.hidden){st.hidden=true;try{render();draw()}catch{}}
-  status(S.step||S.brief.product?'Picked up where you left off.':'');paint();if(!dlg.open)dlg.showModal()};
+  status(S.step||S.brief.product?'Picked up where you left off.':'');paint();if(!dlg.open)dlg.showModal();fitScreen();setTimeout(fitScreen,400)};
 
 // ---------- ways in ----------
 {const bar=document.querySelector('.timebar');if(bar){const b=document.createElement('button');b.type='button';b.id='agButton';b.textContent='🪄 Build My Video';b.title='Build My Video With AI: a guided path from your product to a finished video';b.onclick=()=>window.veBuildMyVideo();
