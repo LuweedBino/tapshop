@@ -37,6 +37,12 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 /* Tap to pause: a big notice over the script until the next tap. */
 #voPause{position:absolute;inset:0;display:grid;place-items:center;background:#000a;z-index:5;text-align:center;font:800 26px/1.3 system-ui,sans-serif;color:#fff;cursor:pointer;border-radius:inherit}#voPause[hidden]{display:none}#voPause small{display:block;font:600 14px system-ui,sans-serif;opacity:.85;margin-top:6px}
 .vo-line p{margin:0;font-weight:600}
+/* A small "how this works" card over the script when the recorder opens. */
+#voTip{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;padding:12px 14px;border-radius:14px;background:#1f1b24;border:2px solid #ec4899;color:#fff;font:500 14px/1.4 system-ui,sans-serif;box-shadow:0 8px 24px #0009}#voTip[hidden]{display:none}
+#voTip b{display:block;font-size:15px;margin-bottom:6px}#voTip ul{margin:0;padding-left:18px}#voTip li{margin:3px 0}
+#voTip .vo-tipbar{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}#voTip .vo-tipbar button{padding:7px 14px;border-radius:999px;font:700 13px system-ui,sans-serif;cursor:pointer;border:1px solid #ffffff55;background:transparent;color:#fff}
+#voTip .vo-tipbar .vo-ok{background:#ec4899;border-color:#ec4899}
+html.ts:not(.ts-dark) #voTip{background:#fff;color:#1f1b24}html.ts:not(.ts-dark) #voTip .vo-tipbar button{color:#1f1b24;border-color:#0003}html.ts:not(.ts-dark) #voTip .vo-tipbar .vo-ok{color:#fff}
 .vo-line.on{opacity:1;background:#ff5b8322;box-shadow:inset 3px 0 0 #ff5b83}
 .vo-line.done{opacity:.3}
 /* Countdown under the highlighted line: seconds left for that line, in a ring that fills green clockwise. */
@@ -97,7 +103,7 @@ document.head.appendChild(css);
 const dlg=document.createElement('dialog');dlg.id='voDialog';dlg.className='closable';dlg.setAttribute('aria-labelledby','voTitle');
 // One screen on phones: the script scrolls, everything else stays put, and the buttons sit at the bottom.
 dlg.innerHTML=`<div class="vo-head"><h2 id="voTitle">🎙️ Voiceover</h2><button type="button" class="vo-x" aria-label="Close" title="Close">×</button></div>
-<div class="vo-stage"><div id="voPrompter" class="vo-prompter" aria-live="polite"></div><div id="voBig" class="vo-big" hidden aria-hidden="true"><div class="vo-dot"></div></div><div id="voRecPill" class="vo-recpill" hidden></div><div id="voPause" hidden role="button" aria-label="Paused. Tap to keep recording."><div>⏸ Paused<small>Tap anywhere to keep recording</small></div></div></div>
+<div class="vo-stage"><div id="voPrompter" class="vo-prompter" aria-live="polite"></div><div id="voBig" class="vo-big" hidden aria-hidden="true"><div class="vo-dot"></div></div><div id="voRecPill" class="vo-recpill" hidden></div><div id="voTip" hidden role="note"></div><div id="voPause" hidden role="button" aria-label="Paused. Tap to keep recording."><div>⏸ Paused<small>Tap anywhere to keep recording</small></div></div></div>
 <details id="voSet" class="vo-set"><summary>⚙️ Prompter settings <span id="voSetSum"></span><small class="vo-set-tip">👆 Too fast? Too small? Tap here to adjust, or edit your script.</small></summary>
 <div class="vo-grid"><label>Text size<input id="voSize" type="range" min="18" max="48" value="28"></label>
 <label id="voSpeedWrap">Speed: <b id="voSpeedV">1.0×</b><input id="voSpeed" type="range" min="0.5" max="2" step="0.1" value="1"></label></div>
@@ -145,6 +151,7 @@ async function start(){
   if(typeof exporting!=='undefined'&&exporting)return;
   if(S.rec||S.starting)return;S.starting=true;try{await begin()}finally{S.starting=false}}
 async function begin(){
+  q('voTip').hidden=true;
   if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){status("This browser can't record sound. Try Chrome or Safari.");return}
   try{pause()}catch{}
   clearTake();S.discard=false;recBtn.disabled=true;
@@ -345,11 +352,18 @@ function fitKb(){const a=document.activeElement,typing=a&&dlg.contains(a)&&/^(TE
   if(kb)setTimeout(()=>a.scrollIntoView({block:'center'}),60)}
 for(const w of [vv,(()=>{try{return window.parent!==window&&window.parent.visualViewport}catch{return null}})()])if(w){w.addEventListener('resize',fitKb);w.addEventListener('scroll',fitKb)}
 dlg.addEventListener('focusin',()=>{fitKb();setTimeout(fitKb,400);setTimeout(fitKb,900)});dlg.addEventListener('focusout',()=>setTimeout(fitKb,100));dlg.addEventListener('close',()=>{dlg.classList.remove('vo-kb');for(const k of ['top','bottom','margin','height','max-height'])dlg.style.removeProperty(k)});
+// Quick tips each time the recorder opens with a script, until "Don't show again".
+const TIP_OFF='tapshop-vo-tip-off';
+function showTip(){const t=q('voTip');let off=false;try{off=localStorage.getItem(TIP_OFF)==='1'}catch{}
+  if(off||!S.scenes.length||S.rec){t.hidden=true;return}
+  t.innerHTML=`<b>👋 Quick tips</b><ul><li>Use <b style="display:inline;font-size:inherit;margin:0">− +</b> on each scene to change how long it lasts.${S.onLen?' It updates your whole video too.':''}</li><li>Tap the script once to pause. Tap again to keep recording.</li><li>Finished a line early? That's fine. Just wait for the next line to light up.</li></ul><div class="vo-tipbar"><button type="button" class="vo-never">Don't show again</button><button type="button" class="vo-ok">Got it</button></div>`;
+  t.hidden=false}
+q('voTip').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.stopPropagation();if(b.classList.contains('vo-never'))try{localStorage.setItem(TIP_OFF,'1')}catch{}q('voTip').hidden=true});
 window.veVoiceover=function(script,opts={}){
   if(typeof exporting!=='undefined'&&exporting)return;
   S.onTake=typeof opts.onTake==='function'?opts.onTake:null;S.onLen=typeof opts.onLength==='function'?opts.onLength:null;useBtn.textContent=S.onTake?'✓ Use this take':'✓ Add to timeline';
   if(script)setScenes(script.scenes);else paint();
-  if(!dlg.open)dlg.showModal();
+  if(!dlg.open)dlg.showModal();showTip();
   status(S.scenes.length?'Tap ● Record when you\'re ready. You get a 3-second countdown.':'');if(!S.scenes.length&&!aiOK())openEditor();
 };
 
