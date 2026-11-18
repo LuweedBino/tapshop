@@ -140,6 +140,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid #8886;border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
 .ag-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.ag-file button{width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:13px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.ag-ex{margin:2px 0 6px;font-size:13px;line-height:1.4;opacity:.85}
 .ag-shotlist{display:block;margin:4px 0 12px;padding:14px 16px;border-radius:16px;border:2px solid #ec4899;background:#ec48991a}.ag-shotlist b{display:block;font-size:18px;margin-bottom:4px}.ag-shotlist span{display:block;font-size:14px;line-height:1.45;opacity:.85}
 .ag-action{display:block;width:100%;margin-top:10px;min-height:50px;border-radius:14px!important;border:none!important;background:linear-gradient(135deg,#ec4899,#f43f5e)!important;color:#fff!important;font:800 16px system-ui,sans-serif!important;box-shadow:0 4px 14px #ec489955;cursor:pointer}
 .ag-action:active{transform:scale(.98)}
@@ -179,6 +180,16 @@ const card=(act,v,on,title,sub='',extra='')=>`<button type="button" class="ag-ca
 const chip=(act,v,on,label)=>`<button type="button" class="${on?'on':''}" data-act="${act}" data-v="${esc(v)}" aria-pressed="${!!on}">${label}</button>`;
 const opts=(list,cur)=>list.map(([k,v])=>`<option value="${esc(k)}"${k===cur?' selected':''}>${esc(v)}</option>`).join('');
 
+// A quick, real-life way to film each kind of scene: two per type (alternating so scenes next to each other differ),
+// one set for b-roll and one for talking to the camera. P = the product's name.
+const EXAMPLES={
+  'Hook':[['Start close on {P}, then pull back fast so it fills the frame','Drop {P} onto the table or into your hand, in one quick move'],['Lean into the camera and say your line like you\'re telling a friend a secret','Hold {P} up next to your face and say your line with a big reaction']],
+  'Problem':[['Show the old way going wrong: the mess, the struggle, the thing that annoys you','Film your hands trying (and failing) with what you used before'],['Shake your head and say it with a tired, been-there face','Hold up the old thing and say your line like you\'re fed up with it']],
+  'Agitate':[['A slow close-up of the worst part: the stain, the smell, the clutter','Film it twice in a row, a little closer each time, so it feels like it keeps happening'],['Count on your fingers as you list what goes wrong','Say it a little louder and faster, like you\'ve had enough']],
+  'Demo/Solution':[['Show {P} working from start to finish, hands only, close up','Film the before and after in the same spot, so the change is easy to see'],['Hold {P} up and show the one thing you love most while you talk','Use {P} on camera and talk us through it as you go']],
+  'Social Proof':[['Scroll through real reviews or messages on your phone screen','Show {P} being used at home: on the shelf, in your bag, every day'],['Say it like a friend sharing a real result, with a smile','Point at {P} and say your line with total confidence']],
+  'CTA':[['Hold {P} toward the camera, then point down to the cart or link','End on {P} sitting nicely in the frame, with space for the words'],['Smile, point down at the link and say your line clearly','Hold {P} next to your face, nod and say your line']]};
+const example=(s,i)=>{const t=EXAMPLES[s.type]||EXAMPLES['Demo/Solution'],l=t[S.voice==='talking'?1:0][i%2],p=(S.brief.product||'').trim();return l.replace(/\{P\}/g,p||'it')};
 const VIEWS={
 about(){const b=S.brief;return `<h3>Tell me about it</h3><p class="ag-help">What are you making a video for? Only use claims the brand approved.</p>
   <label class="ag-f">Product name *<input data-k="brief.product" maxlength="120" value="${esc(b.product)}" placeholder="e.g. GlowDrop Vitamin C Serum"></label>
@@ -222,7 +233,8 @@ script(){const m=S.scriptMode,n=S.scenes.length;
 footage(){let h=`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film scene by scene with shot ideas and use scripts as guides every step of the way.</span></div>`;
   const nextI=S.scenes.findIndex((s,i)=>!(files.get(i)||[]).length);
   h+=S.scenes.map((s,i)=>{const fl=files.get(i)||[];return `<div class="ag-scene${i===nextI?' next':''}"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}${i===nextI?' · next to film':''}</span></div>
-    <p class="ag-shot">🎥 <b>Film:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
+    <p class="ag-shot">🎥 <b>Shot idea:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
+    <p class="ag-ex">💡 <b>Example:</b> ${esc(example(s,i))}</p>
     <p class="ag-len">⏱️ <b>About ${filmSecs(s)} seconds</b> ${S.voice==='talking'?'· say your line in one take, with a breath before and after':'· a little extra is fine, we trim it to fit'}</p>
     ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span>${window.VideoCamera?`<button type="button" class="ag-retake" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip" title="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
     <button type="button" class="ag-action" data-act="${touch()?'filmLine':'film'}" data-i="${i}">${fl.length?'🎬 Film it again':'🎬 Lights, camera, action!'}</button></div>`}).join('');
