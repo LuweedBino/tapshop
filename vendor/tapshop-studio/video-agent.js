@@ -140,6 +140,10 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid #8886;border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
 .ag-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.ag-file button{width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:13px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.ag-meter{margin:6px 0 2px;padding:10px 12px;border-radius:14px;border:2px solid #ec4899;background:#ec489914}.ag-meter.ok{border-color:#22c55e;background:#22c55e14}
+.ag-mtop{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}.ag-mtop b{font-size:16px}.ag-mtop span{font-size:12px;opacity:.8}
+.ag-bar{height:8px;margin-top:8px;border-radius:99px;background:#8883;overflow:hidden}.ag-bar i{display:block;height:100%;border-radius:inherit;background:#ec4899;transition:width .3s}.ag-meter.ok .ag-bar i{background:#22c55e}.ag-meter.ok .ag-mtop span{color:#22c55e;opacity:1;font-weight:700}
+.ag-clipname em{flex:none;font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:#8882}
 .ag-clip{margin:10px 0 0;padding:10px;border:1px solid #8886;border-radius:14px;background:#8881}
 .ag-clipname{display:flex;align-items:center;gap:6px;font-size:13px;min-width:0}.ag-clipname span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85}
 .ag-clipbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.ag-clipbtns button{min-height:44px;border-radius:12px!important;font-weight:700;font-size:14px}
@@ -240,7 +244,8 @@ footage(){let h=`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film s
     <p class="ag-shot">🎥 <b>Shot idea:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
     <p class="ag-ex">💡 <b>Example:</b> ${esc(example(s,i))}</p>
     <p class="ag-len">⏱️ <b>About ${filmSecs(s)} seconds</b> ${S.voice==='talking'?'· say your line in one take, with a breath before and after':'· a little extra is fine, we trim it to fit'}</p>
-    ${fl.map((x,j)=>`<div class="ag-clip"><div class="ag-clipname">🎞️ <span>${esc(x.name)}</span></div><div class="ag-clipbtns">${window.VideoCamera?`<button type="button" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove this clip">✕ Remove</button></div></div>`).join('')}
+    ${filmed(fl,filmSecs(s))}
+    ${fl.map((x,j)=>`<div class="ag-clip"><div class="ag-clipname">🎞️ <span>${esc(x.name)}</span>${clipDur(x)?`<em>${fmtS(clipDur(x))}</em>`:''}</div><div class="ag-clipbtns">${window.VideoCamera?`<button type="button" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove this clip">✕ Remove</button></div></div>`).join('')}
     <button type="button" class="ag-action" data-act="${touch()?'filmLine':'film'}" data-i="${i}" style="${fl.length?'background:transparent!important;color:#ec4899!important;border:2px solid #ec4899!important;box-shadow:none':'background:linear-gradient(135deg,#ec4899,#f43f5e)!important;color:#fff!important;border:none!important'}">${fl.length?'🎬 Film more':'🎬 Lights, camera, action!'}</button></div>`}).join('');
   return h},
 voice(){const v=S.voice,none=S.scriptMode==='none';
@@ -387,6 +392,18 @@ function musicKey(){if(S.music!=='auto')return S.music;const st=STORIES.find(s=>
 // How long to film a scene: as long as its line takes to say (about 2.5 words a second) or the planned length,
 // whichever is longer, plus 2 s to trim from. Talking to camera: the line's own length plus a breath.
 const nWords=t=>String(t||'').split(/\s+/).filter(Boolean).length;
+// How long each filmed clip is. Browser recordings often don't state their length until the video is
+// sought to the end, so a hidden <video> is asked once per file; the shot list repaints when it knows.
+const DUR=new WeakMap();
+function clipDur(f){if(DUR.has(f))return DUR.get(f);DUR.set(f,null);
+  const v=document.createElement('video'),url=URL.createObjectURL(f);let done=false;
+  const end=d=>{if(done)return;done=true;URL.revokeObjectURL(url);v.removeAttribute('src');DUR.set(f,d>0&&isFinite(d)?d:0);if(STEPS[S.step][0]==='footage'&&dlg.open){const b=body.scrollTop;paint();body.scrollTop=b}};
+  v.preload='metadata';v.muted=true;
+  v.onloadedmetadata=()=>{if(isFinite(v.duration)&&v.duration>0)end(v.duration);else{v.ontimeupdate=()=>{if(isFinite(v.duration)){v.ontimeupdate=null;end(v.duration)}};try{v.currentTime=1e9}catch{end(0)}}};
+  v.onerror=()=>end(0);setTimeout(()=>end(0),8000);v.src=url;return null}
+const fmtS=x=>x>=60?Math.floor(x/60)+':'+String(Math.round(x%60)).padStart(2,'0'):(Math.round(x*10)/10)+' s';
+function filmed(fl,goal){if(!fl.length)return '';const ds=fl.map(clipDur),known=ds.every(d=>d!==null),tot=ds.reduce((a,d)=>a+(d||0),0),ok=known&&tot>=goal,pct=Math.min(100,goal?tot/goal*100:100);
+  return `<div class="ag-meter${ok?' ok':''}"><div class="ag-mtop"><b>🎞️ Filmed: ${known?fmtS(tot):'…'}</b><span>${fl.length} clip${fl.length===1?'':'s'} · ${known?(ok?'✓ enough for this scene':'about '+fmtS(Math.max(.1,goal-tot))+' more to go'):'checking…'}</span></div><div class="ag-bar"><i style="width:${pct}%"></i></div></div>`}
 function filmSecs(s){const say=nWords(s.say)/2.5;return S.voice==='talking'?Math.max(2,Math.ceil(say+1)):Math.ceil(Math.max(s.secs||0,say,2)+2)}
 // Footage helpers: the Media Vault (inside TapShopUGC only), and the in-page camera with the scene's line on screen:
 // talking to camera shows what to say on the front camera; b-roll shows what to film on the back camera.
