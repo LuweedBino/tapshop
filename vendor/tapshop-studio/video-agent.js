@@ -79,7 +79,7 @@ const CAPS=[['pop','Word pop'],['karaoke','Karaoke'],['classic','Classic'],['box
 const fresh=()=>({order:2,step:0,max:0,brief:{product:'',benefits:'',audience:'',platform:'tiktok',length:30,tone:'Casual & Authentic'},
   story:'AUTO',group:'',scriptMode:'ai',ownLines:'',title:'',hookOptions:[],hook:0,scenes:[],
   footage:'clips',voice:'record',captions:true,capStyle:'pop',brand:true,music:'auto',built:false});
-let S=(()=>{try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(!d||!d.brief)return fresh();if(d.order!==2){if(d.step===3||d.step===4)d.step=7-d.step;d.order=2}return {...fresh(),...d}}catch{return fresh()}})();
+let S=(()=>{try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(!d||!d.brief)return fresh();if(d.order!==2){if(d.step===3||d.step===4)d.step=7-d.step;d.order=2}return {...fresh(),...d,footage:'clips'}}catch{return fresh()}})();
 const files=new Map();let take=null,busy=false,musicPlayer=null;
 let saveT=0;const save=()=>{clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch{}},300)};
 const scene=x=>({type:x.sectionType||'Demo/Solution',secs:Math.max(1,+x.durationSeconds||3),say:String(x.voiceoverLine||''),text:String(x.onScreenText||''),shot:String(x.visualDirection||''),anim:'',sfx:''});
@@ -140,6 +140,9 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid #8886;border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
 .ag-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.ag-file button{width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:13px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.ag-shotlist{display:block;margin:4px 0 12px;padding:14px 16px;border-radius:16px;border:2px solid #ec4899;background:#ec48991a}.ag-shotlist b{display:block;font-size:18px;margin-bottom:4px}.ag-shotlist span{display:block;font-size:14px;line-height:1.45;opacity:.85}
+.ag-action{display:block;width:100%;margin-top:10px;min-height:50px;border-radius:14px!important;border:none!important;background:linear-gradient(135deg,#ec4899,#f43f5e)!important;color:#fff!important;font:800 16px system-ui,sans-serif!important;box-shadow:0 4px 14px #ec489955;cursor:pointer}
+.ag-action:active{transform:scale(.98)}
 .ag-best{position:relative;border:2px solid #ec4899!important;background:#ec489926!important;font-weight:700}.ag-best::after{content:'⭐ Best';position:absolute;top:-9px;right:-6px;padding:1px 7px;border-radius:999px;background:#ec4899;color:#fff;font-size:10px;font-weight:800;line-height:16px}
 .ag-rec{margin:4px 0 12px;padding:12px 14px;border-radius:14px;border:2px solid #ec4899;background:linear-gradient(90deg,#ec489922,#fbbf2418);font-size:14px;line-height:1.45}.ag-rec b{color:#ec4899}
 .ag-take{display:flex;align-items:center;gap:10px;margin:2px 0 10px}.ag-take b{display:block;font-size:15px}.ag-take small{display:block;font-size:12px;opacity:.7;margin-top:1px}
@@ -216,19 +219,13 @@ script(){const m=S.scriptMode,n=S.scenes.length;
     <label class="ag-f"><textarea data-k="ask" rows="2" maxlength="500" placeholder="e.g. make it funnier, or mention it's dishwasher safe">${esc(S.ask||'')}</textarea></label>
     <div class="ag-btns"><button type="button" class="primary" data-act="askGo" ${busy?'disabled':''}>✨ Change it</button>${S.prev?`<button type="button" data-act="undoAsk" ${busy?'disabled':''}>↩ Undo last change</button>`:''}</div></details></section>`;
   return h},
-footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add clips you have, or film each shot now. You can mix both.</p>
-  <div class="ag-cards">${card('footage','clips',f==='clips','🎥 Clips','Upload or film, scene by scene')}${card('footage','none',f==='none','🎨 No footage','Text and graphics only')}</div>`;
-  if(f==='none')return h+`<p class="ag-help">Your video will be words, graphics, music and your voice on a plain background. You can add clips later in the editor.</p>`;
+footage(){let h=`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film scene by scene with shot ideas and use scripts as guides every step of the way.</span></div>`;
   const nextI=S.scenes.findIndex((s,i)=>!(files.get(i)||[]).length);
-  const nClips=[...files.values()].reduce((n,l)=>n+l.length,0);
-  h+=`<div class="ag-rec">⭐ <b>Highly recommended: 🎬 Film with my line.</b> Your ${S.voice==='talking'?'line':'shot idea'} shows right on the screen while you film, and a timer turns green when you've filmed enough. It's the easiest way to get clips that fit each scene.</div>`;
-  h+=`<div class="ag-btns"><button type="button" data-act="addAll">📁 Add all my clips at once</button>${nClips>1&&window.veClipReader?`<button type="button" class="primary" data-act="sortClips" ${busy?'disabled':''}>✨ Sort my clips into scenes</button>`:''}</div>`;
-  if(nClips>1&&window.veClipReader)h+=`<p class="ag-help">✨ The AI watches${S.voice==='talking'?' and listens to':''} each clip and puts it in the scene it fits best. Nothing is uploaded. Move any clip with the menu next to it.</p>`;
   h+=S.scenes.map((s,i)=>{const fl=files.get(i)||[];return `<div class="ag-scene${i===nextI?' next':''}"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}${i===nextI?' · next to film':''}</span></div>
     <p class="ag-shot">🎥 <b>Film:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
     <p class="ag-len">⏱️ <b>About ${filmSecs(s)} seconds</b> ${S.voice==='talking'?'· say your line in one take, with a breath before and after':'· a little extra is fine, we trim it to fit'}</p>
-    ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span><select class="ag-move" data-i="${i}" data-j="${j}" aria-label="Move to scene">${S.scenes.map((_,k)=>`<option value="${k}"${k===i?' selected':''}>Scene ${k+1}</option>`).join('')}</select>${window.VideoCamera?`<button type="button" class="ag-retake" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip" title="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
-    <div class="ag-btns"><button type="button" class="ag-best" data-act="${touch()?'filmLine':'film'}" data-i="${i}">🎬 Film with my line</button><button type="button" data-act="add" data-i="${i}">📁 Add clip</button>${hasVault()?`<button type="button" data-act="vault" data-i="${i}">🗄️ From Vault</button>`:''}${touch()?`<button type="button" data-act="film" data-i="${i}">📷 Camera app</button>`:''}</div></div>`}).join('');
+    ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span>${window.VideoCamera?`<button type="button" class="ag-retake" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip" title="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
+    <button type="button" class="ag-action" data-act="${touch()?'filmLine':'film'}" data-i="${i}">${fl.length?'🎬 Film it again':'🎬 Lights, camera, action!'}</button></div>`}).join('');
   return h},
 voice(){const v=S.voice,none=S.scriptMode==='none';
   const sec=(n,title,body,sum='')=>`<section class="ag-sec"><div class="ag-sh"><span class="ag-num">${n}</span><b>${title}</b>${sum}</div>${body}</section>`;
@@ -261,7 +258,7 @@ build(){if(S.built)return `<div class="ag-done"><b>🎉 Your video is ready!</b>
   return `<h3>Ready to build</h3><p class="ag-help">Here's what goes into your video:</p><ul class="ag-sum">
   <li><b>${esc(S.brief.product)}</b> · ${esc(PLATFORMS.find(p=>p[0]===S.brief.platform)?.[1]||'')} · ${S.brief.length} s</li>
   <li>Story: ${esc(st?st[2]:S.story)} · ${S.scenes.length} scenes</li>
-  <li>Footage: ${S.footage==='none'?'none, text and graphics only':n+' clip'+(n===1?'':'s')}</li>
+  <li>Footage: ${n+' clip'+(n===1?'':'s')}</li>
   <li>Voice: ${S.voice==='record'?(take?'your voiceover ✓':'not recorded yet'):S.voice==='talking'?'from your clips':'none'}${S.voice!=='none'&&S.captions?' · auto captions':''}</li>
   <li>Music: ${S.music==='auto'?'picked for you':S.music?esc(window.veMoods?.[S.music]?.name||S.music):'none'}</li></ul>
   <p class="ag-help">If you already have a video open, it's kept in Recent videos.</p>`}};
