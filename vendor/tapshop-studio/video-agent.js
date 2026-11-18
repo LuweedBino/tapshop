@@ -409,8 +409,11 @@ function filmSecs(s){const say=nWords(s.say)/2.5;return S.voice==='talking'?Math
 // talking to camera shows what to say on the front camera; b-roll shows what to film on the back camera.
 const hasVault=()=>typeof VaultPicker!=='undefined'&&VaultPicker.inTapShop;
 const touch=()=>matchMedia('(pointer:coarse)').matches;
-function camPrompt(i){const s=S.scenes[i]||{},talk=S.voice==='talking';
-  return {facing:talk?'user':'environment',prompt:{label:(talk?'🗣️ Say':'🎥 Film')+` · scene ${i+1} of ${S.scenes.length}`,line:talk?(s.say||s.text||''):(s.shot||'Anything that shows: '+(s.text||s.say||'')),say:talk?'':(s.say||''),secs:filmSecs(s)}}}
+// The recording countdown is what's still missing for the scene: its full length minus the clips already filmed
+// (leaving out the clip being retaken). Once a scene has enough, an extra take gets the full length again.
+function camPrompt(i,skip=-1){const s=S.scenes[i]||{},talk=S.voice==='talking',goal=filmSecs(s);
+  const had=(files.get(i)||[]).reduce((a,f,j)=>a+(j===skip?0:(clipDur(f)||0)),0),left=goal-had,secs=had>0&&left>=1?Math.ceil(left):goal;
+  return {facing:talk?'user':'environment',prompt:{label:(talk?'🗣️ Say':'🎥 Film')+` · scene ${i+1} of ${S.scenes.length}`+(secs<goal?` · ${secs} s left`:''),line:talk?(s.say||s.text||''):(s.shot||'Anything that shows: '+(s.text||s.say||'')),say:talk?'':(s.say||''),secs}}}
 function pickVault(i){VaultPicker.open({title:`Clip for scene ${i+1}`,kinds:['video'],onPick:async it=>{try{toast('Loading '+it.name+'…');addTo(i,[await VaultPicker.file(it)])}catch(e){toast(e.message)}if(!dlg.open)dlg.showModal()}})}
 // Moving one clip to another scene with the menu next to it.
 body.addEventListener('toggle',e=>{const f=e.target.dataset?.fold;if(f)UI[f]=e.target.open},true);
@@ -545,7 +548,7 @@ body.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||
     case 'vault':pickVault(i);return;
     // Reshoot one clip: the same camera with the scene's line on screen; the new take replaces this clip in place.
     case 'retake':{const j=+b.dataset.j;VideoCamera.open(list=>{const v=[...(list||[])].find(f=>/^video\//.test(f.type)||/\.(mp4|mov|webm|m4v)$/i.test(f.name));const l=(files.get(i)||[]).slice();
-        if(!v||j>=l.length)return;l[j]=v;files.set(i,l);paint();status(`↺ New take is in scene ${i+1}.`)},toast,{only:'video',inApp:touch(),...camPrompt(i)});return}
+        if(!v||j>=l.length)return;l[j]=v;files.set(i,l);paint();status(`↺ New take is in scene ${i+1}.`)},toast,{only:'video',inApp:touch(),...camPrompt(i,j)});return}
     case 'filmLine':if(window.VideoCamera){VideoCamera.open(list=>addTo(i,list),toast,{only:'video',inApp:true,...camPrompt(i)});return}
     // falls through: no in-page camera here
     case 'film':if(window.VideoCamera&&!touch()){VideoCamera.open(list=>addTo(i,list),toast,{only:'video',...camPrompt(i)});return}toast(`🎬 Film about ${filmSecs(S.scenes[i]||{})} seconds for this scene.`);if(window.VideoCamera)VideoCamera.open(list=>addTo(i,list),toast,{only:'video'});else{fileTarget=i;fileIn.click()}return;
