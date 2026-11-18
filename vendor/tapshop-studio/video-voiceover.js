@@ -58,9 +58,11 @@ html.ts:not(.ts-dark) #voTip{--vo-bg:#fff;color:#1f1b24}html.ts:not(.ts-dark) #v
 .vo-cd{display:flex;align-items:center;gap:8px;margin-top:10px}.vo-cd b{padding:4px 12px;border-radius:999px;background:#22c55e22;border:1px solid #22c55e88;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}.vo-cd span{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600;opacity:.8}.vo-cd.end b{background:#22c55e;color:#fff}
 @media (prefers-reduced-motion:reduce){.vo-w{transition:none}}
 /* Light theme: the script box follows it (dark stays the default, also outside the dashboard). */
-html.ts:not(.ts-dark) .vo-prompter{background:#f7f4fb;color:#1d1a26;border:1px solid #e3ddec}
-html.ts:not(.ts-dark) .vo-line.on{background:#ff5b831f}
-.vo-write{color:#fff!important}html.ts:not(.ts-dark) .vo-write{color:#be185d!important}
+/* Light mode keeps a dark prompter (charcoal, white words) so the script stands out from the light page. */
+html.ts:not(.ts-dark) .vo-prompter{background:#141416;color:#fff;border:1px solid #2c2c31}
+html.ts:not(.ts-dark) .vo-line.on{background:#26262b}
+html.ts:not(.ts-dark) #voPrompter .vo-len button,html.ts:not(.ts-dark) #voPrompter .vo-len button:hover{background:#2c2c31!important;color:#fff!important;border:1px solid #44444b!important}
+.vo-write{color:#fff!important}
 .vo-empty{font-size:15px!important;opacity:.75;margin:0}.vo-write{margin-top:12px;padding:10px 16px;border-radius:12px;border:2px solid #ec4899!important;background:#ec489926!important;color:inherit;font:700 15px system-ui,sans-serif;cursor:pointer}
 .vo-set summary{cursor:pointer;font-size:14px;font-weight:600}
 .vo-set summary span{font-weight:400;opacity:.7}
