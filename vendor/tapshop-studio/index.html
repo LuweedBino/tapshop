@@ -1039,4 +1039,21 @@ const renderPngNoFonts=renderPng;renderPng=function(done){withEmbedded(design,()
 const exportSvgNoFonts=exportSvg;exportSvg=function(){withEmbedded(design,()=>exportSvgNoFonts())};
 if(typeof designPng==='function'){const designPngNoFonts=designPng;designPng=function(d){return withEmbedded(d,()=>designPngNoFonts(d))}}
 if(typeof svgImage==='function'){const svgImageNoFonts=svgImage;svgImage=async function(str){let ns=[...new Set(String(str).match(/TapFont\d+/g)||[])];if(ns.length){await prepFontData(ns);str=withFontCss(str)}return svgImageNoFonts(str)}}
-</script><script src="gif-encoder.js"></script><script src="studio-social.js"></script><script src="studio-projects.js"></script><script src="studio-pages.js"></script><link rel="stylesheet" href="tapshop-theme.css"><script src="tapshop-theme.js"></script></body></html>
+</script><script src="gif-encoder.js"></script><script src="studio-social.js"></script><script src="studio-projects.js"></script><script src="studio-pages.js"></script><link rel="stylesheet" href="tapshop-theme.css"><script src="tapshop-theme.js"></script><style id="topNav">
+/* The page buttons sit in one row across the top instead of a side column, on every screen size. */
+html body .app{display:block!important;grid-template-columns:none!important}
+html body #mainSidebar{display:flex!important;flex-direction:row!important;align-items:center;gap:8px;position:sticky!important;top:0!important;left:auto!important;z-index:5!important;width:auto!important;height:auto!important;max-height:none!important;padding:10px 14px!important;margin:0!important;overflow:hidden!important;border-right:0!important;border-bottom:1px solid var(--rim,#8883)!important;box-shadow:0 6px 18px #0002!important;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+html body #mainSidebar::-webkit-scrollbar{display:none}
+html body #mainSidebar #sidebarToggle,html body #mainSidebar .workspace{display:none!important}
+html body #mainSidebar .logo{flex:none;margin:0 6px 0 0!important;font-size:20px!important;line-height:1;white-space:nowrap}
+html body #mainSidebar .logo small{display:block;font-size:9px;letter-spacing:3px;margin-top:3px}
+html body #mainSidebar>.primary{flex:none;width:auto!important;margin:0!important;padding:0 16px!important;height:42px!important;display:flex!important;flex-direction:row!important;align-items:center;gap:6px;white-space:nowrap;border-radius:12px!important}
+html body #mainSidebar>.primary .nav-icon{width:auto!important;height:auto!important;background:none!important;box-shadow:none!important;color:inherit!important;font-size:18px!important}
+html body #mainSidebar>.primary .expanded-label{display:inline!important}html body #mainSidebar>.primary .rail-label{display:none!important}
+html body #mainSidebar nav{display:flex!important;flex-direction:row!important;gap:8px;margin:0!important;flex:1 1 auto;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}html body #mainSidebar nav::-webkit-scrollbar{display:none}
+html body #mainSidebar nav button{flex:none;display:flex!important;flex-direction:row!important;align-items:center;gap:7px;width:auto!important;height:42px!important;margin:0!important;padding:0 14px!important;white-space:nowrap;text-align:left;border-radius:12px!important}
+html body #mainSidebar nav button .nav-label{display:inline!important}
+html body #mainSidebar nav button .nav-icon{font-size:16px}
+html body #mainSidebar>.primary .nav-icon{display:inline!important}
+html body #mainSidebar nav.more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 48px),transparent)}
+</style><script>(()=>{const a=document.querySelector('#mainSidebar nav');if(!a)return;const f=()=>a.classList.toggle('more',a.scrollLeft+a.clientWidth<a.scrollWidth-4);a.addEventListener('scroll',f,{passive:true});addEventListener('resize',f);new MutationObserver(f).observe(a,{subtree:true,attributes:true,attributeFilter:['hidden','style']});setTimeout(f,300);f()})()</script></body></html>
