@@ -488,7 +488,19 @@ const st=document.createElement('style');st.textContent=`
 .br-clip .nm{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px;font-weight:600}
 .br-clip .tag{display:block;opacity:.75;margin-top:2px}.br-clip .said{display:block;font-style:italic;opacity:.65;margin-top:2px;max-height:2.6em;overflow:hidden}
 .br-clip select{width:100%;margin-top:4px;font-size:11px;padding:3px 4px}
-.br-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.br-caps{display:flex;gap:10px;align-items:flex-start;margin:12px 0 4px;padding:10px 12px;border:1px solid var(--ts-border,#8a7aa855);border-radius:12px;cursor:pointer}.br-caps input{width:20px;height:20px;margin:2px 0 0;flex:none;accent-color:#ff3ea5}.br-caps b{display:block;font-size:13px}.br-caps small{display:block;font-size:12px;opacity:.75;margin-top:2px}#brListen{grid-column:1/-1;justify-self:end}.br-row label{display:flex;flex-direction:column;gap:4px;font-size:12px}
+.br-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.br-caps{display:flex;gap:10px;align-items:flex-start;margin:12px 0 4px;padding:10px 12px;border:1px solid var(--ts-border,#8a7aa855);border-radius:12px;cursor:pointer}
+.br-sec{margin:14px 0;padding:14px;border:1px solid var(--ts-border,#8a7aa855);border-radius:16px;background:#8881}
+#brDialog .br-sec>h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font-size:16px}
+.br-n{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#ff3ea5;color:#fff;font-size:14px;font-weight:800}
+.br-sub{margin:-6px 0 10px}
+.br-helpers{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px}
+.br-helpers .br-caps{margin:0;align-items:center;background:#8881}
+.br-helpers .br-caps:has(input:checked){border-color:#ff3ea5;background:#ff3ea514}
+.br-helpers .br-caps input{appearance:none;-webkit-appearance:none;order:2;margin:0 0 0 auto;width:40px;height:24px;border-radius:99px;background:#8886;position:relative;cursor:pointer;transition:background .2s}
+.br-helpers .br-caps input::before{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0005;transition:transform .2s}
+.br-helpers .br-caps input:checked{background:#ff3ea5}
+.br-helpers .br-caps input:checked::before{transform:translateX(16px)}
+.br-note{font-size:12px;margin:8px 2px}.br-caps input{width:20px;height:20px;margin:2px 0 0;flex:none;accent-color:#ff3ea5}.br-caps b{display:block;font-size:13px}.br-caps small{display:block;font-size:12px;opacity:.75;margin-top:2px}#brListen{grid-column:1/-1;justify-self:end}.br-row label{display:flex;flex-direction:column;gap:4px;font-size:12px}
 .br-sec{border:1px solid var(--ts-border,#8883);border-radius:12px;padding:10px;margin:8px 0}
 .br-sec-h{display:flex;align-items:center;gap:8px}.br-sec-h b{font-size:13px;white-space:nowrap}.br-sec-h input{flex:1;min-width:0;font-size:13px;padding:6px 8px}
 .br-sec .br-empty{font-size:11px;opacity:.6;padding:6px 0}
@@ -516,19 +528,23 @@ dlg.addEventListener('cancel',e=>{e.preventDefault();close()});
 function step1(){const flow=t=>t.parts.map(p=>p.label).join(' → ');
   dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>🎞️ B-roll Video Maker</h2>
   <p class="sub">Add your clips and we do the rest: we watch and listen to each clip, pick the story and music, use the best moment of each clip, write words on screen from what you say, and cut it all to the beat with movement.</p>
-  <h3>1. Pick a story</h3><div class="br-tpls"><button type="button" class="br-tpl br-auto${autoStory?' on':''}" data-t="auto"><b>✨ Pick for me</b><small>We look at your clips and choose the best story</small><span class="br-flow">Works best with ✨ Sort my clips</span></button>${TEMPLATES.map(t=>`<button type="button" class="br-tpl${!autoStory&&t===tp?' on':''}" data-t="${t.id}"><b>${enc(t.name)}</b><small>${enc(t.tag)}</small><span class="br-flow">${enc(flow(t))}</span></button>`).join('')}</div>
-  <h3>2. Add your clips <small class="sub">(${items.length})</small></h3>
+  <section class="br-sec"><h3><span class="br-n">1</span>Pick a story</h3><div class="br-tpls"><button type="button" class="br-tpl br-auto${autoStory?' on':''}" data-t="auto"><b>✨ Pick for me</b><small>We look at your clips and choose the best story</small><span class="br-flow">Works best with ✨ Sort my clips</span></button>${TEMPLATES.map(t=>`<button type="button" class="br-tpl${!autoStory&&t===tp?' on':''}" data-t="${t.id}"><b>${enc(t.name)}</b><small>${enc(t.tag)}</small><span class="br-flow">${enc(flow(t))}</span></button>`).join('')}</div>
+</section>
+  <section class="br-sec"><h3><span class="br-n">2</span>Add your clips <small class="sub">(${items.length})</small></h3>
   <div class="br-add"><button type="button" class="primary" id="brChoose">📹 Choose clips</button>${typeof VaultPicker!=='undefined'&&VaultPicker.inTapShop?'<button type="button" id="brVault">⛁ From Media Vault</button>':''}${clips.length?`<button type="button" id="brTimeline">🎬 Use my timeline clips (${clips.length})</button>`:''}<input type="file" id="brFiles" accept="video/*" multiple hidden></div>
   <div class="br-clips">${items.length?items.map((c,i)=>`<div class="br-clip"><img alt="" src="${c.asset.thumb}"><button type="button" class="x" data-x="${i}" aria-label="Remove ${enc(c.asset.name)}">×</button><span class="nm">${enc(c.asset.name)}</span><span class="tag">${(c.out-c.in).toFixed(1)}s</span></div>`).join(''):'<p class="sub" style="margin:0">No clips yet. Add 3 or more for the best result.</p>'}</div>
-  <h3>3. Look and sound</h3><div class="br-row"><label>Video shape<select id="brShape">${shapes().map(([v,l])=>`<option value="${enc(v)}"${v===shape?' selected':''}>${enc(l)}</option>`).join('')}</select></label>
-  <label>Music<select id="brMood"><option value="auto"${mood==='auto'?' selected':''}>✨ Pick for me</option>${moodOpts(mood)}<option value=""${mood?'':' selected'}>No music</option></select></label><button type="button" id="brListen" title="Hear a few seconds of this music">▶ Listen</button></div>
+</section>
+  <section class="br-sec"><h3><span class="br-n">3</span>Look and sound</h3><div class="br-row"><label>Video shape<select id="brShape">${shapes().map(([v,l])=>`<option value="${enc(v)}"${v===shape?' selected':''}>${enc(l)}</option>`).join('')}</select></label>
+  <label>Music<select id="brMood"><option value="auto"${mood==='auto'?' selected':''}>✨ Pick for me</option>${moodOpts(mood)}<option value=""${mood?'':' selected'}>No music</option></select></label><button type="button" id="brListen" title="Hear a few seconds of this music">▶ Listen</button></div></section>
+  <section class="br-sec"><h3><span class="br-n">4</span>Smart edits</h3><p class="sub br-sub">We do these for you while we build. Turn off any you don't want.</p><div class="br-helpers">
   <label class="br-caps"><input type="checkbox" id="brCaps"${autoCaps?' checked':''}> <span><b>✨ Add captions when someone talks</b><small>We write the words people say on screen, like the ✨ Captions tool.</small></span></label>
   <label class="br-caps"><input type="checkbox" id="brTidy"${autoTidy?' checked':''}> <span><b>✂️ Cut pauses and “um”s</b><small>We remove long pauses and “um” / “uh” from talking clips, so they flow.</small></span></label>
   <label class="br-caps"><input type="checkbox" id="brClean"${autoClean?' checked':''}> <span><b>🔇 Clean up the sound</b><small>We take out steady background noise like a fan or AC, and the click when you start and stop recording.</small></span></label>
   ${window.veCloudOn?.()?`<label class="br-caps"><input type="checkbox" id="brCloud"${autoCloud?' checked':''}> <span><b>☁️ Use cloud AI (more accurate)</b><small>Better captions, and it also cuts fumbles and retakes. The sound of your talking clips is sent to Groq’s AI to be written down. Turn off to keep everything on this device.</small></span></label>`:''}
   <label class="br-caps"><input type="checkbox" id="brMove"${autoMove?' checked':''}> <span><b>🎬 Add slow, smooth zooms</b><small>A slow, gentle zoom on each clip so still shots feel alive. Cuts still land on the beat.</small></span></label>
   <label class="br-caps"><input type="checkbox" id="brSfx"${autoSfx?' checked':''}> <span><b>🔊 Add sound effects</b><small>A sound as each line of words pops up: a whoosh on the hook, a ding on the fix, a sparkle on the “after”, a tap on “link in bio”.</small></span></label>
-  <p class="sub">The first time, your browser downloads the clip reader (a one-time download, about 130 MB). After that it’s saved. Phones are slower than computers.</p>
+  </div></section>
+  <p class="sub br-note">The first time, your browser downloads the clip reader (a one-time download, about 130 MB). After that it’s saved. Phones are slower than computers.</p>
   <div class="row"><button type="button" id="brCancel">Cancel</button><button type="button" id="brSkip"${items.length?'':' disabled'}>Keep my order</button><button type="button" class="primary" id="brGo"${items.length?'':' disabled'}>✨ Sort my clips</button></div>`;
   dlg.querySelector('.dialog-x').onclick=dlg.querySelector('#brCancel').onclick=close;
   dlg.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{if(b.dataset.t==='auto')autoStory=true;else{autoStory=false;tp=TEMPLATES.find(t=>t.id===b.dataset.t);if(mood!=='auto')mood=tp.mood}step1()});
