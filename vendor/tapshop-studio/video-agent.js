@@ -230,7 +230,7 @@ footage(){let h=`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film s
 voice(){const v=S.voice,none=S.scriptMode==='none';
   const sec=(n,title,body,sum='')=>`<section class="ag-sec"><div class="ag-sh"><span class="ag-num">${n}</span><b>${title}</b>${sum}</div>${body}</section>`;
   let h=`<h3>Voice + captions</h3><p class="ag-help">${none?'You picked no talking, so music and words on screen carry the video.':'How will people hear your script?'}</p>`;
-  h+=sec(1,'How you\'ll be heard',`<div class="ag-cards">${card('voice','record',v==='record','🎙️ Record a voiceover','With a teleprompter')}${card('voice','talking',v==='talking','🗣️ I\'m talking in my clips','Use the sound from my clips')}${card('voice','none',v==='none','🔇 No voice','Music and text only')}</div>`);
+  h+=sec(1,'How you\'ll be heard',`<div class="ag-cards">${card('voice','record',v==='record','🎙️ Record a voiceover','With a teleprompter')}${card('voice','talking',v==='talking','🗣️ I\'ll talk while I film','Use the sound from my filming')}${card('voice','none',v==='none','🔇 No voice','Music and text only')}</div>`);
   let n=2;
   if(v==='record')h+=sec(n++,'Your voiceover',take
     ?`<div class="ag-take"><span class="ag-ok">✓</span><div><b>Voiceover ready</b><small>${take.dur.toFixed(1)} s · scenes line up with when you said them</small></div></div>
