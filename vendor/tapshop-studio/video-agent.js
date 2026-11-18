@@ -239,7 +239,7 @@ script(){const m=S.scriptMode,n=S.scenes.length;
     <label class="ag-f"><textarea data-k="ask" rows="2" maxlength="500" placeholder="e.g. make it funnier, or mention it's dishwasher safe">${esc(S.ask||'')}</textarea></label>
     <div class="ag-btns"><button type="button" class="primary" data-act="askGo" ${busy?'disabled':''}>✨ Change it</button>${S.prev?`<button type="button" data-act="undoAsk" ${busy?'disabled':''}>↩ Undo last change</button>`:''}</div></details></section>`;
   return h},
-footage(){let h=totalMeter()+`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film scene by scene with shot ideas and use scripts as guides every step of the way.</span></div>`;
+footage(){let h=`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film scene by scene with shot ideas and use scripts as guides every step of the way.</span></div>`+totalMeter();
   const nextI=S.scenes.findIndex((s,i)=>!(files.get(i)||[]).length);
   h+=S.scenes.map((s,i)=>{const fl=files.get(i)||[];return `<div class="ag-scene${i===nextI?' next':''}"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}${i===nextI?' · next to film':''}</span></div>
     <p class="ag-shot">🎥 <b>Shot idea:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
