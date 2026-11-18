@@ -41,10 +41,10 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-line.done{opacity:.3}
 /* Countdown under the highlighted line: seconds left for that line, in a ring that fills green clockwise. */
 /* Words light up like a progress bar: read ones turn green, the one to say now sits in a plain green box, the rest wait dimmed. */
-.vo-w{border-radius:6px;padding:0 .06em;transition:color .2s,opacity .2s}.vo-going .vo-line.on .vo-w{opacity:.45}
-.vo-going .vo-line.on .vo-w.lit{opacity:1;color:#4ade80}
-.vo-going .vo-line.on .vo-w.now{opacity:1;color:#fff;background:#22c55e;box-shadow:0 0 0 2px #22c55e}
-html.ts:not(.ts-dark) .vo-going .vo-line.on .vo-w.lit{color:#15803d}html.ts:not(.ts-dark) .vo-going .vo-line.on .vo-w.now{color:#052e16}
+.vo-w{transition:opacity .25s,box-shadow .25s}.vo-going .vo-line.on .vo-w{opacity:.55}
+/* Calm progress: words you've read go back to full white, the word to say now gets a thin green underline. No colour fills, so it stays easy to read. */
+.vo-going .vo-line.on .vo-w.lit,.vo-going .vo-line.on .vo-w.now{opacity:1}
+.vo-going .vo-line.on .vo-w.now{box-shadow:inset 0 -3px 0 #22c55e}
 .vo-cd{display:flex;align-items:center;gap:8px;margin-top:10px}.vo-cd b{padding:4px 12px;border-radius:999px;background:#22c55e22;border:1px solid #22c55e88;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}.vo-cd span{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600;opacity:.8}.vo-cd.end b{background:#22c55e;color:#fff}
 @media (prefers-reduced-motion:reduce){.vo-w{transition:none}}
 /* Light theme: the script box follows it (dark stays the default, also outside the dashboard). */
@@ -182,7 +182,7 @@ function countdown(){const el=prompter.querySelector('.vo-line.on .vo-cd'),s=S.s
   prompter.classList.toggle('vo-going',!!S.rec);
   for(const w of prompter.querySelectorAll('.vo-line.on .vo-w')){const a=+w.dataset.a,b=+w.dataset.b,now=S.rec&&p>=a&&p<b;w.classList.toggle('lit',!!S.rec&&p>=b);w.classList.toggle('now',now)}
   el.querySelector('b').textContent=end?'✓ Done':S.rec?Math.ceil(left)+'s left':Math.round(total*10)/10+'s';el.classList.toggle('end',end);
-  el.querySelector('span').textContent=!S.rec?'for this line':end?(S.idx<S.scenes.length-1?(manual()?'Tap Next scene':'Next line…'):'Last line, tap Stop when done'):'Read along with the green.'}
+  el.querySelector('span').textContent=!S.rec?'for this line':end?(S.idx<S.scenes.length-1?(manual()?'Tap Next scene':'Next line…'):'Last line, tap Stop when done'):'Follow the green underline.'}
 function advance(to){if(!S.rec||S.rec.state==='paused'||S.idx>=S.scenes.length-1)return;const i=to??S.idx+1;if(i<=S.idx)return;S.idx=i;S.marks[i]=now();paint()}
 function stop(){clearInterval(S.timer);const rec=S.rec;
   if(!rec){stopStream();idle();return}
