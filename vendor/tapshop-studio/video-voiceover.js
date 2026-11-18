@@ -38,11 +38,15 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 #voPause{position:absolute;inset:0;display:grid;place-items:center;background:#000a;z-index:5;text-align:center;font:800 26px/1.3 system-ui,sans-serif;color:#fff;cursor:pointer;border-radius:inherit}#voPause[hidden]{display:none}#voPause small{display:block;font:600 14px system-ui,sans-serif;opacity:.85;margin-top:6px}
 .vo-line p{margin:0;font-weight:600}
 /* A small "how this works" card over the script when the recorder opens. */
-#voTip{position:absolute;left:10px;right:10px;bottom:10px;z-index:4;padding:12px 14px;border-radius:14px;background:#1f1b24;border:2px solid #ec4899;color:#fff;font:500 14px/1.4 system-ui,sans-serif;box-shadow:0 8px 24px #0009}#voTip[hidden]{display:none}
+@property --vo-a{syntax:'<angle>';inherits:false;initial-value:0deg}
+#voTip{--vo-bg:#1f1b24;position:absolute;left:14px;right:14px;bottom:10px;z-index:4;padding:12px 14px;border-radius:14px;border:3px solid transparent;
+  background:linear-gradient(var(--vo-bg),var(--vo-bg)) padding-box,conic-gradient(from var(--vo-a),#ec489955,#ec4899 18%,#fff 25%,#ec4899 32%,#ec489955 50%,#ec489955) border-box;
+  animation:vo-spin 2.6s linear infinite;color:#fff;font:500 14px/1.4 system-ui,sans-serif;box-shadow:0 8px 24px #0009}#voTip[hidden]{display:none}
+@keyframes vo-spin{to{--vo-a:360deg}}@media (prefers-reduced-motion:reduce){#voTip{animation:none}}
 #voTip b{display:block;font-size:15px;margin-bottom:6px}#voTip ul{margin:0;padding-left:18px}#voTip li{margin:3px 0}
 #voTip .vo-tipbar{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}#voTip .vo-tipbar button{padding:7px 14px;border-radius:999px;font:700 13px system-ui,sans-serif;cursor:pointer;border:1px solid #ffffff55;background:transparent;color:#fff}
-#voTip .vo-tipbar .vo-ok{background:#ec4899;border-color:#ec4899}
-html.ts:not(.ts-dark) #voTip{background:#fff;color:#1f1b24}html.ts:not(.ts-dark) #voTip .vo-tipbar button{color:#1f1b24;border-color:#0003}html.ts:not(.ts-dark) #voTip .vo-tipbar .vo-ok{color:#fff}
+#voTip .vo-tipbar .vo-ok{background:#ec4899!important;border-color:#ec4899!important;color:#fff!important}
+html.ts:not(.ts-dark) #voTip{--vo-bg:#fff;color:#1f1b24}html.ts:not(.ts-dark) #voTip .vo-tipbar button{color:#1f1b24;border-color:#0003}html.ts:not(.ts-dark) #voTip .vo-tipbar .vo-ok{color:#fff}
 .vo-line.on{opacity:1;background:#ff5b8322;box-shadow:inset 3px 0 0 #ff5b83}
 .vo-line.done{opacity:.3}
 /* Countdown under the highlighted line: seconds left for that line, in a ring that fills green clockwise. */
@@ -357,7 +361,12 @@ const TIP_OFF='tapshop-vo-tip-off';
 function showTip(){const t=q('voTip');let off=false;try{off=localStorage.getItem(TIP_OFF)==='1'}catch{}
   if(off||!S.scenes.length||S.rec){t.hidden=true;return}
   t.innerHTML=`<b>👋 Quick tips</b><ul><li>Use <b style="display:inline;font-size:inherit;margin:0">− +</b> on each scene to change how long it lasts.${S.onLen?' It updates your whole video too.':''}</li><li>Tap the script once to pause. Tap again to keep recording.</li><li>Finished a line early? That's fine. Just wait for the next line to light up.</li></ul><div class="vo-tipbar"><button type="button" class="vo-never">Don't show again</button><button type="button" class="vo-ok">Got it</button></div>`;
-  t.hidden=false}
+  t.hidden=false;place()}
+// Sit the card across the line between the first two scenes, so it overlaps both and is easy to spot.
+function place(){const t=q('voTip'),st=t.parentElement,l=prompter.querySelector('.vo-line');if(t.hidden||!l||!st)return;
+  const sr=st.getBoundingClientRect(),lr=l.getBoundingClientRect(),h=t.offsetHeight,room=sr.height-h-10;
+  t.style.bottom='auto';t.style.top=Math.max(10,Math.min(room,lr.bottom-sr.top-28))+'px'}
+addEventListener('resize',place);
 q('voTip').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;e.stopPropagation();if(b.classList.contains('vo-never'))try{localStorage.setItem(TIP_OFF,'1')}catch{}q('voTip').hidden=true});
 window.veVoiceover=function(script,opts={}){
   if(typeof exporting!=='undefined'&&exporting)return;
