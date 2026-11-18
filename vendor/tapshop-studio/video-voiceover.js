@@ -178,8 +178,6 @@ async function begin(){
   // If the microphone goes away mid-take (another app, unplugged), end the take instead of counting forever.
   S.stream.getAudioTracks().forEach(t=>t.addEventListener('ended',()=>{if(S.rec)stop()}));
   S.rec.start(250);S.t0=performance.now();S.marks=[0];
-  // A short buzz so you know it's really recording now (phones that allow it; iPhones don't).
-  try{navigator.vibrate?.(200)}catch{}
   recBtn.disabled=false;recBtn.textContent='■ Stop';recBtn.classList.add('vo-live');nextBtn.hidden=S.scenes.length<2;
   const pill=q('voRecPill');pill.hidden=false;pill.textContent='REC 0:00';
   clearInterval(S.timer);S.timer=setInterval(()=>{if(!S.rec||S.rec.state==='inactive'){clearInterval(S.timer);return}if(S.rec.state==='paused')return;const t=now();status('● Recording '+fmt(t));pill.textContent='REC '+fmt(t);countdown();
