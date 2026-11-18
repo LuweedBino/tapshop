@@ -142,6 +142,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .ag-meter{margin:6px 0 2px;padding:10px 12px;border-radius:14px;border:2px solid #ec4899;background:#ec489914}.ag-meter.ok{border-color:#22c55e;background:#22c55e14}
 .ag-mtop{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}.ag-mtop b{font-size:16px}.ag-mtop span{font-size:12px;opacity:.8}
+.ag-total{position:sticky;top:-2px;z-index:3;margin:0 -2px 10px;padding:8px 2px 10px;background:var(--ts-surface,#16161a)}.ag-total .ag-meter{margin:0}.ag-total .ag-mtop b{font-size:15px}
 .ag-mbar{height:8px;margin-top:8px;border-radius:99px;background:#8883;overflow:hidden}.ag-mbar i{display:block;height:100%;border-radius:inherit;background:#ec4899;transition:width .3s}.ag-meter.ok .ag-mbar i{background:#22c55e}.ag-meter.ok .ag-mtop span{color:#22c55e;opacity:1;font-weight:700}
 .ag-clipname em{flex:none;font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:#8882}
 .ag-clip{margin:10px 0 0;padding:10px;border:1px solid #8886;border-radius:14px;background:#8881}
@@ -238,7 +239,7 @@ script(){const m=S.scriptMode,n=S.scenes.length;
     <label class="ag-f"><textarea data-k="ask" rows="2" maxlength="500" placeholder="e.g. make it funnier, or mention it's dishwasher safe">${esc(S.ask||'')}</textarea></label>
     <div class="ag-btns"><button type="button" class="primary" data-act="askGo" ${busy?'disabled':''}>✨ Change it</button>${S.prev?`<button type="button" data-act="undoAsk" ${busy?'disabled':''}>↩ Undo last change</button>`:''}</div></details></section>`;
   return h},
-footage(){let h=`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film scene by scene with shot ideas and use scripts as guides every step of the way.</span></div>`;
+footage(){let h=totalMeter()+`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film scene by scene with shot ideas and use scripts as guides every step of the way.</span></div>`;
   const nextI=S.scenes.findIndex((s,i)=>!(files.get(i)||[]).length);
   h+=S.scenes.map((s,i)=>{const fl=files.get(i)||[];return `<div class="ag-scene${i===nextI?' next':''}"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}${i===nextI?' · next to film':''}</span></div>
     <p class="ag-shot">🎥 <b>Shot idea:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
@@ -403,6 +404,11 @@ function clipDur(f){if(DUR.has(f))return DUR.get(f);DUR.set(f,null);
   v.onerror=()=>end(0);setTimeout(()=>end(0),8000);v.src=url;return null}
 const fmtS=x=>x>=60?Math.floor(x/60)+':'+String(Math.round(x%60)).padStart(2,'0'):(Math.round(x*10)/10)+' s';
 const isFull=(fl,goal)=>{const ds=fl.map(clipDur);return ds.length>0&&ds.every(d=>d!==null)&&ds.reduce((a,d)=>a+d,0)>goal-1};
+function totalMeter(){const n=S.scenes.length;if(!n)return '';let tot=0,need=0,got=0,done=0,known=true;
+  S.scenes.forEach((s,i)=>{const fl=files.get(i)||[],g=filmSecs(s),ds=fl.map(clipDur);if(ds.some(d=>d===null))known=false;const t=ds.reduce((a,d)=>a+(d||0),0);
+    tot+=t;need+=g;got+=Math.min(t,g);if(isFull(fl,g))done++});
+  const ok=done===n,pct=need?Math.min(100,got/need*100):0;
+  return `<div class="ag-total"><div class="ag-meter${ok?' ok':''}"><div class="ag-mtop"><b>🎬 Whole video: ${known?fmtS(tot):'…'} of about ${fmtS(need)}</b><span>${ok?'✓ every scene filmed':done+' of '+n+' scenes done'}</span></div><div class="ag-mbar"><i style="width:${pct}%"></i></div></div></div>`}
 function filmed(fl,goal){if(!fl.length)return '';const ds=fl.map(clipDur),known=ds.every(d=>d!==null),tot=ds.reduce((a,d)=>a+(d||0),0),ok=known&&tot>=goal,pct=Math.min(100,goal?tot/goal*100:100);
   return `<div class="ag-meter${ok?' ok':''}"><div class="ag-mtop"><b>🎞️ Filmed: ${known?fmtS(tot):'…'}</b><span>${fl.length} clip${fl.length===1?'':'s'} · ${known?(ok?'✓ enough for this scene':'about '+fmtS(Math.max(.1,goal-tot))+' more to go'):'checking…'}</span></div><div class="ag-mbar"><i style="width:${pct}%"></i></div></div>`}
 function filmSecs(s){const say=nWords(s.say)/2.5;return S.voice==='talking'?Math.max(2,Math.ceil(say+1)):Math.ceil(Math.max(s.secs||0,say,2)+2)}
