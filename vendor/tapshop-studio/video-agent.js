@@ -78,7 +78,7 @@ const CAPS=[['pop','Word pop'],['karaoke','Karaoke'],['classic','Classic'],['box
 
 const fresh=()=>({order:2,step:0,max:0,brief:{product:'',benefits:'',audience:'',platform:'tiktok',length:30,tone:'Casual & Authentic'},
   story:'AUTO',group:'',scriptMode:'ai',ownLines:'',title:'',hookOptions:[],hook:0,scenes:[],
-  footage:'clips',voice:'record',captions:true,capStyle:'pop',brand:true,music:'auto',built:false});
+  footage:'clips',voice:'record',captions:true,capStyle:'pop',brand:true,music:'auto',built:false,work:0});
 let S=(()=>{try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(!d||!d.brief)return fresh();if(d.order!==2){if(d.step===3||d.step===4)d.step=7-d.step;d.order=2}return {...fresh(),...d,footage:'clips'}}catch{return fresh()}})();
 const files=new Map();let take=null,busy=false,musicPlayer=null;
 let saveT=0;const save=()=>{clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch{}},300)};
@@ -142,6 +142,7 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .ag-meter{margin:6px 0 2px;padding:10px 12px;border-radius:14px;border:2px solid #ec4899;background:#ec489914}.ag-meter.ok{border-color:#22c55e;background:#22c55e14}
 .ag-mtop{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}.ag-mtop b{font-size:16px}.ag-mtop span{font-size:12px;opacity:.8}
+.ag-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin:10px 0}.ag-stat{border:1px solid #8884;border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;text-align:left;min-width:0}.ag-stat span{font-size:12px;opacity:.75}.ag-stat b{font-size:18px;line-height:1.2;overflow-wrap:anywhere}.ag-done .ag-stat b{display:block;font-size:18px;margin:0}.ag-stat small{font-size:12px;opacity:.7}.ag-stat:first-child{border:2px solid #ec4899;background:#ec489914}.ag-stat:first-child b{color:#ff3ea5;font-size:22px}
 .ag-total{position:sticky;top:-2px;z-index:3;margin:0 -2px 10px;padding:8px 2px 10px;background:var(--ts-surface,#16161a)}.ag-total .ag-meter{margin:0}.ag-total .ag-mtop b{font-size:15px}
 .ag-mbar{height:8px;margin-top:8px;border-radius:99px;background:#8883;overflow:hidden}.ag-mbar i{display:block;height:100%;border-radius:inherit;background:#ec4899;transition:width .3s}.ag-meter.ok .ag-mbar i{background:#22c55e}.ag-meter.ok .ag-mtop span{color:#22c55e;opacity:1;font-weight:700}
 .ag-clipname em{flex:none;font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:99px;background:#8882}
@@ -274,15 +275,12 @@ parts(){const sx=[['','None'],...sfxList().map(([k,e,n])=>[k,e+' '+n])],an=anims
     <label>Animation<select data-k="anim" data-i="${i}">${opts(an,s.anim||'fade')}</select></label>
     <label>Sound effect<select data-k="sfx" data-i="${i}">${opts(sx,s.sfx)}</select></label><button type="button" data-act="sfxPlay" data-i="${i}" aria-label="Play sound">▶</button></div></div>`).join('')}
   <div class="ag-g">Music</div><div class="ag-row" style="display:flex;gap:8px;align-items:center"><select data-k="music" style="flex:1">${opts(music,S.music)}</select><button type="button" data-act="musicPlay" aria-label="Listen">▶ Listen</button></div>`},
-build(){if(S.built)return `<div class="ag-done"><b>🎉 Your video is ready!</b><p class="ag-help">It's in the editor now: every clip, word, sound and caption can still be changed.</p>
+build(){const st=STORIES.find(s=>s[0]===S.story);
+  if(S.built)return `<div class="ag-done"><b>🎉 Your video is ready!</b><p class="ag-help">It's in the editor now: every clip, word, sound and caption can still be changed.</p>
+  ${statTiles(true)}
   <div class="ag-btns" style="justify-content:center"><button type="button" class="primary" data-act="watch">▶ Watch it</button><button type="button" data-act="edit">✏️ Edit it</button><button type="button" data-act="restart">🪄 Make another</button></div></div>`;
-  const n=[...files.values()].reduce((a,l)=>a+l.length,0),st=STORIES.find(s=>s[0]===S.story);
-  return `<h3>Ready to build</h3><p class="ag-help">Here's what goes into your video:</p><ul class="ag-sum">
-  <li><b>${esc(S.brief.product)}</b> · ${esc(PLATFORMS.find(p=>p[0]===S.brief.platform)?.[1]||'')} · ${S.brief.length} s</li>
-  <li>Story: ${esc(st?st[2]:S.story)} · ${S.scenes.length} scenes</li>
-  <li>Footage: ${n+' clip'+(n===1?'':'s')}</li>
-  <li>Voice: ${S.voice==='record'?(take?'your voiceover ✓':'not recorded yet'):S.voice==='talking'?'from your clips':'none'}${S.voice!=='none'&&S.captions?' · auto captions':''}</li>
-  <li>Music: ${S.music==='auto'?'picked for you':S.music?esc(window.veMoods?.[S.music]?.name||S.music):'none'}</li></ul>
+  return `<h3>Ready to build</h3><p class="ag-help"><b style="color:#ff3ea5">${esc(S.brief.product)}</b> · ${esc(st?st[2]:S.story)}. Here's what goes into your video:</p>
+  ${statTiles(false)}
   <p class="ag-help">If you already have a video open, it's kept in Recent videos.</p>`}};
 
 function paint(){const i=S.step;
@@ -404,6 +402,27 @@ function clipDur(f){if(DUR.has(f))return DUR.get(f);DUR.set(f,null);
   v.onerror=()=>end(0);setTimeout(()=>end(0),8000);v.src=url;return null}
 const fmtS=x=>x>=60?Math.floor(x/60)+':'+String(Math.round(x%60)).padStart(2,'0'):(Math.round(x*10)/10)+' s';
 const isFull=(fl,goal)=>{const ds=fl.map(clipDur);return ds.length>0&&ds.every(d=>d!==null)&&ds.reduce((a,d)=>a+d,0)>goal-1};
+// Stats for the Build step: what the video holds and how long making it took (active time with the maker open).
+const fmtT=ms=>{const m=Math.round(ms/60000);return ms<60000?Math.max(1,Math.round(ms/1000))+' s':m<60?m+' min':Math.floor(m/60)+' h '+(m%60)+' min'};
+const wordsIn=t=>(String(t||'').match(/[\p{L}\p{N}']+/gu)||[]).length;
+function statTiles(done){const pf=PLATFORMS.find(p=>p[0]===(S.brief.platform||'tiktok'))||PLATFORMS[0],M=S.made||{};
+  const all=[...files.values()].flat(),ds=all.map(clipDur),known=ds.every(d=>d!==null),film=ds.reduce((a,d)=>a+(d||0),0);
+  const plan=S.scenes.reduce((a,x)=>a+(+x.secs||0),0),voice=S.voice==='record'&&take?.dur?take.dur:0;
+  const len=done&&M.len?M.len:voice||plan,nClips=done&&M.clips!=null?M.clips:all.length;
+  const say=S.scenes.reduce((a,x)=>a+wordsIn(x.say),0),onScr=S.scenes.filter(x=>String(x.text||'').trim()).length,fx=S.scenes.filter(x=>x.sfx).length;
+  const music=S.music==='auto'?'Picked for you':S.music?(window.veMoods?.[S.music]?.name||S.music):'None';
+  const T=[['🎬',done?'Video length':'About this long',fmtS(len),done?'':(voice?'from your voiceover':'from your script')],
+    ['📐','Made for',esc(pf[1]),esc(pf[2])+' frame'],
+    ['🎞️','Scenes',S.scenes.length,'you picked '+S.brief.length+' s'],
+    ['📹','Clips filmed',nClips,known&&film?fmtS(film)+' of footage':''],
+    ['🎙️','Voice',S.voice==='record'?(take?'Voiceover ✓':'Not recorded'):S.voice==='talking'?'In your clips':'None',voice?fmtS(voice)+(S.captions?' · captions':''):(S.voice!=='none'&&S.captions?'auto captions':'')],
+    ['✍️','Script',say+' words',voice&&say?Math.round(say/voice*60)+' words a minute':''],
+    ['💬','Words on screen',onScr+' of '+S.scenes.length,'scenes'],
+    ['🔊','Sound effects',fx,fx===1?'sound':'sounds'],
+    ['🎵','Music',esc(music),''],
+    ['⏱️','Time making it',fmtT(done&&M.work?M.work:S.work||0),done?'start to finish':'so far'],
+    ...(done&&M.buildMs?[['⚡','Built in',fmtT(M.buildMs),'by AI']]:[])];
+  return `<div class="ag-stats">${T.map(([i,l,v,sub])=>`<div class="ag-stat"><span>${i} ${l}</span><b>${v}</b>${sub?`<small>${sub}</small>`:''}</div>`).join('')}</div>`}
 function totalMeter(){const n=S.scenes.length;if(!n)return '';let tot=0,need=0,got=0,done=0,known=true;
   S.scenes.forEach((s,i)=>{const fl=files.get(i)||[],g=filmSecs(s),ds=fl.map(clipDur);if(ds.some(d=>d===null))known=false;const t=ds.reduce((a,d)=>a+(d||0),0);
     tot+=t;need+=g;got+=Math.min(t,g);if(isFull(fl,g))done++});
@@ -467,7 +486,7 @@ function alignMarks(scenes,words,dur){const sw=[];scenes.forEach((s,k)=>String(s
   for(let k=1;k<at.length;k++){if(at[k]!=null)continue;let a=k-1,b=k;while(b<at.length&&at[b]==null)b++;
     const tb=b<at.length?at[b]:dur,wa=cnt.slice(a,b).reduce((x,y)=>x+y,0);let w=0;for(let q=a;q<k;q++)w+=cnt[q];at[k]=at[a]+(tb-at[a])*w/wa}
   for(let k=1;k<at.length;k++)at[k]=Math.min(Math.max(at[k],at[k-1]+.4),dur-.3);return at}
-async function build(){if(busy||(typeof exporting!=='undefined'&&exporting))return;busy=true;paint();const say=m=>status(m);
+async function build(){if(busy||(typeof exporting!=='undefined'&&exporting))return;busy=true;paint();const t0=Date.now();const say=m=>status(m);
   try{if(clips.length||graphicTracks.length||extraTracks.length){say('Saving your current video to Recent videos…');if(window.veNewProject)await veNewProject();else{clips=[];graphicTracks=[];extraTracks=[]}}
     const st=byId('veStart');if(st)st.hidden=true;
     const asp=PLATFORMS.find(p=>p[0]===S.brief.platform)?.[2]||'9:16';const sel=byId('aspect');if(sel){sel.value=asp;setAspect()}const W=canvas.width,H=canvas.height;
@@ -520,7 +539,7 @@ async function build(){if(busy||(typeof exporting!=='undefined'&&exporting))retu
         else if(window.veAutoCaptions){say('Listening for captions…');capNote=await veAutoCaptions(say)?'':' We didn\'t hear any words for captions.'}}
       catch(e){console.warn('Captions skipped:',e);capNote=' Captions didn\'t work here; try ✨ Captions in the toolbar.'}
       renderGraphicTracks();draw()}
-    S.built=true;save();status('Done!'+capNote);toast('🪄 Your video is ready! Press ▶ to watch it.'+capNote)}
+    S.made={len:typeof total==='function'?total():0,clips:[...files.values()].flat().length,work:S.work||0,buildMs:Date.now()-t0};S.built=true;save();status('Done!'+capNote);toast('🪄 Your video is ready! Press ▶ to watch it.'+capNote)}
   catch(e){console.error(e);status('Couldn\'t build the video: '+(e.message||e))}
   finally{busy=false;paint()}}
 
@@ -577,6 +596,7 @@ nextBtn.onclick=()=>{if(S.step!==STEPS.length-1)return go(S.step+1);
 backBtn.onclick=()=>go(S.step-1);
 dlg.querySelector('.ag-x').onclick=()=>dlg.close();
 dlg.addEventListener('close',()=>{stopMusic();save()});
+setInterval(()=>{if(dlg.open&&!document.hidden&&!S.built&&!busy){S.work=(S.work||0)+5000;if(STEPS[S.step][0]==='build'&&!body.contains(document.activeElement)){const y=body.scrollTop;paint();body.scrollTop=y}}},5000);
 // Phones: inside the dashboard the editor is an iframe that can reach past the bottom of the screen (browser bars,
 // a scrolled page), so a full-screen dialog's Back / Next bar ended up out of reach. Fit the dialog to the part of
 // the iframe that is really on screen, read from the dashboard page's visual viewport (same origin).
