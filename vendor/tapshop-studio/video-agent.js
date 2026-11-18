@@ -347,7 +347,7 @@ async function editVoice(){if(!take||!window.veVoiceStudio)return;const r=await 
   URL.revokeObjectURL(take.url);take.url=URL.createObjectURL(take.file);paint();status(r.plain?'Back to your original recording.':'🎚️ Voice updated. Tap ▶ to hear it.')}
 function record(){if(!window.veVoiceover){status('The voiceover recorder isn\'t available here.');return}
   veVoiceover({scenes:S.scenes.map(s=>({sectionType:s.type,durationSeconds:s.secs,voiceoverLine:s.say,onScreenText:''}))},
-    {onTake:t=>{if(take?.url)URL.revokeObjectURL(take.url);take={...t,url:URL.createObjectURL(t.file)};paint();status('Voiceover saved for this video.')}})}
+    {onLength:(i,v)=>{if(S.scenes[i]){S.scenes[i].secs=v;save()}},onTake:t=>{if(take?.url)URL.revokeObjectURL(take.url);take={...t,url:URL.createObjectURL(t.file)};paint();status('Voiceover saved for this video.')}})}
 
 // ---------- music preview ----------
 function stopMusic(){try{musicPlayer?.stop()}catch{}musicPlayer=null}

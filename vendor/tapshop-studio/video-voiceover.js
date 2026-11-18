@@ -30,7 +30,12 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 @media (prefers-reduced-motion:reduce){.vo-dot,.vo-dot.go,.vo-recpill::before{animation:none}}
 .vo-prompter{height:min(46vh,380px);min-height:120px;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:10px;border-radius:12px;background:#0b0b10;color:#fff;line-height:1.3}
 .vo-line{padding:8px 12px;border-radius:10px;opacity:.45;transition:opacity .2s,background .2s;cursor:pointer}
-.vo-line small{display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin-bottom:2px}
+.vo-line small{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.75;margin-bottom:2px}
+/* − 6s + on every line: how long the line gets. Hidden while recording, so taps on the script only pause. */
+.vo-len{display:inline-flex;align-items:center;gap:4px;letter-spacing:0;text-transform:none}.vo-len b{min-width:38px;text-align:center;font-size:13px}.vo-len button{width:28px;height:28px;padding:0!important;border-radius:50%!important;font:700 16px system-ui!important;line-height:1!important}
+.vo-going .vo-len,.vo-paused .vo-len{display:none}
+/* Tap to pause: a big notice over the script until the next tap. */
+#voPause{position:absolute;inset:0;display:grid;place-items:center;background:#000a;z-index:5;text-align:center;font:800 26px/1.3 system-ui,sans-serif;color:#fff;cursor:pointer;border-radius:inherit}#voPause[hidden]{display:none}#voPause small{display:block;font:600 14px system-ui,sans-serif;opacity:.85;margin-top:6px}
 .vo-line p{margin:0;font-weight:600}
 .vo-line.on{opacity:1;background:#ff5b8322;box-shadow:inset 3px 0 0 #ff5b83}
 .vo-line.done{opacity:.3}
@@ -92,7 +97,7 @@ document.head.appendChild(css);
 const dlg=document.createElement('dialog');dlg.id='voDialog';dlg.className='closable';dlg.setAttribute('aria-labelledby','voTitle');
 // One screen on phones: the script scrolls, everything else stays put, and the buttons sit at the bottom.
 dlg.innerHTML=`<div class="vo-head"><h2 id="voTitle">🎙️ Voiceover</h2><button type="button" class="vo-x" aria-label="Close" title="Close">×</button></div>
-<div class="vo-stage"><div id="voPrompter" class="vo-prompter" aria-live="polite"></div><div id="voBig" class="vo-big" hidden aria-hidden="true"><div class="vo-dot"></div></div><div id="voRecPill" class="vo-recpill" hidden></div></div>
+<div class="vo-stage"><div id="voPrompter" class="vo-prompter" aria-live="polite"></div><div id="voBig" class="vo-big" hidden aria-hidden="true"><div class="vo-dot"></div></div><div id="voRecPill" class="vo-recpill" hidden></div><div id="voPause" hidden role="button" aria-label="Paused. Tap to keep recording."><div>⏸ Paused<small>Tap anywhere to keep recording</small></div></div></div>
 <details id="voSet" class="vo-set"><summary>⚙️ Prompter settings <span id="voSetSum"></span><small class="vo-set-tip">👆 Too fast? Too small? Tap here to adjust, or edit your script.</small></summary>
 <div class="vo-grid"><label>Text size<input id="voSize" type="range" min="18" max="48" value="28"></label>
 <label id="voSpeedWrap">Speed: <b id="voSpeedV">1.0×</b><input id="voSpeed" type="range" min="0.5" max="2" step="0.1" value="1"></label></div>
@@ -120,7 +125,7 @@ if(!small())q('voSet').open=true;
 
 function paint(){
   if(!S.scenes.length)prompter.innerHTML=aiOK()?aiForm():'<p class="vo-empty">No script yet. Type what you want to say below, one line per scene, then tap Use these lines.</p><button type="button" class="vo-write" style="background:#ec489926">✏️ Write my script</button>';
-  else prompter.innerHTML=S.scenes.map((s,i)=>`<div class="vo-line${i===S.idx?' on':''}${i<S.idx?' done':''}" data-i="${i}"><small>${esc(s.sectionType||'Scene '+(i+1))}${s.durationSeconds?' · '+s.durationSeconds+'s':''}</small><p>${i===S.idx?words(s.voiceoverLine):esc(s.voiceoverLine)}</p>${i===S.idx?CD:''}</div>`).join('');
+  else prompter.innerHTML=S.scenes.map((s,i)=>`<div class="vo-line${i===S.idx?' on':''}${i<S.idx?' done':''}" data-i="${i}"><small><span>${esc(s.sectionType||'Scene '+(i+1))}</span><span class="vo-len"><button type="button" data-len="-0.5" data-i="${i}" aria-label="Shorter">−</button><b>${Math.round(plan(s)*10)/10}s</b><button type="button" data-len="0.5" data-i="${i}" aria-label="Longer">+</button></span></small><p>${i===S.idx?words(s.voiceoverLine):esc(s.voiceoverLine)}</p>${i===S.idx?CD:''}</div>`).join('');
   prompter.style.fontSize=q('voSize').value+'px';q('voChatWrap').hidden=!aiOK()||!S.scenes.length;
   q('voTextWrap').hidden=!!S.onTake||!S.scenes.some(s=>s.onScreenText);
   const on=prompter.querySelector('.vo-line.on');
@@ -131,7 +136,7 @@ function setScenes(scenes){S.scenes=scenes;S.idx=0;S.marks=[];q('voEdit').value=
 
 function clearTake(){if(S.url)URL.revokeObjectURL(S.url);S.url='';S.take=null;audio.removeAttribute('src');q('voTake').hidden=true;useBtn.hidden=retakeBtn.hidden=true;useBtn.disabled=false;recBtn.hidden=false}
 function stopStream(){S.stream?.getTracks().forEach(t=>t.stop());S.stream=null}
-function idle(){clearInterval(S.timer);q('voRecPill').hidden=true;q('voBig').hidden=true;recBtn.disabled=false;recBtn.textContent='● Record';recBtn.classList.remove('vo-live');nextBtn.hidden=true;prompter.classList.remove('vo-going')}
+function idle(){clearInterval(S.timer);q('voRecPill').hidden=true;q('voBig').hidden=true;recBtn.disabled=false;recBtn.textContent='● Record';recBtn.classList.remove('vo-live');nextBtn.hidden=true;prompter.classList.remove('vo-going','vo-paused');const pb=q('voPause');if(pb)pb.hidden=true;S.pausedAt=0}
 
 async function start(){
   if(typeof exporting!=='undefined'&&exporting)return;
@@ -156,7 +161,7 @@ async function begin(){
   S.rec.start(250);S.t0=performance.now();S.marks=[0];
   recBtn.disabled=false;recBtn.textContent='■ Stop';recBtn.classList.add('vo-live');nextBtn.hidden=S.scenes.length<2;
   const pill=q('voRecPill');pill.hidden=false;pill.textContent='REC 0:00';
-  clearInterval(S.timer);S.timer=setInterval(()=>{if(!S.rec||S.rec.state==='inactive'){clearInterval(S.timer);return}const t=now();status('● Recording '+fmt(t));pill.textContent='REC '+fmt(t);countdown();
+  clearInterval(S.timer);S.timer=setInterval(()=>{if(!S.rec||S.rec.state==='inactive'){clearInterval(S.timer);return}if(S.rec.state==='paused')return;const t=now();status('● Recording '+fmt(t));pill.textContent='REC '+fmt(t);countdown();
     if(!manual()&&S.idx<S.scenes.length-1&&t-S.marks[S.idx]>=plan(S.scenes[S.idx])/speed())advance()},150);
 }
 const now=()=>(performance.now()-S.t0)/1000;
@@ -171,7 +176,7 @@ function countdown(){const el=prompter.querySelector('.vo-line.on .vo-cd'),s=S.s
   for(const w of prompter.querySelectorAll('.vo-line.on .vo-w')){const a=+w.dataset.a,b=+w.dataset.b,now=S.rec&&p>=a&&p<b;w.classList.toggle('lit',!!S.rec&&p>=b);w.classList.toggle('now',now)}
   el.querySelector('b').textContent=end?'✓ Done':S.rec?Math.ceil(left)+'s left':Math.round(total*10)/10+'s';el.classList.toggle('end',end);
   el.querySelector('span').textContent=!S.rec?'for this line. The words light up green as you go.':end?(S.idx<S.scenes.length-1?(manual()?'Tap Next scene':'Next line…'):'Last line, tap Stop when done'):'Read along with the green.'}
-function advance(to){if(!S.rec||S.idx>=S.scenes.length-1)return;const i=to??S.idx+1;if(i<=S.idx)return;S.idx=i;S.marks[i]=now();paint()}
+function advance(to){if(!S.rec||S.rec.state==='paused'||S.idx>=S.scenes.length-1)return;const i=to??S.idx+1;if(i<=S.idx)return;S.idx=i;S.marks[i]=now();paint()}
 function stop(){clearInterval(S.timer);const rec=S.rec;
   if(!rec){stopStream();idle();return}
   q('voRecPill').hidden=true;recBtn.disabled=true;recBtn.textContent='Stopping…';recBtn.classList.remove('vo-live');status(S.discard?'':'Stopping…');
@@ -244,7 +249,16 @@ q('voManual').onchange=prefs;
 prefs();
 q('voApply').onclick=()=>{if(S.rec)return;const lines=q('voEdit').value.split('\n').map(l=>l.trim()).filter(Boolean).slice(0,40);
   setScenes(lines.map((l,i)=>({...(S.scenes[i]||{sectionType:'Scene '+(i+1),durationSeconds:0,onScreenText:''}),voiceoverLine:l})));q('voEditWrap').open=false};
-prompter.onclick=e=>{const el=e.target.closest('.vo-line');if(!el)return;const i=+el.dataset.i;if(S.rec)advance(i);else{S.idx=i;paint()}};
+prompter.onclick=e=>{const lb=e.target.closest('[data-len]');if(lb){if(S.rec)return;const i=+lb.dataset.i,s=S.scenes[i];if(!s)return;
+    s.durationSeconds=Math.min(60,Math.max(1,Math.round((plan(s)+(+lb.dataset.len))*2)/2));S.onLen?.(i,s.durationSeconds);paint();return}
+  if(S.rec&&S.rec.state!=='inactive'){togglePause();return}
+  const el=e.target.closest('.vo-line');if(!el)return;S.idx=+el.dataset.i;paint()};
+q('voPause').onclick=()=>togglePause();
+// Tap the script while recording to pause; tap again to carry on. Paused time is left out of the clock, so the
+// line timings and scene marks still match the recording.
+function togglePause(){const r=S.rec;if(!r)return;const box=q('voPause'),pill=q('voRecPill');
+  if(r.state==='recording'){try{r.pause()}catch{return}S.pausedAt=performance.now();box.hidden=false;prompter.classList.add('vo-paused');pill.textContent='⏸ PAUSED';status('⏸ Paused. Tap the script to keep recording.')}
+  else if(r.state==='paused'){S.t0+=performance.now()-S.pausedAt;S.pausedAt=0;try{r.resume()}catch{}box.hidden=true;prompter.classList.remove('vo-paused')}}
 dlg.addEventListener('keydown',e=>{if(S.rec&&(e.key==='ArrowRight'||e.key==='ArrowDown')){e.preventDefault();advance()}});
 dlg.querySelector('.vo-x').onclick=()=>dlg.close();
 dlg.addEventListener('close',()=>{if(S.rec||S.stream){S.discard=true;stop()}clearTake();status('')});
@@ -320,7 +334,7 @@ for(const w of [vv,(()=>{try{return window.parent!==window&&window.parent.visual
 dlg.addEventListener('focusin',()=>{fitKb();setTimeout(fitKb,400);setTimeout(fitKb,900)});dlg.addEventListener('focusout',()=>setTimeout(fitKb,100));dlg.addEventListener('close',()=>{dlg.classList.remove('vo-kb');for(const k of ['top','bottom','margin','height','max-height'])dlg.style.removeProperty(k)});
 window.veVoiceover=function(script,opts={}){
   if(typeof exporting!=='undefined'&&exporting)return;
-  S.onTake=typeof opts.onTake==='function'?opts.onTake:null;useBtn.textContent=S.onTake?'✓ Use this take':'✓ Add to timeline';
+  S.onTake=typeof opts.onTake==='function'?opts.onTake:null;S.onLen=typeof opts.onLength==='function'?opts.onLength:null;useBtn.textContent=S.onTake?'✓ Use this take':'✓ Add to timeline';
   if(script)setScenes(script.scenes);else paint();
   if(!dlg.open)dlg.showModal();
   status(S.scenes.length?'Tap ● Record when you\'re ready. You get a 3-second countdown.':'');if(!S.scenes.length&&!aiOK())openEditor();
