@@ -140,6 +140,10 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-files{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.ag-file{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid #8886;border-radius:999px;padding:3px 4px 3px 10px;max-width:100%}
 .ag-file span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:180px}.ag-file button{width:24px;height:24px;padding:0!important;border-radius:50%!important;font-size:13px}
 .ag-btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.ag-clip{margin:10px 0 0;padding:10px;border:1px solid #8886;border-radius:14px;background:#8881}
+.ag-clipname{display:flex;align-items:center;gap:6px;font-size:13px;min-width:0}.ag-clipname span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.85}
+.ag-clipbtns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.ag-clipbtns button{min-height:44px;border-radius:12px!important;font-weight:700;font-size:14px}
+.ag-clipbtns button[data-act=rmFile]{color:#f87171}
 .ag-ex{margin:2px 0 6px;font-size:13px;line-height:1.4;opacity:.85}
 .ag-shotlist{display:block;margin:4px 0 12px;padding:14px 16px;border-radius:16px;border:2px solid #ec4899;background:#ec48991a}.ag-shotlist b{display:block;font-size:18px;margin-bottom:4px}.ag-shotlist span{display:block;font-size:14px;line-height:1.45;opacity:.85}
 .ag-action{display:block;width:100%;margin-top:10px;min-height:50px;border-radius:14px!important;border:none!important;background:linear-gradient(135deg,#ec4899,#f43f5e)!important;color:#fff!important;font:800 16px system-ui,sans-serif!important;box-shadow:0 4px 14px #ec489955;cursor:pointer}
@@ -236,8 +240,8 @@ footage(){let h=`<div class="ag-shotlist"><b>🎬 Your shot list</b><span>Film s
     <p class="ag-shot">🎥 <b>Shot idea:</b> ${esc(s.shot||'Anything that shows: '+(s.text||s.say))}</p>
     <p class="ag-ex">💡 <b>Example:</b> ${esc(example(s,i))}</p>
     <p class="ag-len">⏱️ <b>About ${filmSecs(s)} seconds</b> ${S.voice==='talking'?'· say your line in one take, with a breath before and after':'· a little extra is fine, we trim it to fit'}</p>
-    ${fl.length?`<div class="ag-files">${fl.map((x,j)=>`<span class="ag-file"><span>${esc(x.name)}</span>${window.VideoCamera?`<button type="button" class="ag-retake" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip" title="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove">✕</button></span>`).join('')}</div>`:''}
-    <button type="button" class="ag-action" data-act="${touch()?'filmLine':'film'}" data-i="${i}">${fl.length?'🎬 Film it again':'🎬 Lights, camera, action!'}</button></div>`}).join('');
+    ${fl.map((x,j)=>`<div class="ag-clip"><div class="ag-clipname">🎞️ <span>${esc(x.name)}</span></div><div class="ag-clipbtns">${window.VideoCamera?`<button type="button" data-act="retake" data-i="${i}" data-j="${j}" aria-label="Retake this clip">↺ Retake</button>`:''}<button type="button" data-act="rmFile" data-i="${i}" data-j="${j}" aria-label="Remove this clip">✕ Remove</button></div></div>`).join('')}
+    <button type="button" class="ag-action" data-act="${touch()?'filmLine':'film'}" data-i="${i}" style="${fl.length?'background:transparent!important;color:#ec4899!important;border:2px solid #ec4899!important;box-shadow:none':'background:linear-gradient(135deg,#ec4899,#f43f5e)!important;color:#fff!important;border:none!important'}">${fl.length?'🎬 Film it again':'🎬 Lights, camera, action!'}</button></div>`}).join('');
   return h},
 voice(){const v=S.voice,none=S.scriptMode==='none';
   const sec=(n,title,body,sum='')=>`<section class="ag-sec"><div class="ag-sh"><span class="ag-num">${n}</span><b>${title}</b>${sum}</div>${body}</section>`;
