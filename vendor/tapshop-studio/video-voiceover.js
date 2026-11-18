@@ -31,9 +31,9 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-prompter{height:min(46vh,380px);min-height:120px;overflow:auto;overscroll-behavior:contain;touch-action:pan-y;padding:10px;border-radius:12px;background:#0b0b10;color:#fff;line-height:1.3}
 .vo-line{padding:8px 12px;border-radius:10px;opacity:.45;transition:opacity .2s,background .2s;cursor:pointer}
 .vo-line small{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;opacity:.75;margin-bottom:2px}
-/* − 6s + on every line: how long the line gets. Hidden while recording, so taps on the script only pause. */
+/* − 6s + on every line: how long the line gets. Hidden while recording (but still taking its space, so nothing jumps), so taps on the script only pause. */
 .vo-len{display:inline-flex;align-items:center;gap:4px;letter-spacing:0;text-transform:none}.vo-len b{min-width:38px;text-align:center;font-size:13px}.vo-len button{width:28px;height:28px;padding:0!important;border-radius:50%!important;font:700 16px system-ui!important;line-height:1!important}
-.vo-going .vo-len,.vo-paused .vo-len{display:none}
+.vo-going .vo-len,.vo-paused .vo-len{visibility:hidden}
 /* Tap to pause: a big notice over the script until the next tap. */
 #voPause{position:absolute;inset:0;display:grid;place-items:center;background:#000a;z-index:5;text-align:center;font:800 26px/1.3 system-ui,sans-serif;color:#fff;cursor:pointer;border-radius:inherit}#voPause[hidden]{display:none}#voPause small{display:block;font:600 14px system-ui,sans-serif;opacity:.85;margin-top:6px}
 .vo-line p{margin:0;font-weight:600}
@@ -45,7 +45,7 @@ css.textContent=`#voDialog{width:min(640px,94vw);padding:14px 16px}
 .vo-going .vo-line.on .vo-w.lit{opacity:1;color:#4ade80}
 .vo-going .vo-line.on .vo-w.now{opacity:1;color:#fff;background:#22c55e;box-shadow:0 0 0 2px #22c55e}
 html.ts:not(.ts-dark) .vo-going .vo-line.on .vo-w.lit{color:#15803d}html.ts:not(.ts-dark) .vo-going .vo-line.on .vo-w.now{color:#052e16}
-.vo-cd{display:flex;align-items:center;gap:8px;margin-top:10px}.vo-cd b{padding:4px 12px;border-radius:999px;background:#22c55e22;border:1px solid #22c55e88;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}.vo-cd span{font-size:13px;font-weight:600;opacity:.8}.vo-cd.end b{background:#22c55e;color:#fff}
+.vo-cd{display:flex;align-items:center;gap:8px;margin-top:10px}.vo-cd b{padding:4px 12px;border-radius:999px;background:#22c55e22;border:1px solid #22c55e88;font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}.vo-cd span{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600;opacity:.8}.vo-cd.end b{background:#22c55e;color:#fff}
 @media (prefers-reduced-motion:reduce){.vo-w{transition:none}}
 /* Light theme: the script box follows it (dark stays the default, also outside the dashboard). */
 html.ts:not(.ts-dark) .vo-prompter{background:#f7f4fb;color:#1d1a26;border:1px solid #e3ddec}
@@ -180,7 +180,7 @@ function countdown(){const el=prompter.querySelector('.vo-line.on .vo-cd'),s=S.s
   prompter.classList.toggle('vo-going',!!S.rec);
   for(const w of prompter.querySelectorAll('.vo-line.on .vo-w')){const a=+w.dataset.a,b=+w.dataset.b,now=S.rec&&p>=a&&p<b;w.classList.toggle('lit',!!S.rec&&p>=b);w.classList.toggle('now',now)}
   el.querySelector('b').textContent=end?'✓ Done':S.rec?Math.ceil(left)+'s left':Math.round(total*10)/10+'s';el.classList.toggle('end',end);
-  el.querySelector('span').textContent=!S.rec?'for this line. The words light up green as you go.':end?(S.idx<S.scenes.length-1?(manual()?'Tap Next scene':'Next line…'):'Last line, tap Stop when done'):'Read along with the green.'}
+  el.querySelector('span').textContent=!S.rec?'for this line':end?(S.idx<S.scenes.length-1?(manual()?'Tap Next scene':'Next line…'):'Last line, tap Stop when done'):'Read along with the green.'}
 function advance(to){if(!S.rec||S.rec.state==='paused'||S.idx>=S.scenes.length-1)return;const i=to??S.idx+1;if(i<=S.idx)return;S.idx=i;S.marks[i]=now();paint()}
 function stop(){clearInterval(S.timer);const rec=S.rec;
   if(!rec){stopStream();idle();return}
