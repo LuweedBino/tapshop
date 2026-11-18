@@ -151,6 +151,7 @@ export function DashTopNav({ admin, actions }: { admin: boolean; actions: React.
               sparkle();
             }}
           >
+            <span className="dash-logo-dot" aria-hidden="true" />
             <span
               className={`dash-slot${hint ? " alt" : ""}`}
               style={{ width: label ? `${label.w}px` : "6.1em", ...(label ? { "--alt": label.alt } : {}) } as React.CSSProperties}
