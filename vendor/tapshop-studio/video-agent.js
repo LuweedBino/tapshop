@@ -112,6 +112,21 @@ css.textContent=`#agDialog{width:min(720px,96vw);padding:14px 16px}
 .ag-card.on{border-color:#ff3ea5!important;box-shadow:inset 0 0 0 1px #ff3ea5;background:#ff3ea51a!important}
 .ag-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}.ag-chips button{border-radius:999px!important;padding:5px 12px!important;font-size:13px}
 .ag-chips button.on{background:#ff3ea5!important;color:#fff!important;border-color:#ff3ea5!important}
+.ag-sec{border:1px solid #8884;border-radius:16px;padding:12px;margin:14px 0;background:#ffffff06}
+.ag-sh{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:15px}.ag-sh b{flex:1}
+.ag-num{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#ff3ea5;color:#fff;font-weight:800;font-size:13px}
+.ag-opt .ag-num{background:#8888}.ag-sum{font-size:12px;opacity:.75;white-space:nowrap}.ag-sum b{color:#ff3ea5}
+.ag-sc{border:1px solid #8886!important;border-radius:14px!important;padding:0 12px 10px!important;margin:12px 0!important;overflow:hidden}
+.ag-sch{display:flex;align-items:center;gap:8px;margin:0 -12px 8px;padding:8px 12px;background:#8881;border-bottom:1px solid #8884}
+.ag-snum{flex:none;display:grid;place-items:center;min-width:28px;height:28px;border-radius:9px;background:#ff3ea5;color:#fff;font-weight:800}
+.ag-type{flex:1;min-width:0;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;line-height:1.2;overflow-wrap:anywhere}
+.ag-sc input,.ag-sc textarea{box-sizing:border-box}.ag-sc .ag-len input{width:52px}
+.t-hook{color:#ff3ea5}.t-cta{color:#22c55e}.t-prob{color:#f59e0b}.t-sol{color:#38bdf8}.t-mid{color:#a78bfa}
+.ag-rm{flex:none;padding:4px 8px!important;font-size:14px;border-radius:9px}
+.ag-fl{display:block;font-size:12px;font-weight:700;opacity:.9;margin-top:8px}
+.ag-fold{border:1px dashed #8886;border-radius:12px;padding:8px 10px;margin-top:10px}.ag-fold[open]{border-style:solid}
+.ag-fold summary{cursor:pointer;font-weight:700;font-size:14px;list-style-position:inside}.ag-fold summary small{display:block;font-weight:500;opacity:.7;margin-left:18px;font-size:12px}
+.ag-linefold{border:0;padding:0;margin-top:8px}.ag-linefold summary{font-size:13px;color:#ff3ea5}
 .ag-g{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;opacity:.7;margin:12px 0 0}
 .ag-scene{border:1px solid #8885;border-radius:12px;padding:10px 12px;margin:8px 0}
 .ag-scene.next{border-color:#ff3ea5;box-shadow:inset 0 0 0 1px #ff3ea5}
@@ -167,20 +182,32 @@ story(){const list=STORIES.slice(1).filter(s=>!S.group||s[1]===S.group);
   <div class="ag-cards">${card('story','AUTO',S.story==='AUTO','✨ Pick for me','The AI picks the best story for your product.')}</div>
   <div class="ag-chips">${chip('group','',!S.group,'All 24')}${GROUPS.map(g=>chip('group',g,S.group===g,g)).join('')}</div>
   ${(S.group?[S.group]:GROUPS).map(g=>`<div class="ag-g">${g}</div><div class="ag-cards">${list.filter(s=>s[1]===g).map(s=>card('story',s[0],S.story===s[0],esc(s[2]),esc(s[3]))).join('')}</div>`).join('')}`},
-script(){const m=S.scriptMode;let h=`<h3>Your script</h3><p class="ag-help">What you'll say in each scene.</p>
+script(){const m=S.scriptMode,n=S.scenes.length;
+  // Three numbered sections: how to write it, the scenes themselves, then optional AI help folded away.
+  let h=`<h3>Your script</h3><p class="ag-help">What you'll say in each scene. Write it, check your scenes, then tap <b>Next</b>.</p>
+  <section class="ag-sec"><div class="ag-sh"><span class="ag-num">1</span><b>How do you want your script?</b></div>
   <div class="ag-cards">${card('mode','ai',m==='ai','✨ Write it for me','AI writes it from your product')}${card('mode','own',m==='own','I have my own','Paste your lines')}${card('mode','none',m==='none','No talking','Words on screen only')}</div>`;
   if(m==='own')h+=`<label class="ag-f">One line per scene. The first is your hook, the last your call to action.<textarea data-k="ownLines" rows="6" placeholder="Stop scrolling if your shakes are chalky.&#10;Mine always were…&#10;Then I found this bottle.&#10;Tap the orange cart.">${esc(S.ownLines)}</textarea></label><div class="ag-btns"><button type="button" class="primary" data-act="own">Use my lines</button></div>`;
-  else h+=`<div class="ag-btns"><button type="button" class="primary" data-act="write" ${busy?'disabled':''}>${busy?'Writing…':S.scenes.length?'↻ Write a new one':'✨ Write my script'}</button></div>`;
-  if(S.scenes.length&&m!=='none'){h+=`<div class="ag-g">🎣 Pick your hook</div><p class="ag-help">The first line decides if people keep watching. Tap the one you like best; it becomes scene 1.</p>`;
+  else h+=`<div class="ag-btns"><button type="button" class="primary" data-act="write" ${busy?'disabled':''}>${busy?'Writing…':n?'↻ Write a new one':'✨ Write my script'}</button></div>`;
+  h+=`</section>`;
+  if(!n)return h;
+  h+=`<section class="ag-sec"><div class="ag-sh"><span class="ag-num">2</span><b>${esc(S.title||'Your scenes')}</b><span class="ag-sum">${n} scene${n>1?'s':''} · ⏱️ <span id="agTotal">${totalLen()}</span></span></div>
+  <p class="ag-help">✏️ Tap any text to change it. <b>− / +</b> sets how long a scene lasts (give slow or calm lines more time).</p>`+
+  S.scenes.map((s,i)=>`<div class="ag-scene ag-sc"><div class="ag-sch"><span class="ag-snum">${i+1}</span><span class="ag-type ${typeTone(s.type)}">${esc(s.type||'Scene')}</span>
+    <span class="ag-len" title="How long this scene lasts"><button type="button" data-act="secs" data-i="${i}" data-v="-0.5" aria-label="Shorter">−</button><input type="number" inputmode="decimal" min="1" max="60" step="0.5" data-k="secs" data-i="${i}" value="${s.secs}" aria-label="Scene ${i+1} length in seconds">s<button type="button" data-act="secs" data-i="${i}" data-v="0.5" aria-label="Longer">+</button></span>
+    <button type="button" class="ag-rm" data-act="rmScene" data-i="${i}" aria-label="Remove scene ${i+1}" title="Remove this scene">🗑</button></div>
+    ${m==='none'?'':`<label class="ag-fl">🗣️ What you say<textarea data-k="say" data-i="${i}" rows="2">${esc(s.say)}</textarea></label>`}
+    <label class="ag-fl">🔤 Words on screen<input data-k="text" data-i="${i}" maxlength="120" value="${esc(s.text)}"></label>${lineAI(i)}</div>`).join('')+
+  `<div class="ag-btns ag-addrow"><button type="button" data-act="addScene">＋ Add a scene</button></div></section>`;
+  h+=`<section class="ag-sec ag-opt"><div class="ag-sh"><span class="ag-num">3</span><b>Extra AI help</b><span class="ag-sum">optional</span></div>`;
+  if(m!=='none'){const cur=S.hook?'Hook '+String.fromCharCode(64+S.hook):'Original';
+    h+=`<details class="ag-fold" data-fold="hook" ${UI.hook?'open':''}><summary>🎣 Try a different hook <small>Now using: ${cur}</small></summary><p class="ag-help">The first line decides if people keep watching. Tap the one you like best; it becomes scene 1.</p>`;
     if(S.hookOptions.length>1)h+=`<div class="ag-cards ag-hooks">${S.hookOptions.map((o,i)=>card('hook',i,S.hook===i,i?'Hook '+String.fromCharCode(64+i):'Original',esc(o))).join('')}</div>`;
-    h+=`<div class="ag-btns"><button type="button" data-act="newHooks" ${busy?'disabled':''}>↻ 3 new hooks</button></div>`}
-  if(S.scenes.length){h+=`<div class="ag-g">💬 Change my script</div><p class="ag-help">Tell the AI what to change, like you'd tell a friend. It keeps everything else.</p>
+    h+=`<div class="ag-btns"><button type="button" data-act="newHooks" ${busy?'disabled':''}>↻ 3 new hooks</button></div></details>`}
+  h+=`<details class="ag-fold" data-fold="ask" ${UI.ask||S.prev?'open':''}><summary>💬 Change the whole script <small>Tell the AI what to change</small></summary><p class="ag-help">Like you'd tell a friend. It keeps everything else.</p>
     <div class="ag-chips">${ASKS.map(a=>`<button type="button" data-act="ask" data-v="${esc(a)}" ${busy?'disabled':''}>${esc(a)}</button>`).join('')}</div>
     <label class="ag-f"><textarea data-k="ask" rows="2" maxlength="500" placeholder="e.g. make it funnier, or mention it's dishwasher safe">${esc(S.ask||'')}</textarea></label>
-    <div class="ag-btns"><button type="button" class="primary" data-act="askGo" ${busy?'disabled':''}>✨ Change it</button>${S.prev?`<button type="button" data-act="undoAsk" ${busy?'disabled':''}>↩ Undo last change</button>`:''}</div>`}
-  if(S.scenes.length)h+=`<div class="ag-g">${esc(S.title||'Your scenes')}</div><p class="ag-help">✏️ Tap any line to change it · <b>✕ Remove</b> deletes a scene · <b>＋ Add a scene</b> at the bottom adds one.</p><p class="ag-help">⏱️ <b>− / +</b> sets how long each scene lasts. Give a line more time if it's slow to say or needs a calm tone. The teleprompter and filming timer follow it.</p>`+S.scenes.map((s,i)=>`<div class="ag-scene"><div class="ag-tag"><span>${i+1} · ${esc(s.type)}</span><span class="ag-len" title="How long this scene lasts"><button type="button" data-act="secs" data-i="${i}" data-v="-0.5" aria-label="Shorter">−</button><input type="number" inputmode="decimal" min="1" max="60" step="0.5" data-k="secs" data-i="${i}" value="${s.secs}" aria-label="Scene ${i+1} length in seconds">s<button type="button" data-act="secs" data-i="${i}" data-v="0.5" aria-label="Longer">+</button></span><button type="button" data-act="rmScene" data-i="${i}" aria-label="Remove scene ${i+1}">✕ Remove</button></div>
-    ${m==='none'?'':`<label>What you say<textarea data-k="say" data-i="${i}" rows="2">${esc(s.say)}</textarea></label>`}
-    <label>Words on screen<input data-k="text" data-i="${i}" maxlength="120" value="${esc(s.text)}"></label>${lineAI(i)}</div>`).join('')+`<div class="ag-btns ag-addrow"><button type="button" data-act="addScene">＋ Add a scene</button><span id="agTotal" class="ag-total">⏱️ ${totalLen()}</span></div>`;
+    <div class="ag-btns"><button type="button" class="primary" data-act="askGo" ${busy?'disabled':''}>✨ Change it</button>${S.prev?`<button type="button" data-act="undoAsk" ${busy?'disabled':''}>↩ Undo last change</button>`:''}</div></details></section>`;
   return h},
 footage(){const f=S.footage;let h=`<h3>Your footage</h3><p class="ag-help">Add clips you have, or film each shot now. You can mix both.</p>
   <div class="ag-cards">${card('footage','clips',f==='clips','🎥 Clips','Upload or film, scene by scene')}${card('footage','none',f==='none','🎨 No footage','Text and graphics only')}</div>`;
@@ -267,9 +294,12 @@ async function writeScript(){if(busy)return;busy=true;paint();const b=S.brief,t0
 // Per-scene AI: a row of chips under each scene; one tap asks for 3 rewrites of just that scene's line in that
 // style, shown as cards to tap; ↩ puts the line back. Only one scene's options are open at a time (S.sugg).
 const LINE_STYLES=[['better','✨ Better','make it better: more scroll-stopping and clear'],['simple','🧸 Simpler','simpler words, easy to say'],['natural','🗣️ More natural','more natural flowing, like real talk'],['punchy','⚡ Punchier','punchier and more energetic'],['funny','😂 Funnier','add a little humor'],['short','✂️ Shorter','shorter'],['emotional','💗 More emotional','more emotional and relatable'],['specific','🎯 More specific','more specific and concrete, sensory details']];
-function lineAI(i){const g=S.sugg,open=g&&g.i===i;let h=`<div class="ag-ai"><span>✨ AI:</span>${LINE_STYLES.map(([k,l])=>`<button type="button" data-act="lineAI" data-i="${i}" data-v="${k}" class="${open&&g.style===k?'on':''}" ${busy?'disabled':''}>${l}</button>`).join('')}</div>`;
+function lineAI(i){const g=S.sugg,open=g&&g.i===i,undo=S.lineUndo&&S.lineUndo.i===i;let h=`<details class="ag-fold ag-linefold" ${open||undo||UI['line'+i]?'open':''} data-fold="line${i}"><summary>✨ Rewrite this line with AI</summary><div class="ag-ai"><span>✨ AI:</span>${LINE_STYLES.map(([k,l])=>`<button type="button" data-act="lineAI" data-i="${i}" data-v="${k}" class="${open&&g.style===k?'on':''}" ${busy?'disabled':''}>${l}</button>`).join('')}</div>`;
   if(open&&g.options)h+=`<div class="ag-cards ag-hooks">${g.options.map((o,j)=>`<button type="button" class="ag-card" data-act="useLine" data-i="${i}" data-v="${j}"><b>Option ${j+1}</b><small>${esc(o.say)}${o.text?`<br><i>On screen: ${esc(o.text)}</i>`:''}</small></button>`).join('')}</div><div class="ag-btns"><button type="button" data-act="lineAI" data-i="${i}" data-v="${g.style}" ${busy?'disabled':''}>↻ 3 more</button><button type="button" data-act="closeLine">Close</button></div>`;
-  if(S.lineUndo&&S.lineUndo.i===i)h+=`<div class="ag-btns"><button type="button" data-act="undoLine" data-i="${i}">↩ Put back my old line</button></div>`;return h}
+  if(undo)h+=`<div class="ag-btns"><button type="button" data-act="undoLine" data-i="${i}">↩ Put back my old line</button></div>`;return h+'</details>'}
+// Which folded boxes are open, so a repaint doesn't snap them shut.
+const UI={};
+const typeTone=t=>/hook/i.test(t)?'t-hook':/cta|call/i.test(t)?'t-cta':/problem|agitat|pain|myth|before/i.test(t)?'t-prob':/solution|demo|result|after|proof|benefit/i.test(t)?'t-sol':'t-mid';
 async function lineEdit(i,style){if(busy||!S.scenes[i])return;const st=LINE_STYLES.find(x=>x[0]===style);if(!st)return;busy=true;S.sugg={i,style};paint();const b=S.brief,t0=Date.now();
   const timer=setInterval(()=>status(`✨ Rewriting scene ${i+1} (${st[1].slice(2).trim()})… ${Math.round((Date.now()-t0)/1000)} s`),1000),ctl=new AbortController(),limit=setTimeout(()=>ctl.abort(),120000);
   try{const res=await fetch('/api/edit-script',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctl.signal,body:JSON.stringify({mode:'line',index:i,request:st[2],product:b.product,benefits:b.benefits,tone:b.tone,title:S.title,
@@ -338,6 +368,7 @@ function camPrompt(i){const s=S.scenes[i]||{},talk=S.voice==='talking';
   return {facing:talk?'user':'environment',prompt:{label:(talk?'🗣️ Say':'🎥 Film')+` · scene ${i+1} of ${S.scenes.length}`,line:talk?(s.say||s.text||''):(s.shot||'Anything that shows: '+(s.text||s.say||'')),say:talk?'':(s.say||''),secs:filmSecs(s)}}}
 function pickVault(i){VaultPicker.open({title:`Clip for scene ${i+1}`,kinds:['video'],onPick:async it=>{try{toast('Loading '+it.name+'…');addTo(i,[await VaultPicker.file(it)])}catch(e){toast(e.message)}if(!dlg.open)dlg.showModal()}})}
 // Moving one clip to another scene with the menu next to it.
+body.addEventListener('toggle',e=>{const f=e.target.dataset?.fold;if(f)UI[f]=e.target.open},true);
 body.addEventListener('change',e=>{const m=e.target.closest?.('.ag-move');if(!m)return;const i=+m.dataset.i,j=+m.dataset.j,to=+m.value,l=(files.get(i)||[]).slice(),[f]=l.splice(j,1);
   if(!f||to===i)return;files.set(i,l);files.set(to,[...(files.get(to)||[]),f]);paint();status(`Moved to scene ${to+1}.`)});
 // Phase 3: sort every added clip into the scene it fits best. The clip reader (CLIP, in video-broll.js's worker)
@@ -441,7 +472,7 @@ async function build(){if(busy||(typeof exporting!=='undefined'&&exporting))retu
 // ---------- events ----------
 const secsOf=v=>Math.min(60,Math.max(1,Math.round((+v||1)*2)/2));
 const totalLen=()=>{const t=S.scenes.reduce((a,s)=>a+(+s.secs||0),0);return `Total: <b>${t}s</b>${S.brief?.length?` (you picked ${S.brief.length}s)`:''}`};
-function setK(k,v,i){if(k==='secs'){if(v===''||!(+v>0))return;v=secsOf(v);const t=document.getElementById('agTotal');if(i!=null&&S.scenes[i])S.scenes[i].secs=v;if(t)t.innerHTML='⏱️ '+totalLen();save();return}if(k.startsWith('brief.'))S.brief[k.slice(6)]=v;else if(i!=null&&S.scenes[i])S.scenes[i][k]=v;else S[k]=v;
+function setK(k,v,i){if(k==='secs'){if(v===''||!(+v>0))return;v=secsOf(v);const t=document.getElementById('agTotal');if(i!=null&&S.scenes[i])S.scenes[i].secs=v;if(t)t.innerHTML=totalLen();save();return}if(k.startsWith('brief.'))S.brief[k.slice(6)]=v;else if(i!=null&&S.scenes[i])S.scenes[i][k]=v;else S[k]=v;
   if(k==='captions')paint();if(k==='music')stopMusic();save()}
 const onField=e=>{const el=e.target;if(!el.dataset?.k)return;setK(el.dataset.k,el.type==='checkbox'?el.checked:el.value,el.dataset.i!=null?+el.dataset.i:null)};
 body.addEventListener('input',onField);body.addEventListener('change',onField);
