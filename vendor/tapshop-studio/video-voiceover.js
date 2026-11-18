@@ -259,7 +259,8 @@ async function use(){
 
 recBtn.onclick=()=>S.rec?stop():start();
 nextBtn.onclick=()=>advance();
-retakeBtn.onclick=()=>{clearTake();S.idx=0;S.marks=[];paint();start()};
+// Retake goes back to the start without recording, so lengths can be changed first.
+retakeBtn.onclick=()=>{clearTake();S.idx=0;S.marks=[];paint();prompter.scrollTop=0;showTip();status('Back to the start. Change any lengths you like, then tap ● Record.')};
 useBtn.onclick=use;
 q('voSize').oninput=()=>{prefs();paint()};
 q('voSpeed').oninput=prefs;
@@ -360,7 +361,7 @@ dlg.addEventListener('focusin',()=>{fitKb();setTimeout(fitKb,400);setTimeout(fit
 const TIP_OFF='tapshop-vo-tip-off';
 function showTip(){const t=q('voTip');let off=false;try{off=localStorage.getItem(TIP_OFF)==='1'}catch{}
   if(off||!S.scenes.length||S.rec){t.hidden=true;return}
-  t.innerHTML=`<b>👋 Quick tips</b><ul><li>Use <b style="display:inline;font-size:inherit;margin:0">− +</b> on each scene to change how long it lasts.${S.onLen?' It updates your whole video too.':''}</li><li>Tap the script once to pause. Tap again to keep recording.</li><li>Finished a line early? That's fine. Just wait for the next line to light up.</li></ul><div class="vo-tipbar"><button type="button" class="vo-never">Don't show again</button><button type="button" class="vo-ok">Got it</button></div>`;
+  t.innerHTML=`<b>👋 Quick tips</b><ul><li>Use <b style="display:inline;font-size:inherit;margin:0">− +</b> on each scene to change how long it lasts.${S.onLen?' It updates your whole video too.':''}</li><li>Tap the script once to pause. Tap again to keep recording.</li><li>Finished a line early? That's fine. Just wait for the next line to light up.</li><li>Record and retake as many times as you like. Take it easy, relax and enjoy it 😊</li></ul><div class="vo-tipbar"><button type="button" class="vo-never">Don't show again</button><button type="button" class="vo-ok">Got it</button></div>`;
   t.hidden=false;place()}
 // Sit the card across the line between the first two scenes, so it overlaps both and is easy to spot.
 function place(){const t=q('voTip'),st=t.parentElement,l=prompter.querySelector('.vo-line');if(t.hidden||!l||!st)return;
