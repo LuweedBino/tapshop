@@ -652,14 +652,27 @@ function step3(note){const opts=j=>tp.parts.map((p,k)=>`<option value="${k}"${k=
 let pvRaf=0;
 function stopPreview(){cancelAnimationFrame(pvRaf);const v=dlg.querySelector('#brPv video');if(v){v.pause()}}
 function playRange(c,r){const box=dlg.querySelector('#brPv'),v=box.querySelector('video'),lbl=dlg.querySelector('#brPvLbl');stopPreview();box.hidden=false;
-  if(v.dataset.src!==c.asset.url){v.src=c.asset.url;v.dataset.src=c.asset.url}v.muted=false;
-  // Shown in the video's own shape, cropped where the build will crop it, so a tall video's framing can be checked too.
-  const [aw,ah]=shape.split(':').map(Number),fx=r.fx??.5;let vis=1;
-  const frameIt=()=>{vis=(aw/ah)/((v.videoWidth||16)/(v.videoHeight||9));v.style.aspectRatio=aw+'/'+ah;v.style.objectFit='cover';v.style.maxHeight='46vh';v.style.width='auto';v.style.maxWidth='100%';v.style.margin='0 auto';
+  // Phones (Chrome on Android especially) only allow sound when play() is called during the tap itself, and may not
+  // load a video that hasn't been asked to play yet. So: play right away, jump to the start once it's ready, and keep
+  // the player's own controls as a way in if the phone still holds it back.
+  v.controls=true;v.playsInline=true;v.onerror=null;
+  if(v.dataset.src!==c.asset.url){v.src=c.asset.url;v.dataset.src=c.asset.url;v.load()}v.muted=false;
+  const [aw,ah]=shape.split(':').map(Number),fx=r.fx??.5;let vis=1,ready=false;
+  const frameIt=()=>{vis=(aw/ah)/((v.videoWidth||16)/(v.videoHeight||9));v.style.aspectRatio=aw+'/'+ah;v.style.objectFit='cover';v.style.maxHeight='46vh';v.style.width='auto';v.style.maxWidth='100%';v.style.margin='0 auto';v.style.display='block';v.style.background='#000';
     v.style.objectPosition=vis<1?Math.max(0,Math.min(100,(fx-vis/2)/(1-vis)*100)).toFixed(1)+'% 50%':'50% 50%'};
-  const go=()=>{frameIt();v.currentTime=r.in;v.dataset.in=r.in;v.dataset.out=r.out;lbl.textContent=`▶ Playing ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}${vis<1?`, framed for ${shape}`:''}`;
-    v.onseeked=()=>{v.onseeked=null;v.play().catch(()=>{});const tick=()=>{if(v.currentTime>=r.out-.02){v.pause();v.dataset.stopped=v.currentTime;lbl.textContent=`Played ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}. Tap ▶ to watch it again.`;return}pvRaf=requestAnimationFrame(tick)};tick()}};
-  if(v.readyState>=1)go();else v.onloadedmetadata=()=>{v.onloadedmetadata=null;go()};box.scrollIntoView({block:'nearest'})}
+  lbl.textContent='Loading the moment…';
+  v.onerror=()=>{lbl.textContent='This browser couldn’t play '+c.asset.name+' here. The moment is still saved; you can lock it and check it on the timeline.'};
+  const done=()=>{v.pause();v.dataset.stopped=v.currentTime;lbl.textContent=`Played ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}. Tap ▶ Play this moment to watch it again.`};
+  const tick=()=>{if(ready&&v.currentTime>=r.out-.02)return done();pvRaf=requestAnimationFrame(tick)};
+  const start=()=>{if(ready)return;ready=true;v.dataset.in=r.in;v.dataset.out=r.out;
+    lbl.textContent=`▶ Playing ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}${vis<1?`, framed for ${shape}`:''}`;
+    if(v.paused)v.play().catch(()=>{lbl.textContent=`Ready at ${fmtT(r.in)}. Tap the ▶ on the video to play it.`})};
+  const go=()=>{frameIt();v.pause();v.onseeked=()=>{v.onseeked=null;start()};v.currentTime=r.in;
+    setTimeout(()=>{if(!ready&&Math.abs(v.currentTime-r.in)<.5)start()},1500)}; // some phones never send "seeked"
+  const p=v.play();if(p&&p.catch)p.catch(()=>{}); // inside the tap, so the phone allows it with sound
+  if(v.readyState>=1)go();else v.onloadedmetadata=()=>{v.onloadedmetadata=null;go()};
+  setTimeout(()=>{if(!ready&&v.readyState<1&&!v.error)lbl.textContent='Still loading… if nothing shows, tap the ▶ on the video.'},4000);
+  tick();box.scrollIntoView({block:'nearest'})}
 // What the rough cut uses from a clip: locked (exact, never changed), a found moment ("check it" until locked),
 // or a button to look for moments in a long clip. The line was heard; the picture is only described as movement.
 function momentRow(c){const name=enc(c.asset.name),long=c.out-c.in>LONG_CLIP,len=r=>(r.out-r.in).toFixed(1)+' s';
