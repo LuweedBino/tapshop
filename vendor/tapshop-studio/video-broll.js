@@ -465,7 +465,13 @@ function scores(clip,tp){const n=tp.parts.length;return tp.parts.map((p,j)=>{let
   let s=wsum?v/wsum*LOOKS.length/3:0;if(clip.words&&p.say.test(clip.words))s+=.35;if(clip.talking&&(p.id==='hook'||p.id==='cta'))s+=.12;
   // A small nudge towards the order the clips were added, so close calls keep the creator's order.
   s-=.12*Math.abs((clip.n/Math.max(1,clip.of-1))-(j/Math.max(1,n-1)));return s})}
-function arrange(list,tp){const n=tp.parts.length,parts=tp.parts.map(()=>[]),sc=list.map(c=>scores(c,tp)),used=new Set(),filled=new Set();
+// A long clip that talks through a whole story is cut into its sentences first (splitStory), and the pieces go
+// to the story's parts in the order they were said. Other clips are shared out as before.
+function arrange(list,tp){const story=list.filter(isStory);if(!story.length)return arrangeBase(list,tp);
+  const rest=list.filter(c=>!story.includes(c)),parts=rest.length?arrangeBase(rest,tp):tp.parts.map(()=>[]);
+  for(const c of story)for(const [j,piece] of splitStory(c,tp))parts[j].push(piece);
+  parts.forEach(p=>p.sort((a,b)=>a.n-b.n));return parts}
+function arrangeBase(list,tp){const n=tp.parts.length,parts=tp.parts.map(()=>[]),sc=list.map(c=>scores(c,tp)),used=new Set(),filled=new Set();
   const pairs=[];sc.forEach((row,i)=>row.forEach((s,j)=>pairs.push([s,i,j])));pairs.sort((a,b)=>b[0]-a[0]);
   for(const [,i,j] of pairs){if(used.has(i)||filled.has(j))continue;parts[j].push(list[i]);used.add(i);filled.add(j);if(filled.size===n||used.size===list.length)break}
   list.forEach((c,i)=>{if(used.has(i))return;let j=sc[i].indexOf(Math.max(...sc[i]));parts[j].push(c)});
@@ -588,7 +594,9 @@ async function analyse(){number();busy=true;stopped=false;
   let mNote='';const long=items.filter(c=>c.out-c.in>LONG_CLIP);
   if(!stopped&&long.length&&typeof window.veClipWords==='function'){for(let i=0;i<long.length;i++){if(stopped)return;status(`Finding the moments in clip ${i+1} of ${long.length}…`);
       try{await findMoments(long[i],m=>status(m))}catch(e){console.warn('Moments skipped:',e);mNote=' We couldn’t look for moments inside your long clips this time.';break}}
-    const found=long.filter(c=>c.pick).length;if(found)mNote=` We found a moment to use in ${found} long clip${found>1?'s':''}: play it and lock it if it’s right.`}
+    const st=long.filter(isStory),found=long.filter(c=>c.pick&&!isStory(c)).length;
+    if(st.length)mNote=` ${st.map(c=>c.asset.name).join(', ')} tells a whole story, so we cut ${st.length>1?'them':'it'} into ${st.length>1?'their':'its'} sentences and put each one into the part it belongs to, in the order you said them.`;
+    if(found)mNote+=` We found a moment to use in ${found} long clip${found>1?'s':''}: play it and lock it if it’s right.`}
   busy=false;if(stopped)return;
   choose(!failed);
   step3((failed?'We couldn’t run the clip reader ('+(failed.message||failed)+'). Check your internet connection for the first download. Your clips are in your order; move any clip with the menu under it.':'Here’s where we think each clip fits.'+pickedNote()+' Not right? Move a clip with the menu under it.')+mNote)}
@@ -596,9 +604,9 @@ async function analyse(){number();busy=true;stopped=false;
 // ---------- picking the story and the music ----------
 // The story whose parts best fit the clips (picture + words), with a pull towards using every part and not
 // having more parts than clips. Without the clip reader we go by how many clips there are.
-function bestStory(){let best=null,top=-1e9;for(const T of TEMPLATES){const P=arrange(items,T);let fit=0,said=0;
+function bestStory(){let best=null,top=-1e9;for(const T of TEMPLATES){const P=arrange(items,T),k=Math.max(1,P.flat().length);let fit=0,said=0;
     P.forEach((list,j)=>list.forEach(c=>{fit+=scores(c,T)[j];if(c.words&&T.parts[j].say.test(c.words))said++}));
-    const filled=P.filter(x=>x.length).length/T.parts.length,sc=fit/items.length+.6*filled+.08*said-.15*Math.max(0,T.parts.length-items.length);
+    const filled=P.filter(x=>x.length).length/T.parts.length,sc=fit/k+.6*filled+.08*said-.15*Math.max(0,T.parts.length-k);
     if(sc>top){top=sc;best=T}}return best}
 const BY_COUNT={2:'beforeafter',3:'pas',4:'pas',5:'reasons'};
 // Music that suits what the clips mostly show; talky videos get calmer beats so the voice stays clear.
@@ -609,7 +617,7 @@ function bestMood(){const seen=items.filter(c=>c.seen);if(!seen.length)return tp
   const order=sum.map((v,i)=>[v,LOOKS[i][0]]).sort((a,b)=>b[0]-a[0]);let key=order[0][1];if(key==='talk')key=order[1][1];
   let m=LOOK_MOOD[key]||tp.mood;if(talky>=.5&&MOODS[m]&&MOODS[m].bpm>=125)m='story';return m}
 function choose(read){picked='';number();
-  if(autoStory){tp=read?bestStory():TEMPLATES.find(t=>t.id===BY_COUNT[items.length])||TEMPLATES[0];picked='story'}
+  if(autoStory){tp=read||items.some(isStory)?bestStory():TEMPLATES.find(t=>t.id===BY_COUNT[items.length])||TEMPLATES[0];picked='story'}
   parts=arrange(items,tp);if(mood==='auto'){mood=read?bestMood():tp.mood;picked+=' music'}}
 const pickedNote=()=>{let a=[];if(/story/.test(picked))a.push(`the “${tp.name}” story`);if(/music/.test(picked)&&MOODS[mood])a.push(`${MOODS[mood].name} music`);return a.length?` We picked ${a.join(' and ')} for you.`:''};
 
@@ -638,14 +646,17 @@ function step3(note){const opts=j=>tp.parts.map((p,k)=>`<option value="${k}"${k=
   <div class="row"><button type="button" id="brBack">← Back</button><button type="button" class="primary" id="brBuild">🎬 Build my video</button></div>`;
   dlg.querySelector('.dialog-x').onclick=close;dlg.querySelector('#brBack').onclick=step1;
   dlg.querySelectorAll('[data-tx]').forEach(el=>el.oninput=()=>texts[tp.id+el.dataset.tx]=el.value);
-  dlg.querySelectorAll('[data-mv]').forEach(sel=>sel.onchange=()=>{let c=items.find(x=>x.n===+sel.dataset.mv);parts.forEach(p=>{let k=p.indexOf(c);if(k>=0)p.splice(k,1)});parts[+sel.value].push(c);parts[+sel.value].sort((a,b)=>a.n-b.n);step3(note)});
+  dlg.querySelectorAll('[data-mv]').forEach(sel=>sel.onchange=()=>{let c=parts.flat().find(x=>x.n===+sel.dataset.mv);parts.forEach(p=>{let k=p.indexOf(c);if(k>=0)p.splice(k,1)});parts[+sel.value].push(c);parts[+sel.value].sort((a,b)=>a.n-b.n);step3(note)});
   dlg.querySelector('#brMood3').onchange=e=>{mood=e.target.value};dlg.querySelector('#brBuild').onclick=build;
   dlg.querySelector('#brFast').onchange=e=>{fast=e.target.checked};
-  const byN=n=>items.find(x=>x.n===+n);
+  const byN=n=>parts.flat().find(x=>x.n===+n)||items.find(x=>x.n===+n);
   dlg.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.play),r=c.lock||c.pick;if(r)playRange(c,r)});
-  dlg.querySelectorAll('[data-lock]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.lock),m=c.pick;if(!m)return;c.lock={in:m.in,out:m.out,fx:m.fx,text:m.text};stopPreview();step3(note)});
+  dlg.querySelectorAll('[data-lock]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.lock),m=c.pick||(c.from?{in:c.in,out:c.out,text:c.words}:null);if(!m)return;c.lock={in:m.in,out:m.out,fx:m.fx,text:m.text};stopPreview();step3(note)});
   dlg.querySelectorAll('[data-unlock]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.unlock);delete c.lock;stopPreview();step3(note)});
   dlg.querySelectorAll('[data-alt]').forEach(sel=>sel.onchange=()=>{const c=byN(sel.dataset.alt);c.pick=sel.value===''?null:c.moments[+sel.value];c.whole=sel.value==='';step3(note)});
+  dlg.querySelectorAll('[data-play-piece]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.playPiece);playRange(c,{in:c.in,out:c.out})});
+  dlg.querySelectorAll('[data-unsplit]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.unsplit);if(!c?.from)return;c.from.noSplit=true;stopPreview();parts=arrange(items,tp);step3(note)});
+  dlg.querySelectorAll('[data-split]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.split);if(!c)return;delete c.noSplit;stopPreview();parts=arrange(items,tp);step3(note)});
   dlg.querySelectorAll('[data-find]').forEach(b=>b.onclick=async()=>{const c=byN(b.dataset.find);b.disabled=true;
     try{await findMoments(c,m=>b.textContent=m);step3(note)}catch(e){b.disabled=false;b.textContent='We couldn’t listen to this clip here ('+(e.message||e)+').'}})}
 // The rough-cut player: plays exactly one selection (source in → out, with its own sound) and stops there.
@@ -679,7 +690,10 @@ function momentRow(c){const name=enc(c.asset.name),long=c.out-c.in>LONG_CLIP,len
   if(c.lock)return `<div class="br-mo locked"><div class="br-mo-h"><b>🔒 Locked</b> <span>${fmtT(c.lock.in)}–${fmtT(c.lock.out)} (${len(c.lock)}) of ${name}</span></div>
     ${c.lock.text?`<p>🗣 “${enc(c.lock.text)}”</p>`:''}<p class="br-mo-note">Used exactly like this, with its own sound, every time you build, even with ⚡ Faster edit or Keep my order.</p>
     <div class="br-mo-b"><button type="button" data-play="${c.n}">▶ Play</button><button type="button" data-unlock="${c.n}">Unlock</button></div></div>`;
+  if(c.from)return `<div class="br-mo"><div class="br-mo-h"><b>✂️ Piece ${c.piece} of ${c.pieces}</b> <span>${fmtT(c.in)}–${fmtT(c.out)} (${len(c)}) of ${name}</span></div>
+    <p>🗣 “${enc(shorten(c.words,90))}”</p><div class="br-mo-b"><button type="button" data-play-piece="${c.n}">▶ Play</button><button type="button" data-lock="${c.n}">🔒 Lock</button>${c.piece===1?`<button type="button" data-unsplit="${c.n}">Use it as one clip</button>`:''}</div></div>`;
   if(!long)return '';
+  if(c.noSplit&&c.allWords&&sentsOf(c).length>=3)return `<div class="br-mo"><p>${name} is used as one clip.</p><div class="br-mo-b"><button type="button" data-split="${c.n}">✂️ Cut it into the story’s parts</button></div></div>`;
   if(!c.moments)return `<div class="br-mo"><p>${name} is ${(c.out-c.in).toFixed(0)} s long. We can listen to all of it and find the moment worth using.</p><div class="br-mo-b"><button type="button" data-find="${c.n}">🔎 Find the moment</button></div></div>`;
   const alts=`<select data-alt="${c.n}" aria-label="Which part of ${name} to use">${c.moments.map((m,i)=>`<option value="${i}"${m===c.pick?' selected':''}>${fmtT(m.in)} “${enc(shorten(m.text,34))}”</option>`).join('')}<option value=""${c.pick?'':' selected'}>The whole clip</option></select>`;
   if(!c.pick)return `<div class="br-mo"><p>We heard ${name}, but no line clearly shows something happening, so the whole clip is used. Pick a moment if you like:</p>${alts}</div>`;
@@ -750,6 +764,33 @@ async function findMoments(c,say=()=>{}){const words=await veClipWords({assetId:
     Object.assign(k,{in:Math.round(a*100)/100,out:Math.round(b*100)/100,first:first.w,last:last.w,act:r.act,settle:r.settle,fx:r.fx,cutShort:short,score:k.score+(r.act==='settles'?1.5:r.act==='ongoing'?.6:0)});
     delete k.ws;c.moments.push(k)}
   c.moments.sort((x,y)=>y.score-x.score);c.pick=c.moments[0]?.score>=1?c.moments[0]:null;return c.moments}
+// ---------- a whole story in one clip ----------
+// The sentences of a long talking clip (fragments under 3 real words join the one before) are handed out to the
+// story's parts in the order they were said: dp over (sentence, part) with parts only moving forward. A sentence
+// earns a point when it has the part's usual words, more when it starts with them ("First…", "Second…", "Link in
+// bio…"), and loses a little the further its place in the clip is from the part's place in the story; skipping a
+// part costs a point. Each group of sentences becomes one piece, cut between sentences so no word is clipped.
+function sentsOf(c){if(c._sents)return c._sents;const words=c.allWords||[],raw=[];let cur=[];
+  words.forEach((w,i)=>{cur.push(w);const nx=words[i+1];if(!nx||/[.!?]["”')]*$/.test(w.w)||nx.s-w.e>.7){raw.push(cur);cur=[]}});
+  const out=[];for(const ws of raw){if(ws.every(junk))continue;if(out.length&&ws.filter(w=>!junk(w)).length<3)out[out.length-1]=out.at(-1).concat(ws);else out.push(ws)}
+  if(out.length>1&&out[0].filter(w=>!junk(w)).length<3){out[1]=out[0].concat(out[1]);out.shift()}
+  return c._sents=out}
+const sentText=ws=>ws.map(w=>w.w).join(' ').replace(/\s+([,.!?])/g,'$1').trim();
+const isStory=c=>!!c.allWords&&c.out-c.in>LONG_CLIP&&!c.noSplit&&!c.lock&&sentsOf(c).length>=3;
+function splitStory(c,tp){const S=sentsOf(c),P=tp.parts.length,txt=S.map(sentText),head=txt.map(t=>t.split(/\s+/).slice(0,5).join(' '));
+  const pos=(i,n)=>n>1?i/(n-1):0,fit=(i,j)=>(tp.parts[j].say.test(txt[i])?1:0)-.8*Math.abs(pos(i,S.length)-pos(j,P)),starts=(i,j)=>tp.parts[j].say.test(head[i])?1.2:0;
+  const dp=S.map(()=>Array(P).fill(-1e9)),from=S.map(()=>Array(P).fill(-1));
+  for(let j=0;j<P;j++)dp[0][j]=fit(0,j)+starts(0,j)-j;
+  for(let i=1;i<S.length;i++)for(let j=0;j<P;j++){let best=dp[i-1][j],k=j;
+    for(let q=0;q<j;q++){const v=dp[i-1][q]+starts(i,j)-(j-q-1);if(v>best){best=v;k=q}}
+    dp[i][j]=best+fit(i,j);from[i][j]=k}
+  let j=0;for(let q=1;q<P;q++)if(dp[S.length-1][q]-.6*(P-1-q)>dp[S.length-1][j]-.6*(P-1-j))j=q;
+  const at=Array(S.length);for(let i=S.length-1;i>=0;i--){at[i]=j;j=from[i][j]}
+  const groups=[];S.forEach((ws,i)=>{if(groups.length&&groups.at(-1).j===at[i])groups.at(-1).ws.push(...ws);else groups.push({j:at[i],ws:[...ws]})});
+  return groups.map((g,k)=>{const first=g.ws.find(w=>!junk(w))||g.ws[0],last=g.ws.at(-1),prev=groups[k-1]?.ws.at(-1),next=groups[k+1]?.ws[0];
+    const a=Math.round(Math.max(c.in,first.s-.15,prev?prev.e+.02:-1)*100)/100,b=Math.round(Math.min(c.out,last.e+.35,next?next.s-.02:1e9)*100)/100;
+    return [g.j,{asset:c.asset,in:a,out:Math.max(b,a+.3),talking:true,words:sentText(g.ws),speech:[first.s-a,last.e-a],heardWords:g.ws,seen:c.seen,
+      from:c,piece:k+1,pieces:groups.length,n:c.n+(k+1)/1000,of:c.of}]})}
 // Where a crop to a tall frame should look so the action stays in view: pan the cover-fitted picture towards the
 // moment's movement (fx, 0–1 across the source), never past its edges.
 // A crop to a tall frame is centred on the moment's action (fx, 0–1 across the source), never past the picture's edges.
@@ -796,7 +837,7 @@ async function build(){if(exporting)return;const btn=dlg.querySelector('#brBuild
           t+=range.out-range.in;continue}
         let [a,b]=cut(c,p,beat),segs=[[a,b]],words=null;
         if(listen&&!failed&&todo.includes(c)){btn.textContent=`Listening to clip ${++n} of ${todo.length}…`;
-          try{words=cloud?.get(c)||await veClipWords({assetId:c.asset.id,in:c.in,out:c.out},m=>btn.textContent=m);listened=true;
+          try{words=cloud?.get(c)||c.heardWords||await veClipWords({assetId:c.asset.id,in:c.in,out:c.out},m=>btn.textContent=m);listened=true;
             if(words.length>=4){talky=true;a=Math.max(c.in,words[0].s-.15);b=Math.min(c.out,words.at(-1).e+.35);segs=[[a,b]]}
             if(autoTidy&&words.length&&!words.est)segs=tidy(words,a,b)}
           catch(e){failed=true;console.warn('Speech engine unavailable:',e)}}
