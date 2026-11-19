@@ -504,9 +504,16 @@ const st=document.createElement('style');st.textContent=`
 .br-sec{border:1px solid var(--ts-border,#8883);border-radius:12px;padding:10px;margin:8px 0}
 .br-sec-h{display:flex;align-items:center;gap:8px}.br-sec-h b{font-size:13px;white-space:nowrap}.br-sec-h input{flex:1;min-width:0;font-size:13px;padding:6px 8px}
 .br-sec .br-empty{font-size:11px;opacity:.6;padding:6px 0}
-#brWork progress{width:100%}`;document.head.appendChild(st);
+#brWork progress{width:100%}
+.br-mo{margin:10px 0 2px;padding:10px 12px;border:1px solid var(--ts-border,#8a7aa855);border-radius:12px;font-size:12px;line-height:1.4}.br-mo p{margin:4px 0}
+.br-mo.check{border-color:#f5b301;background:#f5b30112}.br-mo.locked{border-color:#22c55e;background:#22c55e14}
+.br-mo-h{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline}.br-mo-h b{font-size:13px}.br-mo-h span{opacity:.8}
+.br-mo.check .br-mo-h b{color:#b77d00}html.ts-dark .br-mo.check .br-mo-h b{color:#f5b301}.br-mo.locked .br-mo-h b{color:#16a34a}
+.br-mo-note{opacity:.75}.br-mo-b{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.br-mo select{margin-top:6px;width:100%;font-size:12px}
+.br-pv{margin:8px 0;padding:8px;border-radius:12px;background:#000}.br-pv video{display:block;width:100%;max-height:42vh;border-radius:8px;background:#000}.br-pv p{color:#fff;margin:6px 2px 0}
+.br-fast{margin:8px 0}`;document.head.appendChild(st);
 
-let tp=TEMPLATES[0],mood='auto',shape='9:16',items=[],parts=null,texts={},busy=false,stopped=false,autoStory=true,picked='';
+let tp=TEMPLATES[0],mood='auto',shape='9:16',items=[],parts=null,texts={},busy=false,stopped=false,autoStory=true,picked='';let fast=false;
 // Auto captions (✨ Captions without its dialog) after building, remembered on this device; on unless turned off.
 let autoCaps=(()=>{try{return localStorage.getItem('tapshop-broll-captions')!=='off'}catch{return true}})();
 // Tidy talking clips: cut pauses over half a second and um/uh, using the captions engine's word times. On unless turned off.
@@ -555,7 +562,7 @@ function step1(){const flow=t=>t.parts.map(p=>p.label).join(' → ');
   dlg.querySelector('#brShape').onchange=e=>shape=e.target.value;dlg.querySelector('#brMood').onchange=e=>{mood=e.target.value;stopListen()};dlg.querySelector('#brListen').onclick=listen;dlg.querySelector('#brCaps').onchange=e=>{autoCaps=e.target.checked;try{localStorage.setItem('tapshop-broll-captions',autoCaps?'on':'off')}catch{}};dlg.querySelector('#brTidy').onchange=e=>{autoTidy=e.target.checked;try{localStorage.setItem('tapshop-broll-tidy',autoTidy?'on':'off')}catch{}};dlg.querySelector('#brClean').onchange=e=>{autoClean=e.target.checked;try{localStorage.setItem('tapshop-broll-clean',autoClean?'on':'off')}catch{}};dlg.querySelector('#brCloud')&&(dlg.querySelector('#brCloud').onchange=e=>{autoCloud=e.target.checked;try{localStorage.setItem('tapshop-broll-cloud',autoCloud?'on':'off')}catch{}});dlg.querySelector('#brMove').onchange=e=>{autoMove=e.target.checked;try{localStorage.setItem('tapshop-broll-motion',autoMove?'on':'off')}catch{}};dlg.querySelector('#brSfx').onchange=e=>{autoSfx=e.target.checked;try{localStorage.setItem('tapshop-broll-sfx',autoSfx?'on':'off')}catch{}};if(!dlg._stopsMusic){dlg._stopsMusic=1;dlg.addEventListener('close',stopListen)}
   dlg.querySelector('#brGo').onclick=analyse;dlg.querySelector('#brSkip').onclick=()=>{number();choose(false);step3('Kept your order.'+pickedNote()+' Move any clip with the menu under it.')}}
 async function addFiles(files){let got=0;for(const f of files){if(!/^video\//.test(f.type)&&!/\.(mp4|mov|webm|m4v)$/i.test(f.name))continue;try{toast('Loading '+f.name+'…');let a=await loadAsset(f);items.push({asset:a,in:0,out:a.duration});got++}catch(e){toast(e.message)}}if(got&&dlg.open)step1()}
-function useTimeline(quiet){let seen=new Set(items.map(c=>c.key));for(const c of clips){let a=asset(c);if(!a)continue;let key=c.id;if(seen.has(key))continue;items.push({asset:a,in:c.in,out:c.out,key})}if(!quiet)toast('Your timeline clips are in.')}
+function useTimeline(quiet){let seen=new Set(items.map(c=>c.key));for(const c of clips){let a=asset(c);if(!a)continue;let key=c.id;if(seen.has(key))continue;items.push({asset:a,in:c.in,out:c.out,key,...(c.locked?{lock:{in:c.in,out:c.out,px:c.px||0,fx:c.lockFx}}:{})})}if(!quiet)toast('Your timeline clips are in.')}
 const number=()=>items.forEach((c,i)=>{c.n=i;c.of=items.length});
 
 async function analyse(){number();busy=true;stopped=false;
@@ -577,9 +584,14 @@ async function analyse(){number();busy=true;stopped=false;
         c.words=text;c.talking=text.split(/\s+/).filter(w=>/[a-z]/i.test(w)).length>=4;if(ts.length){c.speech=[ts[0][0],Math.max(...ts.map(t=>Number.isFinite(t[1])?t[1]:t[0]+1))]}}
       prog((i+1)/items.length)}}
   catch(x){failed=x}
+  // Long clips: hear all of it and find its moments (the captions engine, separate from the clip reader above).
+  let mNote='';const long=items.filter(c=>c.out-c.in>LONG_CLIP);
+  if(!stopped&&long.length&&typeof window.veClipWords==='function'){for(let i=0;i<long.length;i++){if(stopped)return;status(`Finding the moments in clip ${i+1} of ${long.length}…`);
+      try{await findMoments(long[i],m=>status(m))}catch(e){console.warn('Moments skipped:',e);mNote=' We couldn’t look for moments inside your long clips this time.';break}}
+    const found=long.filter(c=>c.pick).length;if(found)mNote=` We found a moment to use in ${found} long clip${found>1?'s':''}: play it and lock it if it’s right.`}
   busy=false;if(stopped)return;
   choose(!failed);
-  step3(failed?'We couldn’t run the clip reader ('+(failed.message||failed)+'). Check your internet connection for the first download. Your clips are in your order; move any clip with the menu under it.':'Here’s where we think each clip fits.'+pickedNote()+' Not right? Move a clip with the menu under it.')}
+  step3((failed?'We couldn’t run the clip reader ('+(failed.message||failed)+'). Check your internet connection for the first download. Your clips are in your order; move any clip with the menu under it.':'Here’s where we think each clip fits.'+pickedNote()+' Not right? Move a clip with the menu under it.')+mNote)}
 
 // ---------- picking the story and the music ----------
 // The story whose parts best fit the clips (picture + words), with a pull towards using every part and not
@@ -619,13 +631,51 @@ function step3(note){const opts=j=>tp.parts.map((p,k)=>`<option value="${k}"${k=
   dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>🎞️ ${enc(tp.name)}</h2><p class="sub">${enc(note)}</p>
   ${tp.parts.some((p,j)=>texts[tp.id+p.id]==null&&suggest(j))?'<p class="sub">✍️ Some words on screen were written from what you said. Change them any time.</p>':''}
   <div class="br-row" style="margin-bottom:6px"><label>Music<select id="brMood3">${moodOpts(mood)}<option value=""${mood?'':' selected'}>No music</option></select></label></div>
+  <label class="br-caps br-fast"><input type="checkbox" id="brFast"${fast?' checked':''}> <span><b>⚡ Faster edit</b><small>Shorter b-roll shots and long clips cut to their moment. Locked moments stay exactly as they are.</small></span></label>
+  <div class="br-pv" id="brPv" hidden><video playsinline preload="auto"></video><p class="sub" id="brPvLbl" aria-live="polite"></p></div>
   ${tp.parts.map((p,j)=>`<div class="br-sec"><div class="br-sec-h"><b>${j+1}. ${enc(p.label)}</b><input type="text" data-tx="${p.id}" value="${enc(partText(j))}" aria-label="Words on screen for ${enc(p.label)}" placeholder="Words on screen (leave empty for none)"></div>
-    <div class="br-clips">${parts[j].length?parts[j].map(c=>`<div class="br-clip"><img alt="" src="${c.asset.thumb}"><span class="nm">${enc(c.asset.name)}</span><span class="tag">${tag(c)}</span>${c.words?`<span class="said">“${enc(c.words.slice(0,70))}${c.words.length>70?'…':''}”</span>`:''}<select data-mv="${c.n}" aria-label="Move ${enc(c.asset.name)}">${opts(j)}</select></div>`).join(''):'<p class="br-empty">No clip here. This part will be skipped.</p>'}</div></div>`).join('')}
+    <div class="br-clips">${parts[j].length?parts[j].map(c=>`<div class="br-clip"><img alt="" src="${c.asset.thumb}"><span class="nm">${enc(c.asset.name)}</span><span class="tag">${tag(c)}</span>${c.words?`<span class="said">“${enc(c.words.slice(0,70))}${c.words.length>70?'…':''}”</span>`:''}<select data-mv="${c.n}" aria-label="Move ${enc(c.asset.name)}">${opts(j)}</select></div>`).join(''):'<p class="br-empty">No clip here. This part will be skipped.</p>'}</div>${parts[j].map(momentRow).join('')}</div>`).join('')}
   <div class="row"><button type="button" id="brBack">← Back</button><button type="button" class="primary" id="brBuild">🎬 Build my video</button></div>`;
   dlg.querySelector('.dialog-x').onclick=close;dlg.querySelector('#brBack').onclick=step1;
   dlg.querySelectorAll('[data-tx]').forEach(el=>el.oninput=()=>texts[tp.id+el.dataset.tx]=el.value);
   dlg.querySelectorAll('[data-mv]').forEach(sel=>sel.onchange=()=>{let c=items.find(x=>x.n===+sel.dataset.mv);parts.forEach(p=>{let k=p.indexOf(c);if(k>=0)p.splice(k,1)});parts[+sel.value].push(c);parts[+sel.value].sort((a,b)=>a.n-b.n);step3(note)});
-  dlg.querySelector('#brMood3').onchange=e=>{mood=e.target.value};dlg.querySelector('#brBuild').onclick=build}
+  dlg.querySelector('#brMood3').onchange=e=>{mood=e.target.value};dlg.querySelector('#brBuild').onclick=build;
+  dlg.querySelector('#brFast').onchange=e=>{fast=e.target.checked};
+  const byN=n=>items.find(x=>x.n===+n);
+  dlg.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.play),r=c.lock||c.pick;if(r)playRange(c,r)});
+  dlg.querySelectorAll('[data-lock]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.lock),m=c.pick;if(!m)return;c.lock={in:m.in,out:m.out,fx:m.fx,text:m.text};stopPreview();step3(note)});
+  dlg.querySelectorAll('[data-unlock]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.unlock);delete c.lock;stopPreview();step3(note)});
+  dlg.querySelectorAll('[data-alt]').forEach(sel=>sel.onchange=()=>{const c=byN(sel.dataset.alt);c.pick=sel.value===''?null:c.moments[+sel.value];c.whole=sel.value==='';step3(note)});
+  dlg.querySelectorAll('[data-find]').forEach(b=>b.onclick=async()=>{const c=byN(b.dataset.find);b.disabled=true;
+    try{await findMoments(c,m=>b.textContent=m);step3(note)}catch(e){b.disabled=false;b.textContent='We couldn’t listen to this clip here ('+(e.message||e)+').'}})}
+// The rough-cut player: plays exactly one selection (source in → out, with its own sound) and stops there.
+let pvRaf=0;
+function stopPreview(){cancelAnimationFrame(pvRaf);const v=dlg.querySelector('#brPv video');if(v){v.pause()}}
+function playRange(c,r){const box=dlg.querySelector('#brPv'),v=box.querySelector('video'),lbl=dlg.querySelector('#brPvLbl');stopPreview();box.hidden=false;
+  if(v.dataset.src!==c.asset.url){v.src=c.asset.url;v.dataset.src=c.asset.url}v.muted=false;
+  // Shown in the video's own shape, cropped where the build will crop it, so a tall video's framing can be checked too.
+  const [aw,ah]=shape.split(':').map(Number),fx=r.fx??.5;let vis=1;
+  const frameIt=()=>{vis=(aw/ah)/((v.videoWidth||16)/(v.videoHeight||9));v.style.aspectRatio=aw+'/'+ah;v.style.objectFit='cover';v.style.maxHeight='46vh';v.style.width='auto';v.style.maxWidth='100%';v.style.margin='0 auto';
+    v.style.objectPosition=vis<1?Math.max(0,Math.min(100,(fx-vis/2)/(1-vis)*100)).toFixed(1)+'% 50%':'50% 50%'};
+  const go=()=>{frameIt();v.currentTime=r.in;v.dataset.in=r.in;v.dataset.out=r.out;lbl.textContent=`▶ Playing ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}${vis<1?`, framed for ${shape}`:''}`;
+    v.onseeked=()=>{v.onseeked=null;v.play().catch(()=>{});const tick=()=>{if(v.currentTime>=r.out-.02){v.pause();v.dataset.stopped=v.currentTime;lbl.textContent=`Played ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}. Tap ▶ to watch it again.`;return}pvRaf=requestAnimationFrame(tick)};tick()}};
+  if(v.readyState>=1)go();else v.onloadedmetadata=()=>{v.onloadedmetadata=null;go()};box.scrollIntoView({block:'nearest'})}
+// What the rough cut uses from a clip: locked (exact, never changed), a found moment ("check it" until locked),
+// or a button to look for moments in a long clip. The line was heard; the picture is only described as movement.
+function momentRow(c){const name=enc(c.asset.name),long=c.out-c.in>LONG_CLIP,len=r=>(r.out-r.in).toFixed(1)+' s';
+  if(c.lock)return `<div class="br-mo locked"><div class="br-mo-h"><b>🔒 Locked</b> <span>${fmtT(c.lock.in)}–${fmtT(c.lock.out)} (${len(c.lock)}) of ${name}</span></div>
+    ${c.lock.text?`<p>🗣 “${enc(c.lock.text)}”</p>`:''}<p class="br-mo-note">Used exactly like this, with its own sound, every time you build, even with ⚡ Faster edit or Keep my order.</p>
+    <div class="br-mo-b"><button type="button" data-play="${c.n}">▶ Play</button><button type="button" data-unlock="${c.n}">Unlock</button></div></div>`;
+  if(!long)return '';
+  if(!c.moments)return `<div class="br-mo"><p>${name} is ${(c.out-c.in).toFixed(0)} s long. We can listen to all of it and find the moment worth using.</p><div class="br-mo-b"><button type="button" data-find="${c.n}">🔎 Find the moment</button></div></div>`;
+  const alts=`<select data-alt="${c.n}" aria-label="Which part of ${name} to use">${c.moments.map((m,i)=>`<option value="${i}"${m===c.pick?' selected':''}>${fmtT(m.in)} “${enc(shorten(m.text,34))}”</option>`).join('')}<option value=""${c.pick?'':' selected'}>The whole clip</option></select>`;
+  if(!c.pick)return `<div class="br-mo"><p>We heard ${name}, but no line clearly shows something happening, so the whole clip is used. Pick a moment if you like:</p>${alts}</div>`;
+  const m=c.pick,act=m.act==='settles'?`Something moves right after the line and settles at ${fmtT(m.settle)}. We can’t tell <i>what</i> moved.`:m.act==='ongoing'?'Something is still moving when the selection ends. We can’t tell what it is.':'We didn’t see much movement after the line.';
+  return `<div class="br-mo check"><div class="br-mo-h"><b>Check it</b> <span>${fmtT(m.in)}–${fmtT(m.out)} (${len(m)}) of ${name}</span></div>
+    <p>✅ <b>Line heard:</b> “${enc(m.text)}” (from “${enc(m.first)}” to “${enc(m.last)}”, nothing cut off)</p>
+    <p>👀 <b>Picture not confirmed:</b> ${act}${m.cutShort?' ⚠️ Your next sentence starts soon after, so the action may be cut short.':''}</p>
+    <p class="br-mo-note">Play it. If you see the action finish, lock it so it never changes.</p>
+    <div class="br-mo-b"><button type="button" data-play="${c.n}">▶ Play this moment</button><button type="button" class="primary" data-lock="${c.n}">🔒 Lock this moment</button></div>${alts}</div>`}
 
 // ---------- the best moments ----------
 // Up to 16 tiny frames across a clip: sharpness (edges), brightness, and how much the picture jumps between
@@ -645,11 +695,60 @@ async function scan(c){const v=document.createElement('video');v.muted=true;v.pl
 function bestStart(c,a,b,L){if(!c.q?.length||b-a<=L+.05)return null;let best=a,top=-1e9;
   for(let x=a;x+L<=b+1e-6;x+=.1){const inn=c.q.filter(q=>q.t>=x&&q.t<=x+L);if(!inn.length)continue;const sc=inn.reduce((n,q)=>n+q.s,0)/inn.length;if(sc>top+1e-6){top=sc;best=x}}return best}
 
+// ---------- moments: a line plus what happens right after it ----------
+// A long talking clip (an intro, a demo, a reaction in one take) is heard from start to end with the captions engine
+// (word times in the file's own seconds, the same words captions use later). Its sentences become candidate moments.
+// For the best few, a short look at tiny frames from the line's start to 6 s after it (6 a second, 64 px wide, about
+// 30–45 frames) finds movement after the line and where it settles, so the trim keeps the payoff, not just the words.
+// The engine can only say that something moved, not what: a moment's picture stays "check it" until the creator
+// plays it and locks it. c.moments = [{in, out, text, first, last, act, settle, fx, score}], c.pick = the one used.
+const SHOW=/\b(here|this|these|that|look|see|watch|fits?|holds?|inside|goes|go|put|slide|slides|open|opens|check|now|just|pocket|zip|clip|press|pull|pour|tap|twist|fold|unfold|turn|it)\b/gi;
+const LONG_CLIP=12;
+async function motion(c,a,b){const v=document.createElement('video');v.muted=true;v.playsInline=true;v.preload='auto';v.src=c.asset.url;const out=[];
+  try{await new Promise((r,j)=>{let t=setTimeout(()=>j(Error('timeout')),8000);v.onloadeddata=()=>{clearTimeout(t);r()};v.onerror=()=>{clearTimeout(t);j(Error('read'))}});
+    const W=64,H=Math.max(16,Math.round(64*(v.videoHeight||9)/(v.videoWidth||16))),cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d',{willReadFrequently:true});let prev=null;
+    for(let t=a;t<=b+1e-6;t+=1/6){await new Promise(r=>{let to=setTimeout(r,2500);v.onseeked=()=>{clearTimeout(to);r()};v.currentTime=Math.min(t,c.asset.duration-.05)});
+      g.drawImage(v,0,0,W,H);const d=g.getImageData(0,0,W,H).data,y=new Float32Array(W*H);for(let k=0;k<W*H;k++)y[k]=.299*d[k*4]+.587*d[k*4+1]+.114*d[k*4+2];
+      let sum=0;const col=new Float32Array(W);if(prev)for(let k=0;k<W*H;k++){const q=Math.abs(y[k]-prev[k]);if(q>12){sum+=q;col[k%W]+=q}}
+      out.push({t,d:prev?sum/(W*H):0,col});prev=y}}
+  finally{v.removeAttribute('src');v.load()}return out}
+function readAction(m,from){const ds=m.map(x=>x.d).sort((x,y)=>x-y),base=ds[Math.floor(ds.length/2)]||0,thr=Math.max(.6,base*2.5+.3);
+  const on=m.filter(x=>x.t>=from-.2&&x.d>thr);if(!on.length)return {act:'none'};
+  const end=on.at(-1).t,quiet=m.filter(x=>x.t>end);const settled=quiet.length&&quiet.at(-1).t-end>=.5;
+  // Where it ends up: the first stretch of movement after the line starts (gaps under a third of a second allowed),
+  // and its last third of a second, which is where the moving thing arrives (a phone sliding into a pocket, not the table
+  // it left). fx = that spot, 0–1 across the source; a crop to a tall frame is centred on it (cropPan).
+  const st=on[0].t;let runEnd=st;for(const x of on){if(x.t-runEnd>.34)break;runEnd=x.t}
+  const tail=m.filter(x=>x.t>=runEnd-.3&&x.t<=runEnd+1e-6&&x.d>thr);let w=0,cx=0;
+  for(const x of tail){const n=x.col.length;for(let i=0;i<n;i++){w+=x.col[i];cx+=x.col[i]*(i+.5)/n}}
+  return {act:settled?'settles':'ongoing',start:st,settle:end,fx:w?Math.round(cx/w*1000)/1000:.5}}
+async function findMoments(c,say=()=>{}){const words=await veClipWords({assetId:c.asset.id,in:c.in,out:c.out},say);c.allWords=words;c.moments=[];
+  if(!words.length)return c.moments;
+  const sents=[];let cur=[];words.forEach((w,i)=>{cur.push(w);const nx=words[i+1];if(!nx||/[.!?]["”')]*$/.test(w.w)||nx.s-w.e>.7){sents.push(cur);cur=[]}});
+  const real=sents.filter(ws=>!ws.every(junk));
+  const cand=real.map(ws=>{const text=ws.map(w=>w.w).join(' ').replace(/\s+([,.!?])/g,'$1').trim();return {ws,text,score:(text.match(SHOW)||[]).length*.5+(/[.!?]["”')]*$/.test(text)?.2:0)}})
+    .sort((x,y)=>y.score-x.score).slice(0,3);
+  for(const k of cand){say('Looking at what happens after “'+shorten(k.text,30)+'”…');const first=k.ws[0],last=k.ws.at(-1);
+    let m=[];try{m=await motion(c,Math.max(c.in,first.s),Math.min(c.out,last.e+6))}catch(e){console.warn('Moment scan skipped:',e)}
+    const r=m.length?readAction(m,first.s):{act:'none'},i=sents.indexOf(k.ws),prev=sents[i-1]?.at(-1),next=sents[i+1]?.[0];
+    let a=Math.max(c.in,first.s-.3,prev?prev.e+.05:-1),b=Math.max(last.e+.35,r.act==='settles'?r.settle+.5:r.act==='ongoing'?last.e+6:0);
+    let short=false;if(next&&b>next.s-.08){b=Math.max(last.e+.25,next.s-.08);short=r.act!=='none'&&r.settle>b}
+    b=Math.min(b,c.out,last.e+6.5);
+    Object.assign(k,{in:Math.round(a*100)/100,out:Math.round(b*100)/100,first:first.w,last:last.w,act:r.act,settle:r.settle,fx:r.fx,cutShort:short,score:k.score+(r.act==='settles'?1.5:r.act==='ongoing'?.6:0)});
+    delete k.ws;c.moments.push(k)}
+  c.moments.sort((x,y)=>y.score-x.score);c.pick=c.moments[0]?.score>=1?c.moments[0]:null;return c.moments}
+// Where a crop to a tall frame should look so the action stays in view: pan the cover-fitted picture towards the
+// moment's movement (fx, 0–1 across the source), never past its edges.
+// A crop to a tall frame is centred on the moment's action (fx, 0–1 across the source), never past the picture's edges.
+function cropPan(c,fx){const v=c.asset.video,sw=v?.videoWidth||16,sh=v?.videoHeight||9,W=canvas.width,H=canvas.height;
+  if(fx==null||shape==='16:9')return 0;const f=Math.max(W/sw,H/sh),vw=sw*f;if(vw<=W+1)return 0;
+  const lim=(vw-W)/2,dx=Math.max(-lim,Math.min(lim,vw*(.5-fx)));return Math.round(dx/W*1000)/1000}
+const fmtT=x=>{x=Math.max(0,x);const m=Math.floor(x/60);return m+':'+(x-m*60).toFixed(1).padStart(4,'0')};
 // ---------- building the video ----------
 // Talking clips keep everything that's said; other clips are cut to whole beats so cuts land on the music.
 function cut(c,part,beat){let a=c.in,b=c.out;
   if(c.talking&&c.speech){a=Math.max(c.in,c.in+c.speech[0]-.15);b=Math.min(c.out,c.in+c.speech[1]+.35);if(b-a<.5){a=c.in;b=c.out}return [a,b]}
-  if(!beat){const L=Math.min(6,b-a),x=bestStart(c,a,b,L);return x==null?[a,a+L]:[x,x+L]}let n=Math.min(part.beats||6,Math.floor((b-a)/beat));if(n<2)return [a,b];
+  if(!beat){const L=Math.min(6,b-a),x=bestStart(c,a,b,L);return x==null?[a,a+L]:[x,x+L]}const nb=part.beats||6;let n=Math.min(fast?Math.max(2,Math.round(nb/2)):nb,Math.floor((b-a)/beat));if(n<2)return [a,b];
   const L=n*beat,x=bestStart(c,a,b,L);if(x!=null)return [x,x+L];let start=Math.min(a+.2,b-L);return [Math.max(a,start),Math.max(a,start)+L]}
 const textFrac=(s,W,H)=>{let f=.055,px=f*H,w=s.length*.6*px;return w>W*.84?W*.84/(s.length*.6)/H:f};
 async function build(){if(exporting)return;const btn=dlg.querySelector('#brBuild');btn.disabled=true;btn.textContent='Building…';
@@ -669,7 +768,20 @@ async function build(){if(exporting)return;const btn=dlg.querySelector('#brBuild
       catch(e){console.warn('Cloud AI skipped:',e);cloudNote=e.code==='limit'?' '+e.message+' We used the on-device AI instead.':e.code==='off'?'':' The cloud AI wasn’t available, so we used the on-device AI.'}}
     let t=0,talky=false,failed=false,listened=false,n=0,moveN=0,skipped=0;const spans=[],capWords=[];
     for(let j=0;j<tp.parts.length;j++){const p=tp.parts[j];if(!parts[j].length)continue;let s=t;
-      for(const c of parts[j]){let [a,b]=cut(c,p,beat),segs=[[a,b]],words=null;
+      for(const c of parts[j]){
+        // A locked moment (or a found one the creator hasn't swapped for the whole clip) is used exactly: its own source
+        // range and sound, no pause-cutting inside it (the silent action after a line is the payoff), no zoom.
+        const range=c.lock||(!c.whole?c.pick:null);
+        if(range){let words=c.allWords?c.allWords.filter(w=>w.e>range.in&&w.s<range.out):null;
+          if(!words&&listen&&!failed){btn.textContent=`Listening to clip ${++n}…`;try{words=await veClipWords({assetId:c.asset.id,in:range.in,out:range.out},m=>btn.textContent=m);listened=true}catch(e){failed=true;console.warn('Speech engine unavailable:',e)}}
+          if(words?.length)talky=true;
+          let cl=makeClip(c.asset);Object.assign(cl,{in:range.in,out:range.out,fit:shape==='16:9'?'contain':'cover'});
+          if(c.lock){cl.locked=true;if(range.fx!=null)cl.lockFx=range.fx}
+          const px=cropPan(c,range.fx);if(px)cl.px=px;else if(c.lock?.px)cl.px=c.lock.px;
+          clips.push(cl);
+          if(words)for(const w of words)capWords.push({w:w.w,s:Math.round((t+Math.max(0,w.s-range.in))*100)/100,e:Math.round((t+Math.min(range.out,w.e)-range.in)*100)/100});
+          t+=range.out-range.in;continue}
+        let [a,b]=cut(c,p,beat),segs=[[a,b]],words=null;
         if(listen&&!failed&&todo.includes(c)){btn.textContent=`Listening to clip ${++n} of ${todo.length}…`;
           try{words=cloud?.get(c)||await veClipWords({assetId:c.asset.id,in:c.in,out:c.out},m=>btn.textContent=m);listened=true;
             if(words.length>=4){talky=true;a=Math.max(c.in,words[0].s-.15);b=Math.min(c.out,words.at(-1).e+.35);segs=[[a,b]]}
@@ -722,7 +834,7 @@ function tidy(words,a,b){const ws=words.filter(w=>w.e>a&&w.s<b),isF=w=>w.drop||F
 // energy), 1.5 s fade-out, and auto-ducking under speech.
 const musicTrackMeta=k=>{const M=MOODS[k];return M?{bpm:M.bpm,fadeIn:M.fx?.noFade?0:.3,fadeOut:1.5,duck:true,duckAmt:.85,volume:.6,musicKey:k}:{}};
 window.veMusicTrackMeta=musicTrackMeta;
-window.openBroll=open;window.veMakeBeat=makeBeat;window.veMoods=MOODS;window.veCreatorMoods=CREATOR;window.veMusicGroups=GROUPS;
+window.openBroll=open;window.veBrollState=()=>({items,parts,tp,fast});window.veMakeBeat=makeBeat;window.veMoods=MOODS;window.veCreatorMoods=CREATOR;window.veMusicGroups=GROUPS;
 // Free music for any audio track: pick a style, hear 10 seconds, then it's made as long as the video
 // (at least 15 s, at most 5 minutes) and put on that track.
 window.openFreeMusic=function(trackId){if(exporting)return;pause();let d=$$('fmDialog');

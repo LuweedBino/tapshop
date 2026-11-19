@@ -26,7 +26,7 @@ function quietParts(c,r){const from=Math.floor(c.in*10),to=Math.min(r.length,Mat
   return out}
 
 async function cutQuiet(note){let cut=0,n=0;const all=clips.length;
-  for(let i=clips.length-1;i>=0;i--){const c=clips[i],a=asset(c);if(!a||c.muted||c.volume===0)continue;note(`Listening to clip ${all-i} of ${all}…`);
+  for(let i=clips.length-1;i>=0;i--){const c=clips[i],a=asset(c);if(!a||c.locked||c.muted||c.volume===0)continue;note(`Listening to clip ${all-i} of ${all}…`);
     const r=await levels(a);if(!r)continue;const q=quietParts(c,r);if(!q.length)continue;
     const keep=[];let cur=c.in;for(const [a,b] of q){if(a-cur>.1)keep.push([cur,a]);cur=b}if(c.out-cur>.1)keep.push([cur,c.out]);if(!keep.length)continue;
     const start=startOf(i),sp=c.speed||1;
@@ -34,7 +34,7 @@ async function cutQuiet(note){let cut=0,n=0;const all=clips.length;
     for(const [a,b] of [...q].reverse()){const A=start+(a-c.in)/sp,d=(b-a)/sp;if(typeof rippleGap==='function')rippleGap(A,d);cut+=d;n++}}
   return {cut,n}}
 
-function addZooms(){let n=0,slow=0,jump=0;for(const c of clips){if(c.motion){delete c._jump;continue}
+function addZooms(){let n=0,slow=0,jump=0;for(const c of clips){if(c.motion||c.locked){delete c._jump;continue}
   if(c._jump){c.motion=jump++%2?'closeSoft':'';if(c.motion)n++}else{c.motion=slow++%2?'slowOut':'slowIn';n++}delete c._jump}return n}
 
 async function run(btn,out){if(exporting||analysisBusy)return;if(!clips.length){out.textContent='Add a video first.';return}
