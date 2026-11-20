@@ -598,7 +598,10 @@ async function analyse(){number();busy=true;stopped=false;
       try{await findMoments(long[i],m=>status(m))}catch(e){console.warn('Moments skipped:',e);mNote=' We couldn’t look for moments inside your long clips this time.';break}}
     const st=long.filter(isStory),found=long.filter(c=>c.pick&&!isStory(c)).length;
     if(st.length)mNote=` ${st.map(c=>c.asset.name).join(', ')} tells a whole story, so we cut ${st.length>1?'them':'it'} into ${st.length>1?'their':'its'} sentences and put each one into the part it belongs to, in the order you said them.`;
-    if(found)mNote+=` We found a moment to use in ${found} long clip${found>1?'s':''}: play it and lock it if it’s right.`}
+    if(found)mNote+=` We found a moment to use in ${found} long clip${found>1?'s':''}: play it and lock it if it’s right.`
+    aiStory=null;if(st.length&&aiOn()&&!stopped){status('🧠 Reading what you said, to understand your story…');
+      try{aiStory=await understand(st,TEMPLATES);mNote=` 🧠 The AI read what you said in ${st.map(c=>c.asset.name).join(', ')} and split it into the story’s parts. Check each piece and move it if it’s wrong.`+(found?` We also found a moment to use in ${found} long clip${found>1?'s':''}.`:'')}
+      catch(e){console.warn('Story AI skipped:',e);mNote+=' (The AI reader wasn’t available, so we split it by the words you used.)'}}}
   busy=false;if(stopped)return;
   choose(!failed);
   step3((failed?'We couldn’t run the clip reader ('+(failed.message||failed)+'). Check your internet connection for the first download. Your clips are in your order; move any clip with the menu under it.':'Here’s where we think each clip fits.'+pickedNote()+' Not right? Move a clip with the menu under it.')+mNote)}
@@ -633,7 +636,7 @@ function bestMood(){const seen=items.filter(c=>c.seen);if(!seen.length)return tp
   let m=LOOK_MOOD[key]||tp.mood;if(talky>=.5&&MOODS[m]&&MOODS[m].bpm>=125)m='story';return m}
 let suggested=null;
 function choose(read){picked='';number();
-  if(autoStory){suggested=null;tp=read||items.some(isStory)?(suggested=bestStory()):TEMPLATES.find(t=>t.id===BY_COUNT[items.length])||TEMPLATES[0];picked='story'}
+  if(autoStory){suggested=null;tp=aiStory&&TEMPLATES.find(t=>t.id===aiStory)?(suggested=TEMPLATES.find(t=>t.id===aiStory)):read||items.some(isStory)?(suggested=bestStory()):TEMPLATES.find(t=>t.id===BY_COUNT[items.length])||TEMPLATES[0];picked='story'}
   parts=arrange(items,tp);if(mood==='auto'){mood=read?bestMood():tp.mood;picked+=' music'}}
 const pickedNote=()=>{let a=[];if(/story/.test(picked))a.push(`the “${tp.name}” story`);if(/music/.test(picked)&&MOODS[mood])a.push(`${MOODS[mood].name} music`);return a.length?` We picked ${a.join(' and ')} for you.`:''};
 
@@ -645,7 +648,8 @@ const sentences=t=>String(t||'').replace(/\s+/g,' ').split(/(?<=[.!?])\s+/).map(
 const LEAD=/^((um+|uh+|so|okay|ok|well|like|and|but|yeah|hey|alright|you guys|guys)[,.!]?\s+)+/i;
 function shorten(x,max=42){x=x.replace(LEAD,'').replace(/\b(um+|uh+)[,.]?\s*/gi,'').replace(/[.]+$/,'').trim();if(!x)return '';x=x[0].toUpperCase()+x.slice(1);
   if(x.length<=max)return x;let c=x.slice(0,max);c=c.slice(0,Math.max(c.lastIndexOf(' '),20)).replace(/[,;:\-–]+$/,'');return c+'…'}
-function suggest(j){const p=tp.parts[j],talk=(parts?.[j]||[]).filter(c=>c.talking&&c.words);if(!talk.length)return null;const ss=talk.flatMap(c=>sentences(c.words));if(!ss.length)return null;
+function suggest(j){const ait=(parts?.[j]||[]).find(c=>c.aiTitle)?.aiTitle;if(ait){const p=tp.parts[j],emo=(p.text.match(/(\p{Extended_Pictographic}\uFE0F?)\s*$/u)||[])[1];return shorten(ait)+(emo?' '+emo:'')}
+  const p=tp.parts[j],talk=(parts?.[j]||[]).filter(c=>c.talking&&c.words);if(!talk.length)return null;const ss=talk.flatMap(c=>sentences(c.words));if(!ss.length)return null;
   let pick=ss.find(x=>p.say.test(x))||(p.id==='hook'?(ss.find(x=>/[?!]/.test(x))||ss[0]):null);if(!pick)return null;
   // A long sentence gives its clause with the part's words ("check out the link below", not "If you like this product…").
   if(pick.length>42){const cl=pick.split(/[,;]\s+/).find(x=>p.say.test(x)&&x.split(' ').length>=3);if(cl)pick=cl}const t=shorten(pick);if(!t)return null;
@@ -671,8 +675,11 @@ function step3(note){freePreview();const opts=j=>tp.parts.map((p,k)=>`<option va
   dlg.querySelectorAll('[data-mv]').forEach(sel=>sel.onchange=()=>{let c=parts.flat().find(x=>x.n===+sel.dataset.mv);parts.forEach(p=>{let k=p.indexOf(c);if(k>=0)p.splice(k,1)});parts[+sel.value].push(c);parts[+sel.value].sort((a,b)=>a.n-b.n);step3(note)});
   dlg.querySelector('#brMood3').onchange=e=>{mood=e.target.value};dlg.querySelector('#brBuild').onclick=build;
   dlg.querySelector('#brFast').onchange=e=>{fast=e.target.checked};
-  dlg.querySelectorAll('[data-story]').forEach(b=>b.onclick=()=>{const T=TEMPLATES.find(t=>t.id===b.dataset.story);if(!T||T===tp)return;stopPreview();
-    autoStory=false;tp=T;parts=arrange(items,tp);step3(T===suggested?`Back to the story we suggested. Here’s where each clip fits.`:`Switched to “${T.name}”. We re-sorted your clips into its parts. Move any clip with the menu under it.`)});
+  dlg.querySelectorAll('[data-story]').forEach(b=>b.onclick=async()=>{const T=TEMPLATES.find(t=>t.id===b.dataset.story);if(!T||T===tp||b.disabled)return;stopPreview();
+    // A story the AI hasn't split yet: ask it for just that story first (the phone's own split if it can't).
+    const need=items.filter(c=>isStory(c)&&!c.aiBy?.[T.id]);let read=false;
+    if(need.length&&aiOn()){dlg.querySelectorAll('[data-story]').forEach(x=>x.disabled=true);b.textContent='🧠 Reading…';try{await understand(need,[T]);read=true}catch(e){console.warn('Story AI skipped:',e)}}
+    autoStory=false;tp=T;parts=arrange(items,tp);step3(T===suggested?`Back to the story we suggested. Here’s where each clip fits.`:`Switched to “${T.name}”. ${read?'🧠 The AI re-read what you said for this story.':'We re-sorted your clips into its parts.'} Move any clip with the menu under it.`)});
   const byN=n=>parts.flat().find(x=>x.n===+n)||items.find(x=>x.n===+n);
   dlg.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.play),r=c.lock||c.pick;if(r)playRange(c,r)});
   dlg.querySelectorAll('[data-lock]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.lock),m=c.pick||(c.from?{in:c.in,out:c.out,text:c.words}:null);if(!m)return;c.lock={in:m.in,out:m.out,fx:m.fx,text:m.text};stopPreview();step3(note)});
@@ -747,7 +754,7 @@ function momentRow(c){const name=enc(c.asset.name),long=c.out-c.in>LONG_CLIP,len
   if(c.lock)return `<div class="br-mo locked"><div class="br-mo-h"><b>🔒 Locked</b> <span>${fmtT(c.lock.in)}–${fmtT(c.lock.out)} (${len(c.lock)}) of ${name}</span></div>
     ${c.lock.text?`<p>🗣 “${enc(c.lock.text)}”</p>`:''}<p class="br-mo-note">Used exactly like this, with its own sound, every time you build, even with ⚡ Faster edit or Keep my order.</p>
     <div class="br-mo-b"><button type="button" data-play="${c.n}">▶ Play</button><button type="button" data-unlock="${c.n}">Unlock</button></div></div>`;
-  if(c.from)return `<div class="br-mo"><div class="br-mo-h"><b>✂️ Piece ${c.piece} of ${c.pieces}</b> <span>${fmtT(c.in)}–${fmtT(c.out)} (${len(c)}) of ${name}</span></div>
+  if(c.from)return `<div class="br-mo"><div class="br-mo-h"><b>✂️ Piece ${c.piece} of ${c.pieces}</b>${c.byAI?' <small title="Split by the AI from what you said">🧠</small>':''} <span>${fmtT(c.in)}–${fmtT(c.out)} (${len(c)}) of ${name}</span></div>
     <p>🗣 “${enc(shorten(c.words,90))}”</p><div class="br-mo-b"><button type="button" data-play-piece="${c.n}">▶ Play</button><button type="button" data-lock="${c.n}">🔒 Lock</button>${c.piece===1?`<button type="button" data-unsplit="${c.n}">Use it as one clip</button>`:''}</div></div>`;
   if(!long)return '';
   if(c.noSplit&&c.allWords&&sentsOf(c).length>=3)return `<div class="br-mo"><p>${name} is used as one clip.</p><div class="br-mo-b"><button type="button" data-split="${c.n}">✂️ Cut it into the story’s parts</button></div></div>`;
@@ -827,14 +834,23 @@ async function findMoments(c,say=()=>{}){const words=await veClipWords({assetId:
 // earns a point when it has the part's usual words, more when it starts with them ("First…", "Second…", "Link in
 // bio…"), and loses a little the further its place in the clip is from the part's place in the story; skipping a
 // part costs a point. Each group of sentences becomes one piece, cut between sentences so no word is clipped.
+// A new point often starts mid-sentence when the speech engine leaves out the full stop ("…cup holder and three,
+// it has…"), so a sentence is also split before a counting word with a comma after it ("three,", "second,",
+// "lastly,"), before "number two/three…", and takes a leading "and"/"so"/"plus" with it.
+const ENUM=/^(first|firstly|second|secondly|third|thirdly|fourth|fifth|one|two|three|four|five|next|lastly|finally|plus|also)$/,LINK=/^(and|so|then|plus|also|okay|ok)$/;
+const bare=w=>String(w.w||'').toLowerCase().replace(/[^a-z']/g,'');
+function newPoint(words,i){const w=words[i],b=bare(w);if(!b)return 0;
+  if(ENUM.test(b)&&/[,:;]["”')]*$/.test(w.w)&&!/^(one|also|plus)$/.test(b))return LINK.test(bare(words[i-1]||{}))?2:1;
+  if(b==='number'&&/^(one|two|three|four|five|1|2|3|4|5)$/.test(bare(words[i+1]||{})))return LINK.test(bare(words[i-1]||{}))?2:1;return 0}
 function sentsOf(c){if(c._sents)return c._sents;const words=c.allWords||[],raw=[];let cur=[];
-  words.forEach((w,i)=>{cur.push(w);const nx=words[i+1];if(!nx||/[.!?]["”')]*$/.test(w.w)||nx.s-w.e>.7){raw.push(cur);cur=[]}});
+  words.forEach((w,i)=>{const k=i&&cur.length>=3?newPoint(words,i):0;if(k){const back=k===2&&cur.length>3?[cur.pop()]:[];if(cur.length)raw.push(cur);cur=back}
+    cur.push(w);const nx=words[i+1];if(!nx||/[.!?]["”')]*$/.test(w.w)||nx.s-w.e>.7){raw.push(cur);cur=[]}});
   const out=[];for(const ws of raw){if(ws.every(junk))continue;if(out.length&&ws.filter(w=>!junk(w)).length<3)out[out.length-1]=out.at(-1).concat(ws);else out.push(ws)}
   if(out.length>1&&out[0].filter(w=>!junk(w)).length<3){out[1]=out[0].concat(out[1]);out.shift()}
   return c._sents=out}
 const sentText=ws=>ws.map(w=>w.w).join(' ').replace(/\s+([,.!?])/g,'$1').trim();
 const isStory=c=>!!c.allWords&&c.out-c.in>LONG_CLIP&&!c.noSplit&&!c.lock&&sentsOf(c).length>=3;
-function splitStory(c,tp){const S=sentsOf(c),P=tp.parts.length,txt=S.map(sentText),head=txt.map(t=>t.split(/\s+/).slice(0,5).join(' '));
+function splitStory(c,tp){const ai=c.aiBy?.[tp.id];if(ai)return aiPieces(c,tp,ai);const S=sentsOf(c),P=tp.parts.length,txt=S.map(sentText),head=txt.map(t=>t.split(/\s+/).slice(0,5).join(' '));
   const pos=(i,n)=>n>1?i/(n-1):0,fit=(i,j)=>(tp.parts[j].say.test(txt[i])?1:0)-.8*Math.abs(pos(i,S.length)-pos(j,P)),starts=(i,j)=>tp.parts[j].say.test(head[i])?1.2:tp.parts[j].say.test(txt[i])?.6:0;
   const dp=S.map(()=>Array(P).fill(-1e9)),from=S.map(()=>Array(P).fill(-1));
   for(let j=0;j<P;j++)dp[0][j]=fit(0,j)+starts(0,j)-j;
@@ -848,6 +864,29 @@ function splitStory(c,tp){const S=sentsOf(c),P=tp.parts.length,txt=S.map(sentTex
     const a=Math.round(Math.max(c.in,first.s-.15,prev?prev.e+.02:-1)*100)/100,b=Math.round(Math.min(c.out,last.e+.35,next?next.s-.02:1e9)*100)/100;
     return [g.j,{asset:c.asset,in:a,out:Math.max(b,a+.3),talking:true,words:sentText(g.ws),speech:[first.s-a,last.e-a],heardWords:g.ws,seen:c.seen,
       from:c,piece:k+1,pieces:groups.length,n:c.n+(k+1)/1000,of:c.of}]})}
+// ---------- the AI reads what was said ----------
+// Inside TapShopUGC, /api/story-parts (Gemini) gets only the written-down words of the story clips, numbered, and
+// says which story they tell and which words make each part (it understands meaning, so a reason with no number
+// word still counts, and it can start a part mid-sentence). c.aiBy[storyId] = [{part, from, to, title}] (word
+// numbers into c.allWords); aiStory = the story it picked. Any failure leaves the phone's own split in charge.
+let aiStory=null;const aiOn=()=>typeof inTapShop==='function'&&inTapShop();
+async function readParts(res){const rd=res.body.getReader(),dec=new TextDecoder();let buf='',out=null;
+  for(;;){const {value,done}=await rd.read();buf+=dec.decode(value||new Uint8Array(),{stream:!done});let nl;
+    while((nl=buf.indexOf('\n'))>=0){const line=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(!line)continue;try{const ev=JSON.parse(line);if(ev.type==='result')out=ev}catch{}}
+    if(done)return out}}
+async function understand(list,stories){const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),90000);
+  try{const res=await fetch('/api/story-parts',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctl.signal,
+      body:JSON.stringify({stories:stories.map(T=>({id:T.id,name:T.name,parts:T.parts.map(p=>({id:p.id,label:p.label}))})),clips:list.map(c=>({n:c.n,words:c.allWords.map(w=>String(w.w))}))})});
+    const r=(res.headers.get('content-type')||'').includes('ndjson')&&res.body?await readParts(res):await res.json().catch(()=>null);
+    if(!r?.ok)throw Error(r?.error||'The AI didn’t answer.');
+    for(const c of list){const got=r.clips.find(x=>x.n===c.n);if(got?.segments?.length){(c.aiBy||={})[r.story]=got.segments}}
+    return r.story}
+  finally{clearTimeout(t)}}
+function aiPieces(c,tp,segs){const W=c.allWords,list=segs.filter(g=>tp.parts.some(p=>p.id===g.part)&&W[g.from]&&W[g.to]);
+  return list.map((g,k)=>{const ws=W.slice(g.from,g.to+1),first=ws.find(w=>!junk(w))||ws[0],last=ws.at(-1),prev=list[k-1]?W[list[k-1].to]:null,next=list[k+1]?W[list[k+1].from]:null;
+    const a=Math.round(Math.max(c.in,first.s-.15,prev?prev.e+.02:-1)*100)/100,b=Math.round(Math.min(c.out,last.e+.35,next?next.s-.02:1e9)*100)/100;
+    return [tp.parts.findIndex(p=>p.id===g.part),{asset:c.asset,in:a,out:Math.max(b,a+.3),talking:true,words:sentText(ws),speech:[first.s-a,last.e-a],heardWords:ws,seen:c.seen,
+      from:c,piece:k+1,pieces:list.length,n:c.n+(k+1)/1000,of:c.of,aiTitle:g.title||'',byAI:true}]})}
 // Where a crop to a tall frame should look so the action stays in view: pan the cover-fitted picture towards the
 // moment's movement (fx, 0–1 across the source), never past its edges.
 // A crop to a tall frame is centred on the moment's action (fx, 0–1 across the source), never past the picture's edges.
