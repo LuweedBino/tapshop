@@ -662,7 +662,7 @@ function step3(note){freePreview();const opts=j=>tp.parts.map((p,k)=>`<option va
   ${tp.parts.some((p,j)=>texts[tp.id+p.id]==null&&suggest(j))?'<p class="sub">✍️ Some words on screen were written from what you said. Change them any time.</p>':''}
   <div class="br-row" style="margin-bottom:6px"><label>Music<select id="brMood3">${moodOpts(mood)}<option value=""${mood?'':' selected'}>No music</option></select></label></div>
   <label class="br-caps br-fast"><input type="checkbox" id="brFast"${fast?' checked':''}> <span><b>⚡ Faster edit</b><small>Shorter b-roll shots and long clips cut to their moment. Locked moments stay exactly as they are.</small></span></label>
-  <div class="br-pv" id="brPv" hidden><video playsinline preload="auto"></video><p class="sub" id="brPvLbl" aria-live="polite"></p></div>
+  <div class="br-pv" id="brPv" hidden><canvas hidden style="display:block;margin:0 auto;max-width:100%;max-height:46vh;background:#000;border-radius:10px"></canvas><video playsinline preload="auto"></video><p class="sub" id="brPvLbl" aria-live="polite"></p></div>
   ${tp.parts.map((p,j)=>`<div class="br-sec"><div class="br-sec-h"><b>${j+1}. ${enc(p.label)}</b><input type="text" data-tx="${p.id}" value="${enc(partText(j))}" aria-label="Words on screen for ${enc(p.label)}" placeholder="Words on screen (leave empty for none)"></div>
     <div class="br-clips">${parts[j].length?parts[j].map(c=>`<div class="br-clip"><img alt="" src="${c.asset.thumb}"><span class="nm">${enc(c.asset.name)}</span><span class="tag">${tag(c)}</span>${c.words?`<span class="said">“${enc(c.words.slice(0,70))}${c.words.length>70?'…':''}”</span>`:''}<select data-mv="${c.n}" aria-label="Move ${enc(c.asset.name)}">${opts(j)}</select></div>`).join(''):`<p class="br-empty">No clip here yet. Film a short clip for “${enc(p.text)}” (or say it in a talking clip), or this part is skipped.</p>`}</div>${parts[j].map(momentRow).join('')}</div>`).join('')}
   <div class="row"><button type="button" id="brBack">← Back</button><button type="button" class="primary" id="brBuild">🎬 Build my video</button></div>`;
@@ -685,13 +685,38 @@ function step3(note){freePreview();const opts=j=>tp.parts.map((p,k)=>`<option va
     try{await findMoments(c,m=>b.textContent=m);step3(note)}catch(e){b.disabled=false;b.textContent='We couldn’t listen to this clip here ('+(e.message||e)+').'}})}
 // The rough-cut player: plays exactly one selection (source in → out, with its own sound) and stops there.
 let pvRaf=0;
-function stopPreview(){cancelAnimationFrame(pvRaf);clearTimeout(pvT1);clearTimeout(pvT2);const v=dlg.querySelector('#brPv video');if(v){v.pause()}}
+function stopPreview(){cancelAnimationFrame(pvRaf);clearTimeout(pvT1);clearTimeout(pvT2);unborrow();const v=dlg.querySelector('#brPv video');if(v){v.pause()}}
 // Phones only have a few video players to go round (the clip reader, the frame checks and the editor use them too),
 // and a <video> thrown away with its file still set keeps its player until it's garbage-collected. So the preview's
 // player is always let go before the screen is redrawn or closed.
 function freePreview(){stopPreview();const v=dlg.querySelector('#brPv video');if(v){v.onerror=v.onloadedmetadata=v.onseeked=null;v.removeAttribute('src');try{v.load()}catch{}delete v.dataset.src}}
 let pvT1=0,pvT2=0;
-function playRange(c,r,retry){const box=dlg.querySelector('#brPv'),v=box.querySelector('video'),lbl=dlg.querySelector('#brPvLbl');stopPreview();box.hidden=false;
+// The preview borrows the clip's own <video> (the editor keeps one open per clip) and paints it on a canvas, so it
+// never needs a new player: phones have only a few, and a request past that fails with error 4. Its sound goes the
+// way the editor's does (through a.gain when the editor's sound has started), turned up for the preview and put back.
+let pvBorrow=null;
+function unborrow(){const b=pvBorrow;if(!b)return;pvBorrow=null;try{b.v.onseeked=null;b.v.pause();b.v.muted=b.muted;b.v.playbackRate=b.rate;if(b.g)b.g.gain.value=b.gain;if(b.clean){b.clean.pause()}}catch{}
+  try{if(typeof seekTimeline==='function'&&typeof playhead==='number')seekTimeline(playhead)}catch{}}
+function playBorrowed(c,r){const a=c.asset,v=a.video,box=dlg.querySelector('#brPv'),cv=box.querySelector('canvas'),lbl=dlg.querySelector('#brPvLbl'),own=box.querySelector('video');
+  stopPreview();box.hidden=false;own.hidden=true;own.removeAttribute('src');try{own.load()}catch{}delete own.dataset.src;cv.hidden=false;
+  const [aw,ah]=shape.split(':').map(Number),fx=r.fx??.5,H=Math.min(640,Math.round(Math.min(innerHeight*.46,(box.clientWidth||320)*ah/aw)));cv.height=H;cv.width=Math.round(H*aw/ah);
+  const g=cv.getContext('2d'),gainNode=a.gain||null;
+  pvBorrow={v,muted:v.muted,rate:v.playbackRate,g:gainNode,gain:gainNode?gainNode.gain.value:1,clean:a.cleanEl||null};
+  try{if(typeof audioCtx!=='undefined'&&audioCtx&&audioCtx.state!=='running')audioCtx.resume()}catch{}
+  if(gainNode)gainNode.gain.value=1;v.muted=false;v.playbackRate=1;
+  let ready=false;const paint=()=>{const sw=v.videoWidth,sh=v.videoHeight;if(!sw||!sh||v.readyState<2)return;const f=Math.max(cv.width/sw,cv.height/sh),dw=sw*f,dh=sh*f;
+    let dx=cv.width/2-dw*fx;dx=Math.min(0,Math.max(cv.width-dw,dx));g.fillStyle='#000';g.fillRect(0,0,cv.width,cv.height);g.drawImage(v,dx,(cv.height-dh)/2,dw,dh)};
+  const done=()=>{const b=pvBorrow;paint();unborrow();lbl.textContent=`Played ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}. Tap ▶ Play to watch it again.`;void b};
+  const tick=()=>{if(pvBorrow?.v!==v)return;paint();if(ready&&v.currentTime>=r.out-.02)return done();pvRaf=requestAnimationFrame(tick)};
+  const start=()=>{if(ready||pvBorrow?.v!==v)return;ready=true;lbl.textContent=`▶ Playing ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}`;
+    if(pvBorrow.clean){try{pvBorrow.clean.currentTime=v.currentTime;pvBorrow.clean.play().catch(()=>{})}catch{}}
+    if(v.paused)v.play().catch(()=>{lbl.textContent='Tap ▶ Play again to start it.'})};
+  lbl.textContent='Loading the moment…';
+  const p=v.play();if(p&&p.catch)p.catch(()=>{}); // inside the tap, so sound is allowed
+  v.onseeked=()=>{v.onseeked=null;start()};v.currentTime=r.in;
+  pvT1=setTimeout(()=>{if(!ready&&Math.abs(v.currentTime-r.in)<.6)start();else if(!ready)lbl.textContent='This phone is slow to load this clip. Tap ▶ Play again.'},1500);
+  tick();box.scrollIntoView({block:'nearest'})}
+function playRange(c,r,retry){if(c.asset?.video&&!retry&&!c.asset._noBorrow){playBorrowed(c,r);return}const box=dlg.querySelector('#brPv'),v=box.querySelector('video'),lbl=dlg.querySelector('#brPvLbl');stopPreview();box.hidden=false;v.hidden=false;box.querySelector('canvas').hidden=true;
   if(v.error||retry){v.removeAttribute('src');try{v.load()}catch{}delete v.dataset.src} // a failed or stuck load is never reused
   // Phones (Chrome on Android especially) only allow sound when play() is called during the tap itself, and may not
   // load a video that hasn't been asked to play yet. So: play right away, jump to the start once it's ready, and keep
