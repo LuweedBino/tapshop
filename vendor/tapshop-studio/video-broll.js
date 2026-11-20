@@ -552,22 +552,14 @@ function step1(){freePreview();const flow=t=>t.parts.map(p=>p.label).join(' → 
 </section>
   <section class="br-sec"><h3><span class="br-n">2</span>Look and sound</h3><div class="br-row"><label>Video shape<select id="brShape">${shapes().map(([v,l])=>`<option value="${enc(v)}"${v===shape?' selected':''}>${enc(l)}</option>`).join('')}</select></label>
   <label>Music<select id="brMood"><option value="auto"${mood==='auto'?' selected':''}>✨ Pick for me</option>${moodOpts(mood)}<option value=""${mood?'':' selected'}>No music</option></select></label><button type="button" id="brListen" title="Hear a few seconds of this music">▶ Listen</button></div></section>
-  <section class="br-sec"><h3><span class="br-n">3</span>Smart edits</h3><p class="sub br-sub">We do these for you while we build. Turn off any you don't want.</p><div class="br-helpers">
-  <label class="br-caps"><input type="checkbox" id="brCaps"${autoCaps?' checked':''}> <span><b>✨ Add captions when someone talks</b><small>We write the words people say on screen, like the ✨ Captions tool.</small></span></label>
-  <label class="br-caps"><input type="checkbox" id="brTidy"${autoTidy?' checked':''}> <span><b>✂️ Cut pauses and “um”s</b><small>We remove long pauses and “um” / “uh” from talking clips, so they flow.</small></span></label>
-  <label class="br-caps"><input type="checkbox" id="brClean"${autoClean?' checked':''}> <span><b>🔇 Clean up the sound</b><small>We take out steady background noise like a fan or AC, and the click when you start and stop recording.</small></span></label>
-  ${window.veCloudOn?.()?`<label class="br-caps"><input type="checkbox" id="brCloud"${autoCloud?' checked':''}> <span><b>☁️ Use cloud AI (more accurate)</b><small>Better captions, and it also cuts fumbles and retakes. The sound of your talking clips is sent to Groq’s AI to be written down. Turn off to keep everything on this device.</small></span></label>`:''}
-  <label class="br-caps"><input type="checkbox" id="brMove"${autoMove?' checked':''}> <span><b>🎬 Add slow, smooth zooms</b><small>A slow, gentle zoom on each clip so still shots feel alive. Cuts still land on the beat.</small></span></label>
-  <label class="br-caps"><input type="checkbox" id="brSfx"${autoSfx?' checked':''}> <span><b>🔊 Add sound effects</b><small>A sound as each line of words pops up: a whoosh on the hook, a ding on the fix, a sparkle on the “after”, a tap on “link in bio”.</small></span></label>
-  </div></section>
   <p class="sub br-note">The first time, your browser downloads the clip reader (a one-time download, about 130 MB). After that it’s saved. Phones are slower than computers.</p>
-  <div class="row"><button type="button" id="brCancel">Cancel</button><button type="button" id="brSkip"${items.length?'':' disabled'}>Keep my order</button><button type="button" class="primary" id="brGo"${items.length?'':' disabled'}>✨ Make my video</button></div>`;
+  <div class="row"><button type="button" id="brCancel">Cancel</button><button type="button" id="brSkip"${items.length?'':' disabled'}>Keep my order</button><button type="button" class="primary" id="brGo"${items.length?'':' disabled'}>✨ Find my story</button></div>`;
   dlg.querySelector('.dialog-x').onclick=dlg.querySelector('#brCancel').onclick=close;
   dlg.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{items.splice(+b.dataset.x,1);step1()});
   const fi=dlg.querySelector('#brFiles');dlg.querySelector('#brChoose').onclick=()=>fi.click();fi.onchange=()=>{addFiles([...fi.files]);fi.value=''};
   dlg.querySelector('#brVault')?.addEventListener('click',()=>VaultPicker.open({title:'Pick a clip',kinds:['video'],onPick:async it=>{try{toast('Loading '+it.name+'…');await addFiles([await VaultPicker.file(it)])}catch(e){toast(e.message)}if(!dlg.open)dlg.showModal()}}));
   dlg.querySelector('#brTimeline')?.addEventListener('click',()=>{useTimeline();step1()});
-  dlg.querySelector('#brShape').onchange=e=>shape=e.target.value;dlg.querySelector('#brMood').onchange=e=>{mood=e.target.value;stopListen()};dlg.querySelector('#brListen').onclick=listen;dlg.querySelector('#brCaps').onchange=e=>{autoCaps=e.target.checked;try{localStorage.setItem('tapshop-broll-captions',autoCaps?'on':'off')}catch{}};dlg.querySelector('#brTidy').onchange=e=>{autoTidy=e.target.checked;try{localStorage.setItem('tapshop-broll-tidy',autoTidy?'on':'off')}catch{}};dlg.querySelector('#brClean').onchange=e=>{autoClean=e.target.checked;try{localStorage.setItem('tapshop-broll-clean',autoClean?'on':'off')}catch{}};dlg.querySelector('#brCloud')&&(dlg.querySelector('#brCloud').onchange=e=>{autoCloud=e.target.checked;try{localStorage.setItem('tapshop-broll-cloud',autoCloud?'on':'off')}catch{}});dlg.querySelector('#brMove').onchange=e=>{autoMove=e.target.checked;try{localStorage.setItem('tapshop-broll-motion',autoMove?'on':'off')}catch{}};dlg.querySelector('#brSfx').onchange=e=>{autoSfx=e.target.checked;try{localStorage.setItem('tapshop-broll-sfx',autoSfx?'on':'off')}catch{}};if(!dlg._stopsMusic){dlg._stopsMusic=1;dlg.addEventListener('close',stopListen)}
+  dlg.querySelector('#brShape').onchange=e=>shape=e.target.value;dlg.querySelector('#brMood').onchange=e=>{mood=e.target.value;stopListen()};dlg.querySelector('#brListen').onclick=listen;if(!dlg._stopsMusic){dlg._stopsMusic=1;dlg.addEventListener('close',stopListen)}
   dlg.querySelector('#brGo').onclick=analyse;dlg.querySelector('#brSkip').onclick=()=>{number();choose(false);step3('Kept your order.'+pickedNote()+' Move any clip with the menu under it.')}}
 async function addFiles(files){let got=0;for(const f of files){if(!/^video\//.test(f.type)&&!/\.(mp4|mov|webm|m4v)$/i.test(f.name))continue;try{toast('Loading '+f.name+'…');let a=await loadAsset(f);items.push({asset:a,in:0,out:a.duration});got++}catch(e){toast(e.message)}}if(got&&dlg.open)step1()}
 function useTimeline(quiet){let seen=new Set(items.map(c=>c.key));for(const c of clips){let a=asset(c);if(!a)continue;let key=c.id;if(seen.has(key))continue;items.push({asset:a,in:c.in,out:c.out,key,...(c.locked?{lock:{in:c.in,out:c.out,px:c.px||0,fx:c.lockFx}}:{})})}if(!quiet)toast('Your timeline clips are in.')}
@@ -665,16 +657,15 @@ function step3(note){freePreview();const opts=j=>tp.parts.map((p,k)=>`<option va
     ${gaps.length?`<p class="br-gap">⚠️ None of your clips fit <b>${gaps.map(p=>enc(p.label)).join(', ')}</b>. Add a clip for ${gaps.length>1?'them':'it'}, say it in a talking clip, or ${gaps.length>1?'they’ll':'it’ll'} be skipped.</p>`:''}</div>
   ${tp.parts.some((p,j)=>texts[tp.id+p.id]==null&&suggest(j))?'<p class="sub">✍️ Some words on screen were written from what you said. Change them any time.</p>':''}
   <div class="br-row" style="margin-bottom:6px"><label>Music<select id="brMood3">${moodOpts(mood)}<option value=""${mood?'':' selected'}>No music</option></select></label></div>
-  <label class="br-caps br-fast"><input type="checkbox" id="brFast"${fast?' checked':''}> <span><b>⚡ Faster edit</b><small>Snappier, TikTok-style: silent b-roll shots last half as long, and talking clips lose every pause longer than a third of a second (normally half a second). Locked moments stay exactly as they are.</small></span></label>
   <div class="br-pv" id="brPv" hidden><canvas hidden style="display:block;margin:0 auto;max-width:100%;max-height:46vh;background:#000;border-radius:10px"></canvas><video playsinline preload="auto"></video><p class="sub" id="brPvLbl" aria-live="polite"></p></div>
   ${tp.parts.map((p,j)=>`<div class="br-sec"><div class="br-sec-h"><b>${j+1}. ${enc(p.label)}</b><input type="text" data-tx="${p.id}" value="${enc(partText(j))}" aria-label="Words on screen for ${enc(p.label)}" placeholder="Words on screen (leave empty for none)"></div>
     <div class="br-clips">${parts[j].length?parts[j].map(c=>`<div class="br-clip"><img alt="" src="${c.asset.thumb}"><span class="nm">${enc(c.asset.name)}</span><span class="tag">${tag(c)}</span>${c.words?`<span class="said">“${enc(c.words.slice(0,70))}${c.words.length>70?'…':''}”</span>`:''}<select data-mv="${c.n}" aria-label="Move ${enc(c.asset.name)}">${opts(j)}</select></div>`).join(''):`<p class="br-empty">No clip here yet. Film a short clip for “${enc(p.text)}” (or say it in a talking clip), or this part is skipped.</p>`}</div>${parts[j].map(momentRow).join('')}</div>`).join('')}
-  <div class="row"><button type="button" id="brBack">← Back</button><button type="button" class="primary" id="brBuild">🎬 Build my video</button></div>`;
+  <div class="row"><button type="button" id="brBack">← Back</button><button type="button" id="brRough">▶ Play my rough cut</button><button type="button" class="primary" id="brNext">Next: finishing touches →</button></div>`;
   dlg.querySelector('.dialog-x').onclick=close;dlg.querySelector('#brBack').onclick=step1;
+  dlg.querySelector('#brRough').onclick=()=>playSeq(roughCut(false),'your rough cut');dlg.querySelector('#brNext').onclick=()=>step4(note);
   dlg.querySelectorAll('[data-tx]').forEach(el=>el.oninput=()=>texts[tp.id+el.dataset.tx]=el.value);
   dlg.querySelectorAll('[data-mv]').forEach(sel=>sel.onchange=()=>{let c=parts.flat().find(x=>x.n===+sel.dataset.mv);parts.forEach(p=>{let k=p.indexOf(c);if(k>=0)p.splice(k,1)});parts[+sel.value].push(c);parts[+sel.value].sort((a,b)=>a.n-b.n);step3(note)});
-  dlg.querySelector('#brMood3').onchange=e=>{mood=e.target.value};dlg.querySelector('#brBuild').onclick=build;
-  dlg.querySelector('#brFast').onchange=e=>{fast=e.target.checked};
+  dlg.querySelector('#brMood3').onchange=e=>{mood=e.target.value};
   dlg.querySelectorAll('[data-story]').forEach(b=>b.onclick=async()=>{const T=TEMPLATES.find(t=>t.id===b.dataset.story);if(!T||T===tp||b.disabled)return;stopPreview();
     // A story the AI hasn't split yet: ask it for just that story first (the phone's own split if it can't).
     const need=items.filter(c=>isStory(c)&&!c.aiBy?.[T.id]);let read=false;
@@ -690,6 +681,26 @@ function step3(note){freePreview();const opts=j=>tp.parts.map((p,k)=>`<option va
   dlg.querySelectorAll('[data-split]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.split);if(!c)return;delete c.noSplit;stopPreview();parts=arrange(items,tp);step3(note)});
   dlg.querySelectorAll('[data-find]').forEach(b=>b.onclick=async()=>{const c=byN(b.dataset.find);b.disabled=true;
     try{await findMoments(c,m=>b.textContent=m);step3(note)}catch(e){b.disabled=false;b.textContent='We couldn’t listen to this clip here ('+(e.message||e)+').'}})}
+
+// Step 4: the finishing touches (captions, pauses, clean sound, zooms, sound effects, Faster edit), with a preview of
+// the cut they make before anything is built.
+function step4(note){freePreview();
+  dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>✨ Finishing touches</h2><p class="sub">Your story is set. Pick how it's finished, tap ▶ to preview the cut, then build.</p>
+  <div class="br-pv" id="brPv" hidden><canvas hidden style="display:block;margin:0 auto;max-width:100%;max-height:46vh;background:#000;border-radius:10px"></canvas><video playsinline preload="auto"></video><p class="sub" id="brPvLbl" aria-live="polite"></p></div>
+  <label class="br-caps br-fast"><input type="checkbox" id="brFast"${fast?' checked':''}> <span><b>⚡ Faster edit</b><small>Snappier, TikTok-style: silent b-roll shots last half as long, and talking clips lose every pause longer than a third of a second (normally half a second). Locked moments stay exactly as they are.</small></span></label>
+  <section class="br-sec"><h3><span class="br-n">✨</span>Finishing touches</h3><p class="sub br-sub">We do these while we build. Turn off any you don't want, then preview.</p><div class="br-helpers">
+  <label class="br-caps"><input type="checkbox" id="brCaps"${autoCaps?' checked':''}> <span><b>✨ Add captions when someone talks</b><small>We write the words people say on screen, like the ✨ Captions tool.</small></span></label>
+  <label class="br-caps"><input type="checkbox" id="brTidy"${autoTidy?' checked':''}> <span><b>✂️ Cut pauses and “um”s</b><small>We remove long pauses and “um” / “uh” from talking clips, so they flow.</small></span></label>
+  <label class="br-caps"><input type="checkbox" id="brClean"${autoClean?' checked':''}> <span><b>🔇 Clean up the sound</b><small>We take out steady background noise like a fan or AC, and the click when you start and stop recording.</small></span></label>
+  ${window.veCloudOn?.()?`<label class="br-caps"><input type="checkbox" id="brCloud"${autoCloud?' checked':''}> <span><b>☁️ Use cloud AI (more accurate)</b><small>Better captions, and it also cuts fumbles and retakes. The sound of your talking clips is sent to Groq’s AI to be written down. Turn off to keep everything on this device.</small></span></label>`:''}
+  <label class="br-caps"><input type="checkbox" id="brMove"${autoMove?' checked':''}> <span><b>🎬 Add slow, smooth zooms</b><small>A slow, gentle zoom on each clip so still shots feel alive. Cuts still land on the beat.</small></span></label>
+  <label class="br-caps"><input type="checkbox" id="brSfx"${autoSfx?' checked':''}> <span><b>🔊 Add sound effects</b><small>A sound as each line of words pops up: a whoosh on the hook, a ding on the fix, a sparkle on the “after”, a tap on “link in bio”.</small></span></label>
+  </div></section>
+  <div class="row"><button type="button" id="brBack4">← Back</button><button type="button" id="brPrev4">▶ Preview with these edits</button><button type="button" class="primary" id="brBuild">🎬 Build my video</button></div>`;
+  dlg.querySelector('.dialog-x').onclick=close;dlg.querySelector('#brBack4').onclick=()=>step3(note);dlg.querySelector('#brBuild').onclick=build;
+  dlg.querySelector('#brPrev4').onclick=()=>playSeq(roughCut(true),'your video with these edits');
+  dlg.querySelector('#brFast').onchange=e=>{fast=e.target.checked};
+  dlg.querySelector('#brCaps').onchange=e=>{autoCaps=e.target.checked;try{localStorage.setItem('tapshop-broll-captions',autoCaps?'on':'off')}catch{}};dlg.querySelector('#brTidy').onchange=e=>{autoTidy=e.target.checked;try{localStorage.setItem('tapshop-broll-tidy',autoTidy?'on':'off')}catch{}};dlg.querySelector('#brClean').onchange=e=>{autoClean=e.target.checked;try{localStorage.setItem('tapshop-broll-clean',autoClean?'on':'off')}catch{}};dlg.querySelector('#brCloud')&&(dlg.querySelector('#brCloud').onchange=e=>{autoCloud=e.target.checked;try{localStorage.setItem('tapshop-broll-cloud',autoCloud?'on':'off')}catch{}});dlg.querySelector('#brMove').onchange=e=>{autoMove=e.target.checked;try{localStorage.setItem('tapshop-broll-motion',autoMove?'on':'off')}catch{}};dlg.querySelector('#brSfx').onchange=e=>{autoSfx=e.target.checked;try{localStorage.setItem('tapshop-broll-sfx',autoSfx?'on':'off')}catch{}};}
 // The rough-cut player: plays exactly one selection (source in → out, with its own sound) and stops there.
 let pvRaf=0;
 function stopPreview(){cancelAnimationFrame(pvRaf);clearTimeout(pvT1);clearTimeout(pvT2);unborrow();const v=dlg.querySelector('#brPv video');if(v){v.pause()}}
@@ -702,27 +713,43 @@ let pvT1=0,pvT2=0;
 // never needs a new player: phones have only a few, and a request past that fails with error 4. Its sound goes the
 // way the editor's does (through a.gain when the editor's sound has started), turned up for the preview and put back.
 let pvBorrow=null;
-function unborrow(){const b=pvBorrow;if(!b)return;pvBorrow=null;try{b.v.onseeked=null;b.v.pause();b.v.muted=b.muted;b.v.playbackRate=b.rate;if(b.g)b.g.gain.value=b.gain;if(b.clean){b.clean.pause()}}catch{}
-  try{if(typeof seekTimeline==='function'&&typeof playhead==='number')seekTimeline(playhead)}catch{}}
-function playBorrowed(c,r){const a=c.asset,v=a.video,box=dlg.querySelector('#brPv'),cv=box.querySelector('canvas'),lbl=dlg.querySelector('#brPvLbl'),own=box.querySelector('video');
-  stopPreview();box.hidden=false;own.hidden=true;own.removeAttribute('src');try{own.load()}catch{}delete own.dataset.src;cv.hidden=false;
-  const [aw,ah]=shape.split(':').map(Number),fx=r.fx??.5,H=Math.min(640,Math.round(Math.min(innerHeight*.46,(box.clientWidth||320)*ah/aw)));cv.height=H;cv.width=Math.round(H*aw/ah);
-  const g=cv.getContext('2d'),gainNode=a.gain||null;
-  pvBorrow={v,muted:v.muted,rate:v.playbackRate,g:gainNode,gain:gainNode?gainNode.gain.value:1,clean:a.cleanEl||null};
+function unborrow(keep){const b=pvBorrow;if(!b)return;pvBorrow=null;try{b.v.onseeked=null;b.v.pause();b.v.muted=b.muted;b.v.playbackRate=b.rate;if(b.g)b.g.gain.value=b.gain;if(b.clean){b.clean.pause()}}catch{}
+  if(!keep)try{if(typeof seekTimeline==='function'&&typeof playhead==='number')seekTimeline(playhead)}catch{}}
+function borrow(a){const v=a.video,g=a.gain||null;pvBorrow={v,a,muted:v.muted,rate:v.playbackRate,g,gain:g?g.gain.value:1,clean:a.cleanEl||null};if(g)g.gain.value=1;v.muted=false;v.playbackRate=1;return v}
+function playBorrowed(c,r){playSeq([{c,in:r.in,out:r.out,fx:r.fx}],null)}
+// Plays a list of pieces one after another ({c, in, out, fx, text}) on the preview canvas, borrowing each clip's own
+// player in turn. While a player is finding its next spot the canvas keeps the last picture, so cuts don't blink.
+function playSeq(segs,what){segs=segs.filter(x=>x.c?.asset?.video&&x.out-x.in>.05);const box=dlg.querySelector('#brPv'),lbl=dlg.querySelector('#brPvLbl');if(!box)return;
+  if(!segs.length){box.hidden=false;lbl.textContent='Nothing to play yet.';return}
+  const cv=box.querySelector('canvas'),own=box.querySelector('video');stopPreview();box.hidden=false;own.hidden=true;own.removeAttribute('src');try{own.load()}catch{}delete own.dataset.src;cv.hidden=false;
+  const [aw,ah]=shape.split(':').map(Number),H=Math.min(640,Math.round(Math.min(innerHeight*.46,(box.clientWidth||320)*ah/aw)));cv.height=H;cv.width=Math.round(H*aw/ah);
+  const g=cv.getContext('2d');g.fillStyle='#000';g.fillRect(0,0,cv.width,cv.height);
   try{if(typeof audioCtx!=='undefined'&&audioCtx&&audioCtx.state!=='running')audioCtx.resume()}catch{}
-  if(gainNode)gainNode.gain.value=1;v.muted=false;v.playbackRate=1;
-  let ready=false;const paint=()=>{const sw=v.videoWidth,sh=v.videoHeight;if(!sw||!sh||v.readyState<2)return;const f=Math.max(cv.width/sw,cv.height/sh),dw=sw*f,dh=sh*f;
-    let dx=cv.width/2-dw*fx;dx=Math.min(0,Math.max(cv.width-dw,dx));g.fillStyle='#000';g.fillRect(0,0,cv.width,cv.height);g.drawImage(v,dx,(cv.height-dh)/2,dw,dh)};
-  const done=()=>{const b=pvBorrow;paint();unborrow();lbl.textContent=`Played ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}. Tap ▶ Play to watch it again.`;void b};
-  const tick=()=>{if(pvBorrow?.v!==v)return;paint();if(ready&&v.currentTime>=r.out-.02)return done();pvRaf=requestAnimationFrame(tick)};
-  const start=()=>{if(ready||pvBorrow?.v!==v)return;ready=true;lbl.textContent=`▶ Playing ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}`;
-    if(pvBorrow.clean){try{pvBorrow.clean.currentTime=v.currentTime;pvBorrow.clean.play().catch(()=>{})}catch{}}
-    if(v.paused)v.play().catch(()=>{lbl.textContent='Tap ▶ Play again to start it.'})};
-  lbl.textContent='Loading the moment…';
-  const p=v.play();if(p&&p.catch)p.catch(()=>{}); // inside the tap, so sound is allowed
-  v.onseeked=()=>{v.onseeked=null;start()};v.currentTime=r.in;
-  pvT1=setTimeout(()=>{if(!ready&&Math.abs(v.currentTime-r.in)<.6)start();else if(!ready)lbl.textContent='This phone is slow to load this clip. Tap ▶ Play again.'},1500);
-  tick();box.scrollIntoView({block:'nearest'})}
+  const total=segs.reduce((n,x)=>n+x.out-x.in,0),one=segs.length===1,name=c=>c.asset.name;let k=0,ready=false,v=null,done0=0;
+  const words=(x)=>{if(!x.text)return;const fs=Math.round(cv.height*.045);g.font=`800 ${fs}px system-ui,sans-serif`;g.textAlign='center';g.textBaseline='middle';
+    const tw=Math.min(g.measureText(x.text).width,cv.width*.9),y=cv.height*.16;g.fillStyle='rgba(0,0,0,.6)';g.fillRect((cv.width-tw)/2-fs*.4,y-fs*.75,tw+fs*.8,fs*1.5);g.fillStyle='#fff';g.fillText(x.text,cv.width/2,y,cv.width*.9)};
+  const paint=()=>{const x=segs[k];if(!v||!ready||v.readyState<2)return;const sw=v.videoWidth,sh=v.videoHeight;if(!sw||!sh)return;const f=Math.max(cv.width/sw,cv.height/sh),dw=sw*f,dh=sh*f,fx=x.fx??.5;
+    let dx=cv.width/2-dw*fx;dx=Math.min(0,Math.max(cv.width-dw,dx));g.fillStyle='#000';g.fillRect(0,0,cv.width,cv.height);g.drawImage(v,dx,(cv.height-dh)/2,dw,dh);words(x)};
+  const say=()=>{const x=segs[k];lbl.textContent=one?`▶ Playing ${fmtT(x.in)}–${fmtT(x.out)} of ${name(x.c)}`:`▶ Playing ${what}: ${x.label?x.label+' · ':''}${k+1} of ${segs.length} (${Math.round(done0)} of ${Math.round(total)} s)`};
+  const finish=()=>{paint();unborrow();const x=segs[0];lbl.textContent=one?`Played ${fmtT(x.in)}–${fmtT(x.out)} of ${name(x.c)}. Tap ▶ Play to watch it again.`:`Played ${what} (${Math.round(total)} s). Tap ▶ to watch it again.`};
+  const go=i=>{k=i;ready=false;const x=segs[i];if(!pvBorrow||pvBorrow.a!==x.c.asset){if(pvBorrow){unborrow(true)}v=borrow(x.c.asset);if(pvBorrow.clean)try{pvBorrow.clean.pause()}catch{}}
+    say();const start=()=>{if(ready||k!==i)return;ready=true;if(pvBorrow?.clean){try{pvBorrow.clean.currentTime=v.currentTime;pvBorrow.clean.play().catch(()=>{})}catch{}}if(v.paused)v.play().catch(()=>{lbl.textContent='Tap ▶ again to keep playing.'})};
+    v.onseeked=()=>{v.onseeked=null;start()};
+    if(Math.abs(v.currentTime-x.in)<.04){v.onseeked=null;start()}else v.currentTime=x.in;
+    clearTimeout(pvT1);pvT1=setTimeout(()=>{if(k===i&&!ready)start()},1500)};
+  const tick=()=>{if(!pvBorrow)return;paint();const x=segs[k];if(ready&&v.currentTime>=x.out-.02){done0+=x.out-x.in;if(k+1<segs.length)go(k+1);else return finish()}pvRaf=requestAnimationFrame(tick)};
+  lbl.textContent='Loading…';v=borrow(segs[0].c.asset);const p=v.play();if(p&&p.catch)p.catch(()=>{}); // inside the tap, so sound is allowed
+  go(0);tick();box.scrollIntoView({block:'nearest'})}
+// The cut as it stands: each part's clips in order, talking pieces whole (or with their pauses taken out when the
+// finishing touches say so), b-roll as a short look, locked and picked moments exactly as chosen.
+function roughCut(edits){const out=[],tidyOn=edits&&(autoTidy||fast),look=edits&&fast?1.5:3;
+  tp.parts.forEach((p,j)=>{const text=String(partText(j)||'').trim();(parts?.[j]||[]).forEach((c,ci)=>{const base={c,label:p.label,text:ci?'':text};
+    const r=c.lock||(!c.whole?c.pick:null);if(r){out.push({...base,in:r.in,out:r.out,fx:r.fx});return}
+    const ws=c.heardWords||(c.allWords?c.allWords.filter(w=>w.e>c.in&&w.s<c.out):null);
+    if(c.talking||ws?.length){let a=c.in,b=c.out;if(ws?.length){a=Math.max(c.in,ws[0].s-.15);b=Math.min(c.out,ws.at(-1).e+.35)}else if(c.speech){a=Math.max(c.in,c.in+c.speech[0]-.15);b=Math.min(c.out,c.in+c.speech[1]+.35)}
+      const segs=tidyOn&&ws?.length?tidy(ws,a,b):[[a,b]];segs.forEach(([x,y],si)=>out.push({...base,text:si?'':base.text,in:x,out:y}));return}
+    out.push({...base,in:c.in,out:Math.min(c.out,c.in+look)})})});
+  return out}
 function playRange(c,r,retry){if(c.asset?.video&&!retry&&!c.asset._noBorrow){playBorrowed(c,r);return}const box=dlg.querySelector('#brPv'),v=box.querySelector('video'),lbl=dlg.querySelector('#brPvLbl');stopPreview();box.hidden=false;v.hidden=false;box.querySelector('canvas').hidden=true;
   if(v.error||retry){v.removeAttribute('src');try{v.load()}catch{}delete v.dataset.src} // a failed or stuck load is never reused
   // Phones (Chrome on Android especially) only allow sound when play() is called during the tap itself, and may not
@@ -943,8 +970,8 @@ async function build(){if(exporting)return;const btn=dlg.querySelector('#brBuild
         if(c.talking)talky=true;
         segs.forEach(([x,y],si)=>{let cl=makeClip(c.asset);Object.assign(cl,{in:x,out:y,fit:shape==='16:9'?'contain':'cover'});
           if(autoMove){const speaking=(words&&words.length>=4)||c.talking;
-            // Calm: one very slow zoom per clip, in then out on the next. Talking jump cuts switch to a slight close-up so they look on purpose.
-            cl.motion=speaking?(segs.length>1&&si%2?'closeSoft':''):(moveN++%2?'slowOut':'slowIn')}
+            // Calm: one very slow zoom per b-roll clip, in then out on the next. Talking cuts stay still: the old alternating close-up made every cut pop.
+            cl.motion=speaking?'':(moveN++%2?'slowOut':'slowIn')}
           clips.push(cl);
           if(words)for(const w of words)if(w.e>x&&w.s<y&&!(autoTidy&&!words.est&&(w.drop||FILLER.test(String(w.w).replace(/[^a-z]/gi,'')))))capWords.push({w:w.w,s:Math.round((t+Math.max(0,w.s-x))*100)/100,e:Math.round((t+Math.min(y,w.e)-x)*100)/100});
           t+=y-x})}
