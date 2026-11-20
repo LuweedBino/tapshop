@@ -665,7 +665,7 @@ function step3(note){freePreview();const opts=j=>tp.parts.map((p,k)=>`<option va
     ${gaps.length?`<p class="br-gap">⚠️ None of your clips fit <b>${gaps.map(p=>enc(p.label)).join(', ')}</b>. Add a clip for ${gaps.length>1?'them':'it'}, say it in a talking clip, or ${gaps.length>1?'they’ll':'it’ll'} be skipped.</p>`:''}</div>
   ${tp.parts.some((p,j)=>texts[tp.id+p.id]==null&&suggest(j))?'<p class="sub">✍️ Some words on screen were written from what you said. Change them any time.</p>':''}
   <div class="br-row" style="margin-bottom:6px"><label>Music<select id="brMood3">${moodOpts(mood)}<option value=""${mood?'':' selected'}>No music</option></select></label></div>
-  <label class="br-caps br-fast"><input type="checkbox" id="brFast"${fast?' checked':''}> <span><b>⚡ Faster edit</b><small>Shorter b-roll shots and long clips cut to their moment. Locked moments stay exactly as they are.</small></span></label>
+  <label class="br-caps br-fast"><input type="checkbox" id="brFast"${fast?' checked':''}> <span><b>⚡ Faster edit</b><small>Snappier, TikTok-style: silent b-roll shots last half as long, and talking clips lose every pause longer than a third of a second (normally half a second). Locked moments stay exactly as they are.</small></span></label>
   <div class="br-pv" id="brPv" hidden><canvas hidden style="display:block;margin:0 auto;max-width:100%;max-height:46vh;background:#000;border-radius:10px"></canvas><video playsinline preload="auto"></video><p class="sub" id="brPvLbl" aria-live="polite"></p></div>
   ${tp.parts.map((p,j)=>`<div class="br-sec"><div class="br-sec-h"><b>${j+1}. ${enc(p.label)}</b><input type="text" data-tx="${p.id}" value="${enc(partText(j))}" aria-label="Words on screen for ${enc(p.label)}" placeholder="Words on screen (leave empty for none)"></div>
     <div class="br-clips">${parts[j].length?parts[j].map(c=>`<div class="br-clip"><img alt="" src="${c.asset.thumb}"><span class="nm">${enc(c.asset.name)}</span><span class="tag">${tag(c)}</span>${c.words?`<span class="said">“${enc(c.words.slice(0,70))}${c.words.length>70?'…':''}”</span>`:''}<select data-mv="${c.n}" aria-label="Move ${enc(c.asset.name)}">${opts(j)}</select></div>`).join(''):`<p class="br-empty">No clip here yet. Film a short clip for “${enc(p.text)}” (or say it in a talking clip), or this part is skipped.</p>`}</div>${parts[j].map(momentRow).join('')}</div>`).join('')}
@@ -935,7 +935,7 @@ async function build(){if(exporting)return;const btn=dlg.querySelector('#brBuild
         if(listen&&!failed&&todo.includes(c)){btn.textContent=`Listening to clip ${++n} of ${todo.length}…`;
           try{words=cloud?.get(c)||c.heardWords||await veClipWords({assetId:c.asset.id,in:c.in,out:c.out},m=>btn.textContent=m);listened=true;
             if(words.length>=4){talky=true;a=Math.max(c.in,words[0].s-.15);b=Math.min(c.out,words.at(-1).e+.35);segs=[[a,b]]}
-            if(autoTidy&&words.length&&!words.est)segs=tidy(words,a,b)}
+            if((autoTidy||fast)&&words.length&&!words.est)segs=tidy(words,a,b)}
           catch(e){failed=true;console.warn('Speech engine unavailable:',e)}}
         // A throwaway take (only "um", "ok", "alright"… or words the cloud AI marked as a mistake) is left out
         // completely, as long as the video still has other clips.
@@ -976,7 +976,7 @@ const junk=w=>{const k=String(w.w).toLowerCase().replace(/[^a-z-]/g,'');return w
 function tidy(words,a,b){const ws=words.filter(w=>w.e>a&&w.s<b),isF=w=>w.drop||FILLER.test(String(w.w).replace(/[^a-z]/gi,'')),kept=ws.filter(w=>!isF(w));
   if(!kept.length)return [[a,b]];const out=[];let start=Math.max(a,kept[0].s-.12);
   for(let i=0;i<kept.length-1;i++){const cur=kept[i],nx=kept[i+1],gap=nx.s-cur.e,ums=ws.filter(w=>isF(w)&&w.s>=cur.e-.05&&w.e<=nx.s+.05);
-    if(gap>.5||(ums.length&&gap>.2)){const end=Math.min(nx.s,cur.e+.12,ums.length?ums[0].s:Infinity);out.push([start,end]);start=Math.max(end,nx.s-.1,ums.length?ums.at(-1).e:-Infinity)}}
+    if(gap>(fast?.3:.5)||(ums.length&&gap>.2)){const end=Math.min(nx.s,cur.e+.12,ums.length?ums[0].s:Infinity);out.push([start,end]);start=Math.max(end,nx.s-.1,ums.length?ums.at(-1).e:-Infinity)}}
   out.push([start,Math.min(b,kept.at(-1).e+.3)]);const good=out.filter(([x,y])=>y-x>.15);return good.length?good:[[a,b]]}
 
 // ---------- ways in ----------
