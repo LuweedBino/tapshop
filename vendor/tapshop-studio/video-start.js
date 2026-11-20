@@ -192,7 +192,7 @@ const TIPS=[
   ['🎞️','B-roll Video Maker','Drop in raw clips. It picks the story, music and best moments, then builds the whole video.'],
   ['⭐','Reviews Video Maker','Paste screenshots of real reviews. They animate in with a rating and “Link in bio”.'],
   ['⏱','Shorter wins','Cut the slow parts. Most short videos work best under a minute.'],
-  ['✨','Sort my clips','In the B-roll maker, tap ✨ Sort my clips so each clip lands in the part of the story it fits.'],
+  ['✨','Make my video','In the B-roll maker, add your clips first and tap ✨ Make my video: it works out the story and puts each clip where it fits. Tap another story to re-sort.'],
   ['👀','Show it early','Show the product or the result in the very first shot. People decide in a second.'],
   ['✂️','Cut the “um”s','“Cut pauses and ums” trims long pauses and filler words from talking clips for you.'],
   ['🗑️','Bad takes vanish','Clips that only say “um”, “ok” or “let me start over” are left out automatically.'],

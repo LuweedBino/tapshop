@@ -488,6 +488,9 @@ const st=document.createElement('style');st.textContent=`
 .br-tpl{text-align:left;padding:10px 12px!important;border-radius:12px!important;white-space:normal;line-height:1.3}
 .br-tpl b{display:block;font-size:13px}.br-tpl small{display:block;font-size:11px;opacity:.7;margin-top:3px}.br-tpl .br-flow{display:block;font-size:10px;opacity:.6;margin-top:5px}
 .br-tpl.on{outline:2px solid #ff3ea5;outline-offset:1px}
+.br-story{margin:8px 0 10px;padding:10px 12px;border:1px solid #ff3ea566;border-radius:14px;background:#ff3ea50d}.br-story-h{margin:0 0 8px;font-size:13px;line-height:1.4}
+.br-chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}.br-chip{flex:none;padding:7px 12px!important;border-radius:999px!important;font-size:12px!important;white-space:nowrap}
+.br-chip.on{background:#ff3ea5!important;color:#fff!important;border-color:#ff3ea5!important}.br-gap{margin:8px 0 0;font-size:12px;line-height:1.4;color:#f5b301}
 .br-add{display:flex;flex-wrap:wrap;gap:6px}
 .br-clips{display:flex;gap:8px;overflow-x:auto;padding:8px 0 4px;min-height:24px}
 .br-clip{position:relative;flex:none;width:112px;font-size:10px;line-height:1.25}
@@ -536,22 +539,20 @@ let autoMove=(()=>{try{return localStorage.getItem('tapshop-broll-motion')!=='of
 let autoSfx=(()=>{try{return localStorage.getItem('tapshop-broll-sfx')!=='off'}catch{return true}})();
 const shapes=()=>[...($$('aspect')?.options||[])].map(o=>[o.value,o.textContent]);
 // From the start screen the chosen platform has already set the shape; otherwise UGC defaults to vertical.
-function open(fromStart){if(exporting)return;stopped=false;parts=null;let a=$$('aspect')?.value;shape=(fromStart===true||clips.length)&&['9:16','1:1','4:5','16:9'].includes(a)?a:'9:16';if(!items.length&&clips.length)useTimeline(true);step1();dlg.showModal()}
+function open(fromStart){if(exporting)return;stopped=false;parts=null;if(!items.length)autoStory=true;let a=$$('aspect')?.value;shape=(fromStart===true||clips.length)&&['9:16','1:1','4:5','16:9'].includes(a)?a:'9:16';if(!items.length&&clips.length)useTimeline(true);step1();dlg.showModal()}
 function close(){stopped=true;if(busy)stopWorker();busy=false;dlg.close()}
 dlg.addEventListener('cancel',e=>{e.preventDefault();close()});
 
 function step1(){const flow=t=>t.parts.map(p=>p.label).join(' → ');
   dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>🎞️ B-roll Video Maker</h2>
-  <p class="sub">Add your clips and we do the rest: we watch and listen to each clip, pick the story and music, use the best moment of each clip, write words on screen from what you say, and cut it all to the beat with movement.</p>
-  <section class="br-sec"><h3><span class="br-n">1</span>Pick a story</h3><div class="br-tpls"><button type="button" class="br-tpl br-auto${autoStory?' on':''}" data-t="auto"><b>✨ Pick for me</b><small>We look at your clips and choose the best story</small><span class="br-flow">Works best with ✨ Sort my clips</span></button>${TEMPLATES.map(t=>`<button type="button" class="br-tpl${!autoStory&&t===tp?' on':''}" data-t="${t.id}"><b>${enc(t.name)}</b><small>${enc(t.tag)}</small><span class="br-flow">${enc(flow(t))}</span></button>`).join('')}</div>
-</section>
-  <section class="br-sec"><h3><span class="br-n">2</span>Add your clips <small class="sub">(${items.length})</small></h3>
+  <p class="sub">Start with your clips. We watch and listen to each one, work out the story they tell (you can change it after), pick the music, use the best moment of each clip, write words on screen from what you say, and cut it all to the beat with movement.</p>
+  <section class="br-sec"><h3><span class="br-n">1</span>Add your clips <small class="sub">(${items.length})</small></h3>
   <div class="br-add"><button type="button" class="primary" id="brChoose">📹 Choose clips</button>${typeof VaultPicker!=='undefined'&&VaultPicker.inTapShop?'<button type="button" id="brVault">⛁ From Media Vault</button>':''}${clips.length?`<button type="button" id="brTimeline">🎬 Use my timeline clips (${clips.length})</button>`:''}<input type="file" id="brFiles" accept="video/*" multiple hidden></div>
   <div class="br-clips">${items.length?items.map((c,i)=>`<div class="br-clip"><img alt="" src="${c.asset.thumb}"><button type="button" class="x" data-x="${i}" aria-label="Remove ${enc(c.asset.name)}">×</button><span class="nm">${enc(c.asset.name)}</span><span class="tag">${(c.out-c.in).toFixed(1)}s</span></div>`).join(''):'<p class="sub" style="margin:0">No clips yet. Add 3 or more for the best result.</p>'}</div>
 </section>
-  <section class="br-sec"><h3><span class="br-n">3</span>Look and sound</h3><div class="br-row"><label>Video shape<select id="brShape">${shapes().map(([v,l])=>`<option value="${enc(v)}"${v===shape?' selected':''}>${enc(l)}</option>`).join('')}</select></label>
+  <section class="br-sec"><h3><span class="br-n">2</span>Look and sound</h3><div class="br-row"><label>Video shape<select id="brShape">${shapes().map(([v,l])=>`<option value="${enc(v)}"${v===shape?' selected':''}>${enc(l)}</option>`).join('')}</select></label>
   <label>Music<select id="brMood"><option value="auto"${mood==='auto'?' selected':''}>✨ Pick for me</option>${moodOpts(mood)}<option value=""${mood?'':' selected'}>No music</option></select></label><button type="button" id="brListen" title="Hear a few seconds of this music">▶ Listen</button></div></section>
-  <section class="br-sec"><h3><span class="br-n">4</span>Smart edits</h3><p class="sub br-sub">We do these for you while we build. Turn off any you don't want.</p><div class="br-helpers">
+  <section class="br-sec"><h3><span class="br-n">3</span>Smart edits</h3><p class="sub br-sub">We do these for you while we build. Turn off any you don't want.</p><div class="br-helpers">
   <label class="br-caps"><input type="checkbox" id="brCaps"${autoCaps?' checked':''}> <span><b>✨ Add captions when someone talks</b><small>We write the words people say on screen, like the ✨ Captions tool.</small></span></label>
   <label class="br-caps"><input type="checkbox" id="brTidy"${autoTidy?' checked':''}> <span><b>✂️ Cut pauses and “um”s</b><small>We remove long pauses and “um” / “uh” from talking clips, so they flow.</small></span></label>
   <label class="br-caps"><input type="checkbox" id="brClean"${autoClean?' checked':''}> <span><b>🔇 Clean up the sound</b><small>We take out steady background noise like a fan or AC, and the click when you start and stop recording.</small></span></label>
@@ -560,9 +561,8 @@ function step1(){const flow=t=>t.parts.map(p=>p.label).join(' → ');
   <label class="br-caps"><input type="checkbox" id="brSfx"${autoSfx?' checked':''}> <span><b>🔊 Add sound effects</b><small>A sound as each line of words pops up: a whoosh on the hook, a ding on the fix, a sparkle on the “after”, a tap on “link in bio”.</small></span></label>
   </div></section>
   <p class="sub br-note">The first time, your browser downloads the clip reader (a one-time download, about 130 MB). After that it’s saved. Phones are slower than computers.</p>
-  <div class="row"><button type="button" id="brCancel">Cancel</button><button type="button" id="brSkip"${items.length?'':' disabled'}>Keep my order</button><button type="button" class="primary" id="brGo"${items.length?'':' disabled'}>✨ Sort my clips</button></div>`;
+  <div class="row"><button type="button" id="brCancel">Cancel</button><button type="button" id="brSkip"${items.length?'':' disabled'}>Keep my order</button><button type="button" class="primary" id="brGo"${items.length?'':' disabled'}>✨ Make my video</button></div>`;
   dlg.querySelector('.dialog-x').onclick=dlg.querySelector('#brCancel').onclick=close;
-  dlg.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{if(b.dataset.t==='auto')autoStory=true;else{autoStory=false;tp=TEMPLATES.find(t=>t.id===b.dataset.t);if(mood!=='auto')mood=tp.mood}step1()});
   dlg.querySelectorAll('[data-x]').forEach(b=>b.onclick=()=>{items.splice(+b.dataset.x,1);step1()});
   const fi=dlg.querySelector('#brFiles');dlg.querySelector('#brChoose').onclick=()=>fi.click();fi.onchange=()=>{addFiles([...fi.files]);fi.value=''};
   dlg.querySelector('#brVault')?.addEventListener('click',()=>VaultPicker.open({title:'Pick a clip',kinds:['video'],onPick:async it=>{try{toast('Loading '+it.name+'…');await addFiles([await VaultPicker.file(it)])}catch(e){toast(e.message)}if(!dlg.open)dlg.showModal()}}));
@@ -631,8 +631,9 @@ function bestMood(){const seen=items.filter(c=>c.seen);if(!seen.length)return tp
   const sum=LOOKS.map((_,i)=>seen.reduce((n,c)=>n+c.seen[i],0)),talky=items.filter(c=>c.talking).length/items.length;
   const order=sum.map((v,i)=>[v,LOOKS[i][0]]).sort((a,b)=>b[0]-a[0]);let key=order[0][1];if(key==='talk')key=order[1][1];
   let m=LOOK_MOOD[key]||tp.mood;if(talky>=.5&&MOODS[m]&&MOODS[m].bpm>=125)m='story';return m}
+let suggested=null;
 function choose(read){picked='';number();
-  if(autoStory){tp=read||items.some(isStory)?bestStory():TEMPLATES.find(t=>t.id===BY_COUNT[items.length])||TEMPLATES[0];picked='story'}
+  if(autoStory){suggested=null;tp=read||items.some(isStory)?(suggested=bestStory()):TEMPLATES.find(t=>t.id===BY_COUNT[items.length])||TEMPLATES[0];picked='story'}
   parts=arrange(items,tp);if(mood==='auto'){mood=read?bestMood():tp.mood;picked+=' music'}}
 const pickedNote=()=>{let a=[];if(/story/.test(picked))a.push(`the “${tp.name}” story`);if(/music/.test(picked)&&MOODS[mood])a.push(`${MOODS[mood].name} music`);return a.length?` We picked ${a.join(' and ')} for you.`:''};
 
@@ -653,19 +654,25 @@ const partText=j=>{const p=tp.parts[j],k=tp.id+p.id;return texts[k]??suggest(j)?
 
 function step3(note){const opts=j=>tp.parts.map((p,k)=>`<option value="${k}"${k===j?' selected':''}>Move to: ${enc(p.label)}</option>`).join('');
   const tag=c=>{if(!c.seen)return '';let i=c.seen.indexOf(Math.max(...c.seen));return enc(LOOKS[i][2])+(c.talking&&LOOKS[i][0]!=='talk'?' · 🗣':'')};
+  const gaps=tp.parts.filter((p,j)=>!parts[j].length);
   dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>🎞️ ${enc(tp.name)}</h2><p class="sub">${enc(note)}</p>
+  <div class="br-story"><p class="br-story-h">${suggested===tp?`✨ We think your clips make a <b>${enc(tp.name)}</b> video.`:`📖 Story: <b>${enc(tp.name)}</b>`} Want a different story? Tap one and we’ll re-sort your clips.</p>
+    <div class="br-chips">${[tp,...(suggested&&suggested!==tp?[suggested]:[]),...TEMPLATES.filter(t=>t!==tp&&t!==suggested)].map(t=>`<button type="button" class="br-chip${t===tp?' on':''}"${t===tp?' style="background:#ff3ea5;color:#fff;border-color:#ff3ea5"':''} data-story="${t.id}" aria-pressed="${t===tp}">${t===suggested?'✨ ':''}${enc(t.name)}</button>`).join('')}</div>
+    ${gaps.length?`<p class="br-gap">⚠️ None of your clips fit <b>${gaps.map(p=>enc(p.label)).join(', ')}</b>. Add a clip for ${gaps.length>1?'them':'it'}, say it in a talking clip, or ${gaps.length>1?'they’ll':'it’ll'} be skipped.</p>`:''}</div>
   ${tp.parts.some((p,j)=>texts[tp.id+p.id]==null&&suggest(j))?'<p class="sub">✍️ Some words on screen were written from what you said. Change them any time.</p>':''}
   <div class="br-row" style="margin-bottom:6px"><label>Music<select id="brMood3">${moodOpts(mood)}<option value=""${mood?'':' selected'}>No music</option></select></label></div>
   <label class="br-caps br-fast"><input type="checkbox" id="brFast"${fast?' checked':''}> <span><b>⚡ Faster edit</b><small>Shorter b-roll shots and long clips cut to their moment. Locked moments stay exactly as they are.</small></span></label>
   <div class="br-pv" id="brPv" hidden><video playsinline preload="auto"></video><p class="sub" id="brPvLbl" aria-live="polite"></p></div>
   ${tp.parts.map((p,j)=>`<div class="br-sec"><div class="br-sec-h"><b>${j+1}. ${enc(p.label)}</b><input type="text" data-tx="${p.id}" value="${enc(partText(j))}" aria-label="Words on screen for ${enc(p.label)}" placeholder="Words on screen (leave empty for none)"></div>
-    <div class="br-clips">${parts[j].length?parts[j].map(c=>`<div class="br-clip"><img alt="" src="${c.asset.thumb}"><span class="nm">${enc(c.asset.name)}</span><span class="tag">${tag(c)}</span>${c.words?`<span class="said">“${enc(c.words.slice(0,70))}${c.words.length>70?'…':''}”</span>`:''}<select data-mv="${c.n}" aria-label="Move ${enc(c.asset.name)}">${opts(j)}</select></div>`).join(''):'<p class="br-empty">No clip here. This part will be skipped.</p>'}</div>${parts[j].map(momentRow).join('')}</div>`).join('')}
+    <div class="br-clips">${parts[j].length?parts[j].map(c=>`<div class="br-clip"><img alt="" src="${c.asset.thumb}"><span class="nm">${enc(c.asset.name)}</span><span class="tag">${tag(c)}</span>${c.words?`<span class="said">“${enc(c.words.slice(0,70))}${c.words.length>70?'…':''}”</span>`:''}<select data-mv="${c.n}" aria-label="Move ${enc(c.asset.name)}">${opts(j)}</select></div>`).join(''):`<p class="br-empty">No clip here yet. Film a short clip for “${enc(p.text)}” (or say it in a talking clip), or this part is skipped.</p>`}</div>${parts[j].map(momentRow).join('')}</div>`).join('')}
   <div class="row"><button type="button" id="brBack">← Back</button><button type="button" class="primary" id="brBuild">🎬 Build my video</button></div>`;
   dlg.querySelector('.dialog-x').onclick=close;dlg.querySelector('#brBack').onclick=step1;
   dlg.querySelectorAll('[data-tx]').forEach(el=>el.oninput=()=>texts[tp.id+el.dataset.tx]=el.value);
   dlg.querySelectorAll('[data-mv]').forEach(sel=>sel.onchange=()=>{let c=parts.flat().find(x=>x.n===+sel.dataset.mv);parts.forEach(p=>{let k=p.indexOf(c);if(k>=0)p.splice(k,1)});parts[+sel.value].push(c);parts[+sel.value].sort((a,b)=>a.n-b.n);step3(note)});
   dlg.querySelector('#brMood3').onchange=e=>{mood=e.target.value};dlg.querySelector('#brBuild').onclick=build;
   dlg.querySelector('#brFast').onchange=e=>{fast=e.target.checked};
+  dlg.querySelectorAll('[data-story]').forEach(b=>b.onclick=()=>{const T=TEMPLATES.find(t=>t.id===b.dataset.story);if(!T||T===tp)return;stopPreview();
+    autoStory=false;tp=T;parts=arrange(items,tp);step3(T===suggested?`Back to the story we suggested. Here’s where each clip fits.`:`Switched to “${T.name}”. We re-sorted your clips into its parts. Move any clip with the menu under it.`)});
   const byN=n=>parts.flat().find(x=>x.n===+n)||items.find(x=>x.n===+n);
   dlg.querySelectorAll('[data-play]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.play),r=c.lock||c.pick;if(r)playRange(c,r)});
   dlg.querySelectorAll('[data-lock]').forEach(b=>b.onclick=()=>{const c=byN(b.dataset.lock),m=c.pick||(c.from?{in:c.in,out:c.out,text:c.words}:null);if(!m)return;c.lock={in:m.in,out:m.out,fx:m.fx,text:m.text};stopPreview();step3(note)});
