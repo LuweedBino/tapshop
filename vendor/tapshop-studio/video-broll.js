@@ -40,7 +40,7 @@ const TEMPLATES=[
     S('before','Before','BEFORE',{messy:1,upset:.7},/\b(before|used to|was|look at this|look how)\b/i,{y:12,box:'#111111',anim:'left',beats:8}),
     S('after','After','AFTER ✨',{clean:1,happy:.6,product:.3},/\b(after|now|look at|wow|so much better|finally)\b/i,{y:12,box:'#ffffff',color:'#111111',anim:'pop',beats:8}),
     CTA]},
-  {id:'reasons',name:'3 reasons I love it',tag:'Quick reasons people save',mood:'haul',parts:[S('hook','Hook','3 reasons I love this 💕',HOOK.look,HOOK.say,{...HOOK,text:'3 reasons I love this 💕'}),
+  {id:'reasons',name:'3 reasons I love it',tag:'Quick reasons people save',mood:'haul',parts:[S('hook','Hook','3 reasons I love this 💕',HOOK.look,new RegExp(HOOK.say.source.replace(')\\b','|three things|3 things|reasons|things i love)\\b'),'i'),{...HOOK,text:'3 reasons I love this 💕'}),
     S('r1','Reason 1','Reason #1 💡',{using:1,product:.8,happy:.3},/\b(first|one|number one|reason one|1)\b/i,{y:18,box:'#7c3aed',anim:'pop',beats:6}),
     S('r2','Reason 2','Reason #2 🙌',{using:.9,product:.8,clean:.3},/\b(second|two|also|plus|another|2)\b/i,{y:18,box:'#7c3aed',anim:'pop',beats:6}),
     S('r3','Reason 3','Reason #3 😍',{happy:1,using:.6,clean:.5},/\b(third|three|finally|best part|last|3)\b/i,{y:18,box:'#7c3aed',anim:'pop',beats:6}),
@@ -461,7 +461,9 @@ async function sound(src){let buf;try{buf=await new OfflineAudioContext(1,1,1600
   let e=0;for(let i=0;i<mono.length;i+=8)e+=mono[i]*mono[i];return e/(mono.length/8||1)>1e-5?mono:null}
 
 // ---------- matching clips to parts ----------
-function scores(clip,tp){const n=tp.parts.length;return tp.parts.map((p,j)=>{let wsum=0,v=0;for(const [k,w] of Object.entries(p.look)){let i=LOOKS.findIndex(x=>x[0]===k);if(i<0)continue;v+=w*(clip.seen?.[i]||0);wsum+=w}
+function scores(clip,tp){const n=tp.parts.length;return tp.parts.map((p,j)=>{let wsum=0,v=0;
+  // Pieces of one clip all look alike, so the picture can't tell their parts apart: only their words count.
+  if(!clip.from)for(const [k,w] of Object.entries(p.look)){let i=LOOKS.findIndex(x=>x[0]===k);if(i<0)continue;v+=w*(clip.seen?.[i]||0);wsum+=w}
   let s=wsum?v/wsum*LOOKS.length/3:0;if(clip.words&&p.say.test(clip.words))s+=.35;if(clip.talking&&(p.id==='hook'||p.id==='cta'))s+=.12;
   // A small nudge towards the order the clips were added, so close calls keep the creator's order.
   s-=.12*Math.abs((clip.n/Math.max(1,clip.of-1))-(j/Math.max(1,n-1)));return s})}
@@ -604,9 +606,22 @@ async function analyse(){number();busy=true;stopped=false;
 // ---------- picking the story and the music ----------
 // The story whose parts best fit the clips (picture + words), with a pull towards using every part and not
 // having more parts than clips. Without the clip reader we go by how many clips there are.
+// How a creator says what kind of video it is: "three things I love…", "first… two… and three…", "step one",
+// "before… after". [strong, supporting] patterns per story, checked on everything the clips say.
+const CUES={reasons:[/\b(two|three|four|five|2|3|4|5|top)\s+(things|reasons|ways|features|favou?rite)/i,/\b(first|one|number one)\b[\s\S]*\b(second|two|also|another)\b[\s\S]*\b(third|three|last|finally)\b/i],
+  howto:[/\bhow (to|i) use\b|\bstep (one|1)\b|\btutorial\b/i,/\bstep\b[\s\S]*\bstep\b|\bthen\b[\s\S]*\b(then|next|finally)\b/i],
+  beforeafter:[/\bbefore and after\b|\bbefore\b[\s\S]*\bafter\b/i,/\b(glow ?up|transformation)\b/i],
+  unboxing:[/\bunbox|\bjust (arrived|came)|\bcame in the mail|\blet'?s open\b/i,/\b(box|package)\b/i],
+  myth:[/\bmyth\b|\bpeople think\b|\byou'?ve been told\b/i,/\b(truth|actually|wrong)\b/i],
+  versus:[/\b(vs\.?|versus|compared to|which one is better)\b/i,/\b(this one|that one|cheaper|dupe)\b/i],
+  dayinlife:[/\bday in (my|the) life\b|\bmorning routine\b/i,/\b(morning|afternoon|tonight|night)\b/i],
+  pov:[/\bpov\b|\bstory ?time\b|\bso this happened\b/i,/\b(then|suddenly|turns out)\b/i],
+  honest:[/\bhonest(ly)? review\b|\bpros and cons\b|\bworth it\b/i,/\b(honestly|but|downside|not perfect)\b/i],
+  pas:[/\b(tired of|sick of|struggl|hate when|problem with)\b/i,/\b(finally|fixed|solved)\b/i]};
+function cue(T){const said=items.map(c=>c.allWords?sentText(c.allWords):c.words||'').join(' ');if(!said.trim())return 0;const [a,b]=CUES[T.id]||[];return (a?.test(said)?1.6:0)+(b?.test(said)?.8:0)}
 function bestStory(){let best=null,top=-1e9;for(const T of TEMPLATES){const P=arrange(items,T),k=Math.max(1,P.flat().length);let fit=0,said=0;
     P.forEach((list,j)=>list.forEach(c=>{fit+=scores(c,T)[j];if(c.words&&T.parts[j].say.test(c.words))said++}));
-    const filled=P.filter(x=>x.length).length/T.parts.length,sc=fit/k+.6*filled+.08*said-.15*Math.max(0,T.parts.length-k);
+    const filled=P.filter(x=>x.length).length/T.parts.length,sc=fit/k+.6*filled+.08*said-.15*Math.max(0,T.parts.length-k)+cue(T);
     if(sc>top){top=sc;best=T}}return best}
 const BY_COUNT={2:'beforeafter',3:'pas',4:'pas',5:'reasons'};
 // Music that suits what the clips mostly show; talky videos get calmer beats so the voice stays clear.
@@ -630,7 +645,9 @@ const LEAD=/^((um+|uh+|so|okay|ok|well|like|and|but|yeah|hey|alright|you guys|gu
 function shorten(x,max=42){x=x.replace(LEAD,'').replace(/\b(um+|uh+)[,.]?\s*/gi,'').replace(/[.]+$/,'').trim();if(!x)return '';x=x[0].toUpperCase()+x.slice(1);
   if(x.length<=max)return x;let c=x.slice(0,max);c=c.slice(0,Math.max(c.lastIndexOf(' '),20)).replace(/[,;:\-–]+$/,'');return c+'…'}
 function suggest(j){const p=tp.parts[j],talk=(parts?.[j]||[]).filter(c=>c.talking&&c.words);if(!talk.length)return null;const ss=talk.flatMap(c=>sentences(c.words));if(!ss.length)return null;
-  const pick=ss.find(x=>p.say.test(x))||(p.id==='hook'?(ss.find(x=>/[?!]/.test(x))||ss[0]):null);if(!pick)return null;const t=shorten(pick);if(!t)return null;
+  let pick=ss.find(x=>p.say.test(x))||(p.id==='hook'?(ss.find(x=>/[?!]/.test(x))||ss[0]):null);if(!pick)return null;
+  // A long sentence gives its clause with the part's words ("check out the link below", not "If you like this product…").
+  if(pick.length>42){const cl=pick.split(/[,;]\s+/).find(x=>p.say.test(x)&&x.split(' ').length>=3);if(cl)pick=cl}const t=shorten(pick);if(!t)return null;
   const emo=(p.text.match(/(\p{Extended_Pictographic}\uFE0F?)\s*$/u)||[])[1];return t+(emo?' '+emo:'')}
 const partText=j=>{const p=tp.parts[j],k=tp.id+p.id;return texts[k]??suggest(j)??p.text};
 
@@ -778,7 +795,7 @@ function sentsOf(c){if(c._sents)return c._sents;const words=c.allWords||[],raw=[
 const sentText=ws=>ws.map(w=>w.w).join(' ').replace(/\s+([,.!?])/g,'$1').trim();
 const isStory=c=>!!c.allWords&&c.out-c.in>LONG_CLIP&&!c.noSplit&&!c.lock&&sentsOf(c).length>=3;
 function splitStory(c,tp){const S=sentsOf(c),P=tp.parts.length,txt=S.map(sentText),head=txt.map(t=>t.split(/\s+/).slice(0,5).join(' '));
-  const pos=(i,n)=>n>1?i/(n-1):0,fit=(i,j)=>(tp.parts[j].say.test(txt[i])?1:0)-.8*Math.abs(pos(i,S.length)-pos(j,P)),starts=(i,j)=>tp.parts[j].say.test(head[i])?1.2:0;
+  const pos=(i,n)=>n>1?i/(n-1):0,fit=(i,j)=>(tp.parts[j].say.test(txt[i])?1:0)-.8*Math.abs(pos(i,S.length)-pos(j,P)),starts=(i,j)=>tp.parts[j].say.test(head[i])?1.2:tp.parts[j].say.test(txt[i])?.6:0;
   const dp=S.map(()=>Array(P).fill(-1e9)),from=S.map(()=>Array(P).fill(-1));
   for(let j=0;j<P;j++)dp[0][j]=fit(0,j)+starts(0,j)-j;
   for(let i=1;i<S.length;i++)for(let j=0;j<P;j++){let best=dp[i-1][j],k=j;
