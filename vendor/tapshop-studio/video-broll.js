@@ -591,6 +591,7 @@ async function analyse(){number();busy=true;stopped=false;
     const st=long.filter(isStory),found=long.filter(c=>c.pick&&!isStory(c)).length;
     if(st.length)mNote=` ${st.map(c=>c.asset.name).join(', ')} tells a whole story, so we cut ${st.length>1?'them':'it'} into ${st.length>1?'their':'its'} sentences and put each one into the part it belongs to, in the order you said them.`;
     if(found)mNote+=` We found a moment to use in ${found} long clip${found>1?'s':''}: play it and lock it if it’s right.`
+    for(const c of st)await envOf(c.asset);
     aiStory=null;if(st.length&&aiOn()&&!stopped){status('🧠 Reading what you said, to understand your story…');
       try{aiStory=await understand(st,TEMPLATES);mNote=` 🧠 The AI read what you said in ${st.map(c=>c.asset.name).join(', ')} and split it into the story’s parts. Check each piece and move it if it’s wrong.`+(found?` We also found a moment to use in ${found} long clip${found>1?'s':''}.`:'')}
       catch(e){console.warn('Story AI skipped:',e);mNote+=' (The AI reader wasn’t available, so we split it by the words you used.)'}}}
@@ -746,8 +747,8 @@ function roughCut(edits){const out=[],tidyOn=edits&&(autoTidy||fast),look=edits&
   tp.parts.forEach((p,j)=>{const text=String(partText(j)||'').trim();(parts?.[j]||[]).forEach((c,ci)=>{const base={c,label:p.label,text:ci?'':text};
     const r=c.lock||(!c.whole?c.pick:null);if(r){out.push({...base,in:r.in,out:r.out,fx:r.fx});return}
     const ws=c.heardWords||(c.allWords?c.allWords.filter(w=>w.e>c.in&&w.s<c.out):null);
-    if(c.talking||ws?.length){let a=c.in,b=c.out;if(ws?.length){a=Math.max(c.in,ws[0].s-.15);b=Math.min(c.out,ws.at(-1).e+.35)}else if(c.speech){a=Math.max(c.in,c.in+c.speech[0]-.15);b=Math.min(c.out,c.in+c.speech[1]+.35)}
-      const segs=tidyOn&&ws?.length?tidy(ws,a,b):[[a,b]];segs.forEach(([x,y],si)=>out.push({...base,text:si?'':base.text,in:x,out:y}));return}
+    if(c.talking||ws?.length){let a=c.in,b=c.out;if(c.from){}else if(ws?.length){a=Math.max(c.in,ws[0].s-.15);b=Math.min(c.out,ws.at(-1).e+.35)}else if(c.speech){a=Math.max(c.in,c.in+c.speech[0]-.15);b=Math.min(c.out,c.in+c.speech[1]+.35)}
+      const segs=tidyOn&&ws?.length?tidy(ws,a,b,c.asset,!!c.from):[[a,b]];segs.forEach(([x,y],si)=>out.push({...base,text:si?'':base.text,in:x,out:y}));return}
     out.push({...base,in:c.in,out:Math.min(c.out,c.in+look)})})});
   return out}
 function playRange(c,r,retry){if(c.asset?.video&&!retry&&!c.asset._noBorrow){playBorrowed(c,r);return}const box=dlg.querySelector('#brPv'),v=box.querySelector('video'),lbl=dlg.querySelector('#brPvLbl');stopPreview();box.hidden=false;v.hidden=false;box.querySelector('canvas').hidden=true;
@@ -887,10 +888,7 @@ function splitStory(c,tp){const ai=c.aiBy?.[tp.id];if(ai)return aiPieces(c,tp,ai
   let j=0;for(let q=1;q<P;q++)if(dp[S.length-1][q]-.6*(P-1-q)>dp[S.length-1][j]-.6*(P-1-j))j=q;
   const at=Array(S.length);for(let i=S.length-1;i>=0;i--){at[i]=j;j=from[i][j]}
   const groups=[];S.forEach((ws,i)=>{if(groups.length&&groups.at(-1).j===at[i])groups.at(-1).ws.push(...ws);else groups.push({j:at[i],ws:[...ws]})});
-  return groups.map((g,k)=>{const first=g.ws.find(w=>!junk(w))||g.ws[0],last=g.ws.at(-1),prev=groups[k-1]?.ws.at(-1),next=groups[k+1]?.ws[0];
-    const a=Math.round(Math.max(c.in,first.s-.15,prev?prev.e+.02:-1)*100)/100,b=Math.round(Math.min(c.out,last.e+.35,next?next.s-.02:1e9)*100)/100;
-    return [g.j,{asset:c.asset,in:a,out:Math.max(b,a+.3),talking:true,words:sentText(g.ws),speech:[first.s-a,last.e-a],heardWords:g.ws,seen:c.seen,
-      from:c,piece:k+1,pieces:groups.length,n:c.n+(k+1)/1000,of:c.of}]})}
+  return piecesOf(c,groups.map(g=>({j:g.j,ws:g.ws})))}
 // ---------- the AI reads what was said ----------
 // Inside TapShopUGC, /api/story-parts (Gemini) gets only the written-down words of the story clips, numbered, and
 // says which story they tell and which words make each part (it understands meaning, so a reason with no number
@@ -901,7 +899,13 @@ async function readParts(res){const rd=res.body.getReader(),dec=new TextDecoder(
   for(;;){const {value,done}=await rd.read();buf+=dec.decode(value||new Uint8Array(),{stream:!done});let nl;
     while((nl=buf.indexOf('\n'))>=0){const line=buf.slice(0,nl).trim();buf=buf.slice(nl+1);if(!line)continue;try{const ev=JSON.parse(line);if(ev.type==='result')out=ev}catch{}}
     if(done)return out}}
-async function understand(list,stories){const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),90000);
+// The same clip and the same choice of stories always get the same answer in this session (the AI can vary from run
+// to run, and a split that changes every time feels random).
+const aiMemo=new Map();
+async function understand(list,stories){const key=JSON.stringify([list.map(c=>c.asset.id+':'+c.allWords.map(w=>w.w).join(' ')),stories.map(T=>T.id)]);
+  if(aiMemo.has(key)){const m=aiMemo.get(key);list.forEach((c,i)=>{if(m.segs[i])(c.aiBy||={})[m.story]=m.segs[i]});return m.story}
+  const r=await understandNow(list,stories);aiMemo.set(key,{story:r,segs:list.map(c=>c.aiBy?.[r])});return r}
+async function understandNow(list,stories){const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),90000);
   try{const res=await fetch('/api/story-parts',{method:'POST',headers:{'Content-Type':'application/json'},signal:ctl.signal,
       body:JSON.stringify({stories:stories.map(T=>({id:T.id,name:T.name,parts:T.parts.map(p=>({id:p.id,label:p.label}))})),clips:list.map(c=>({n:c.n,words:c.allWords.map(w=>String(w.w))}))})});
     const r=(res.headers.get('content-type')||'').includes('ndjson')&&res.body?await readParts(res):await res.json().catch(()=>null);
@@ -910,10 +914,28 @@ async function understand(list,stories){const ctl=new AbortController(),t=setTim
     return r.story}
   finally{clearTimeout(t)}}
 function aiPieces(c,tp,segs){const W=c.allWords,list=segs.filter(g=>tp.parts.some(p=>p.id===g.part)&&W[g.from]&&W[g.to]);
-  return list.map((g,k)=>{const ws=W.slice(g.from,g.to+1),first=ws.find(w=>!junk(w))||ws[0],last=ws.at(-1),prev=list[k-1]?W[list[k-1].to]:null,next=list[k+1]?W[list[k+1].from]:null;
-    const a=Math.round(Math.max(c.in,first.s-.15,prev?prev.e+.02:-1)*100)/100,b=Math.round(Math.min(c.out,last.e+.35,next?next.s-.02:1e9)*100)/100;
-    return [tp.parts.findIndex(p=>p.id===g.part),{asset:c.asset,in:a,out:Math.max(b,a+.3),talking:true,words:sentText(ws),speech:[first.s-a,last.e-a],heardWords:ws,seen:c.seen,
-      from:c,piece:k+1,pieces:list.length,n:c.n+(k+1)/1000,of:c.of,aiTitle:g.title||'',byAI:true}]})}
+  return piecesOf(c,list.map(g=>({j:tp.parts.findIndex(p=>p.id===g.part),ws:W.slice(g.from,g.to+1),aiTitle:g.title||'',byAI:true})))}
+// Where one piece ends and the next begins. The speech engine's word times are often a little late, so a cut just
+// before the next word's stamped start can already hold the start of that word, and the next piece then says it
+// again ("First… First"). So the cut goes in the quietest 30 ms between the two words, measured from the clip's own
+// sound (asset._env, loudness every 10 ms), and when two pieces sit back to back they share that one cut: the
+// first ends exactly where the second starts, so no sound is ever played twice. No loudness yet → the midpoint.
+async function envOf(a){if(a._env)return a._env;try{let buf=await new OfflineAudioContext(1,1,16000).decodeAudioData(await a.file.arrayBuffer());
+    if(buf.sampleRate!==16000){const oc=new OfflineAudioContext(1,Math.ceil(buf.duration*16000),16000),src=oc.createBufferSource();src.buffer=buf;src.connect(oc.destination);src.start();buf=await oc.startRendering()}
+    const ch=buf.getChannelData(0),n=Math.floor(ch.length/160),v=new Float32Array(n);
+    for(let i=0;i<n;i++){let e=0;for(let k=i*160;k<i*160+160;k++)e+=ch[k]*ch[k];v[i]=e/160}
+    return a._env=v}catch{return null}}
+function gapCut(a,w1,w2){const lo=Math.max(0,Math.min(w1.e-.25,w2.s-.05)),hi=Math.max(lo+.02,w2.s+.05),v=a._env;
+  if(!v)return Math.round((w1.e+w2.s)/2*100)/100;
+  let best=-1,bt=(lo+hi)/2;for(let i=Math.floor(lo*100);i<=Math.ceil(hi*100)-3&&i+2<v.length;i++){const e=v[i]+v[i+1]+v[i+2];if(best<0||e<best){best=e;bt=(i+1.5)/100}}
+  return Math.round(bt*100)/100}
+function quietNear(a,lo,hi,dflt){const v=a._env;if(!v)return dflt;let best=-1,bt=dflt;for(let i=Math.max(0,Math.floor(lo*100));i<=Math.ceil(hi*100)-3&&i+2<v.length;i++){const e=v[i]+v[i+1]+v[i+2];if(best<0||e<best){best=e;bt=(i+1.5)/100}}return Math.round(bt*100)/100}
+function piecesOf(c,groups){const W=c.allWords,idx=w=>W.indexOf(w);
+  return groups.map((g,k)=>{const ws=g.ws,first=ws.find(w=>!junk(w))||ws[0],last=ws.at(-1),i0=idx(ws[0]),i1=idx(last),pw=i0>0?W[i0-1]:null,fw=i1>=0&&i1<W.length-1?W[i1+1]:null;
+    const fi=idx(first),lead=fi>0?W[fi-1]:null,start=pw?gapCut(c.asset,pw,ws[0]):lead?gapCut(c.asset,lead,first):quietNear(c.asset,first.s-.4,first.s+.05,first.s-.15),
+      a=Math.round(Math.max(c.in,start)*100)/100,b=Math.round(Math.min(c.out,fw?gapCut(c.asset,last,fw):quietNear(c.asset,last.e-.05,last.e+.5,last.e+.35))*100)/100;
+    return [g.j,{asset:c.asset,in:a,out:Math.max(b,a+.3),talking:true,words:sentText(ws),speech:[Math.max(0,first.s-a),last.e-a],heardWords:ws,seen:c.seen,
+      from:c,piece:k+1,pieces:groups.length,n:c.n+(k+1)/1000,of:c.of,...(g.aiTitle!=null?{aiTitle:g.aiTitle,byAI:true}:{})}]})}
 // Where a crop to a tall frame should look so the action stays in view: pan the cover-fitted picture towards the
 // moment's movement (fx, 0–1 across the source), never past its edges.
 // A crop to a tall frame is centred on the moment's action (fx, 0–1 across the source), never past the picture's edges.
@@ -924,6 +946,7 @@ const fmtT=x=>{x=Math.max(0,x);const m=Math.floor(x/60);return m+':'+(x-m*60).to
 // ---------- building the video ----------
 // Talking clips keep everything that's said; other clips are cut to whole beats so cuts land on the music.
 function cut(c,part,beat){let a=c.in,b=c.out;
+  if(c.from)return [a,b]; // a piece of a story clip already starts and ends at quiet cuts
   if(c.talking&&c.speech){a=Math.max(c.in,c.in+c.speech[0]-.15);b=Math.min(c.out,c.in+c.speech[1]+.35);if(b-a<.5){a=c.in;b=c.out}return [a,b]}
   if(!beat){const L=Math.min(6,b-a),x=bestStart(c,a,b,L);return x==null?[a,a+L]:[x,x+L]}const nb=part.beats||6;let n=Math.min(fast?Math.max(2,Math.round(nb/2)):nb,Math.floor((b-a)/beat));if(n<2)return [a,b];
   const L=n*beat,x=bestStart(c,a,b,L);if(x!=null)return [x,x+L];let start=Math.min(a+.2,b-L);return [Math.max(a,start),Math.max(a,start)+L]}
@@ -961,8 +984,8 @@ async function build(){if(exporting)return;const btn=dlg.querySelector('#brBuild
         let [a,b]=cut(c,p,beat),segs=[[a,b]],words=null;
         if(listen&&!failed&&todo.includes(c)){btn.textContent=`Listening to clip ${++n} of ${todo.length}…`;
           try{words=cloud?.get(c)||c.heardWords||await veClipWords({assetId:c.asset.id,in:c.in,out:c.out},m=>btn.textContent=m);listened=true;
-            if(words.length>=4){talky=true;a=Math.max(c.in,words[0].s-.15);b=Math.min(c.out,words.at(-1).e+.35);segs=[[a,b]]}
-            if((autoTidy||fast)&&words.length&&!words.est)segs=tidy(words,a,b)}
+            if(words.length>=4){talky=true;if(!c.from){a=Math.max(c.in,words[0].s-.15);b=Math.min(c.out,words.at(-1).e+.35)}segs=[[a,b]]}
+            if((autoTidy||fast)&&words.length&&!words.est)segs=tidy(words,a,b,c.asset,!!c.from)}
           catch(e){failed=true;console.warn('Speech engine unavailable:',e)}}
         // A throwaway take (only "um", "ok", "alright"… or words the cloud AI marked as a mistake) is left out
         // completely, as long as the video still has other clips.
@@ -1000,11 +1023,19 @@ const FILLER=/^(u+m+|u+h+|uhm+|e+r+m*|a+h+|h+m+|m+h*m+)$/i;
 // Words that mean nothing on their own: a clip with only these (and fillers) is a throwaway take.
 const EMPTY=/^(ok(ay)?|k|alright|all|right|so|yeah|yep|yes|cool|and|well|mhm|uh-?huh|go|action|cut|again|one|more|time|sorry|wait|hold|on)$/i;
 const junk=w=>{const k=String(w.w).toLowerCase().replace(/[^a-z-]/g,'');return w.drop||!k||FILLER.test(k)||EMPTY.test(k)};
-function tidy(words,a,b){const ws=words.filter(w=>w.e>a&&w.s<b),isF=w=>w.drop||FILLER.test(String(w.w).replace(/[^a-z]/gi,'')),kept=ws.filter(w=>!isF(w));
-  if(!kept.length)return [[a,b]];const out=[];let start=Math.max(a,kept[0].s-.12);
+// Cuts a talking stretch around its pauses and um/uh. Word times from the speech engine are often a little late, so
+// with the clip's loudness (asset._env) each cut goes at the quietest spot: just after the last word before the pause
+// and just before the next word really starts, never into a word. `edges` keeps a and b as they are (a piece's
+// own quiet cuts) instead of re-trimming to the first and last word.
+function tidy(words,a,b,asset,edges){const ws=words.filter(w=>w.e>a&&w.s<b),isF=w=>w.drop||FILLER.test(String(w.w).replace(/[^a-z]/gi,'')),kept=ws.filter(w=>!isF(w));
+  if(!kept.length)return [[a,b]];const v=asset?._env,q=(lo,hi)=>{if(!v||hi-lo<.04)return null;let best=-1,bt=null;for(let i=Math.floor(lo*100);i<=Math.ceil(hi*100)-3&&i+2<v.length;i++){if(i<0)continue;const e=v[i]+v[i+1]+v[i+2];if(best<0||e<best){best=e;bt=(i+1.5)/100}}return bt};
+  const out=[];let start=edges?a:Math.max(a,kept[0].s-.12);
   for(let i=0;i<kept.length-1;i++){const cur=kept[i],nx=kept[i+1],gap=nx.s-cur.e,ums=ws.filter(w=>isF(w)&&w.s>=cur.e-.05&&w.e<=nx.s+.05);
-    if(gap>(fast?.3:.5)||(ums.length&&gap>.2)){const end=Math.min(nx.s,cur.e+.12,ums.length?ums[0].s:Infinity);out.push([start,end]);start=Math.max(end,nx.s-.1,ums.length?ums.at(-1).e:-Infinity)}}
-  out.push([start,Math.min(b,kept.at(-1).e+.3)]);const good=out.filter(([x,y])=>y-x>.15);return good.length?good:[[a,b]]}
+    if(gap>(fast?.3:.5)||(ums.length&&gap>.2)){let end=Math.min(nx.s,cur.e+.12,ums.length?ums[0].s:Infinity),st=Math.max(end,nx.s-.1,ums.length?ums.at(-1).e:-Infinity);
+      const qe=q(cur.e-.1,Math.min(cur.e+.3,ums.length?ums[0].s:nx.s)),qs=q(Math.max(qe??end,(ums.length?ums.at(-1).e:nx.s-.35)),nx.s+.05);
+      if(qe!=null&&qs!=null&&qs>qe+.05){end=qe;st=qs}
+      out.push([start,end]);start=st}}
+  out.push([start,edges?b:Math.min(b,kept.at(-1).e+.3)]);const good=out.filter(([x,y])=>y-x>.15);return good.length?good:[[a,b]]}
 
 // ---------- ways in ----------
 // The timeline's music settings for a style: its tempo (beat markers and snapping), fade-in (none for styles that start at full
