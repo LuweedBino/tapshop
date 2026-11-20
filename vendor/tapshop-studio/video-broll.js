@@ -540,10 +540,10 @@ let autoSfx=(()=>{try{return localStorage.getItem('tapshop-broll-sfx')!=='off'}c
 const shapes=()=>[...($$('aspect')?.options||[])].map(o=>[o.value,o.textContent]);
 // From the start screen the chosen platform has already set the shape; otherwise UGC defaults to vertical.
 function open(fromStart){if(exporting)return;stopped=false;parts=null;if(!items.length)autoStory=true;let a=$$('aspect')?.value;shape=(fromStart===true||clips.length)&&['9:16','1:1','4:5','16:9'].includes(a)?a:'9:16';if(!items.length&&clips.length)useTimeline(true);step1();dlg.showModal()}
-function close(){stopped=true;if(busy)stopWorker();busy=false;dlg.close()}
+function close(){freePreview();stopped=true;if(busy)stopWorker();busy=false;dlg.close()}
 dlg.addEventListener('cancel',e=>{e.preventDefault();close()});
 
-function step1(){const flow=t=>t.parts.map(p=>p.label).join(' → ');
+function step1(){freePreview();const flow=t=>t.parts.map(p=>p.label).join(' → ');
   dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>🎞️ B-roll Video Maker</h2>
   <p class="sub">Start with your clips. We watch and listen to each one, work out the story they tell (you can change it after), pick the music, use the best moment of each clip, write words on screen from what you say, and cut it all to the beat with movement.</p>
   <section class="br-sec"><h3><span class="br-n">1</span>Add your clips <small class="sub">(${items.length})</small></h3>
@@ -652,7 +652,7 @@ function suggest(j){const p=tp.parts[j],talk=(parts?.[j]||[]).filter(c=>c.talkin
   const emo=(p.text.match(/(\p{Extended_Pictographic}\uFE0F?)\s*$/u)||[])[1];return t+(emo?' '+emo:'')}
 const partText=j=>{const p=tp.parts[j],k=tp.id+p.id;return texts[k]??suggest(j)??p.text};
 
-function step3(note){const opts=j=>tp.parts.map((p,k)=>`<option value="${k}"${k===j?' selected':''}>Move to: ${enc(p.label)}</option>`).join('');
+function step3(note){freePreview();const opts=j=>tp.parts.map((p,k)=>`<option value="${k}"${k===j?' selected':''}>Move to: ${enc(p.label)}</option>`).join('');
   const tag=c=>{if(!c.seen)return '';let i=c.seen.indexOf(Math.max(...c.seen));return enc(LOOKS[i][2])+(c.talking&&LOOKS[i][0]!=='talk'?' · 🗣':'')};
   const gaps=tp.parts.filter((p,j)=>!parts[j].length);
   dlg.innerHTML=`<button type="button" class="dialog-x" aria-label="Close" title="Close">×</button><h2>🎞️ ${enc(tp.name)}</h2><p class="sub">${enc(note)}</p>
@@ -685,8 +685,14 @@ function step3(note){const opts=j=>tp.parts.map((p,k)=>`<option value="${k}"${k=
     try{await findMoments(c,m=>b.textContent=m);step3(note)}catch(e){b.disabled=false;b.textContent='We couldn’t listen to this clip here ('+(e.message||e)+').'}})}
 // The rough-cut player: plays exactly one selection (source in → out, with its own sound) and stops there.
 let pvRaf=0;
-function stopPreview(){cancelAnimationFrame(pvRaf);const v=dlg.querySelector('#brPv video');if(v){v.pause()}}
-function playRange(c,r){const box=dlg.querySelector('#brPv'),v=box.querySelector('video'),lbl=dlg.querySelector('#brPvLbl');stopPreview();box.hidden=false;
+function stopPreview(){cancelAnimationFrame(pvRaf);clearTimeout(pvT1);clearTimeout(pvT2);const v=dlg.querySelector('#brPv video');if(v){v.pause()}}
+// Phones only have a few video players to go round (the clip reader, the frame checks and the editor use them too),
+// and a <video> thrown away with its file still set keeps its player until it's garbage-collected. So the preview's
+// player is always let go before the screen is redrawn or closed.
+function freePreview(){stopPreview();const v=dlg.querySelector('#brPv video');if(v){v.onerror=v.onloadedmetadata=v.onseeked=null;v.removeAttribute('src');try{v.load()}catch{}delete v.dataset.src}}
+let pvT1=0,pvT2=0;
+function playRange(c,r,retry){const box=dlg.querySelector('#brPv'),v=box.querySelector('video'),lbl=dlg.querySelector('#brPvLbl');stopPreview();box.hidden=false;
+  if(v.error||retry){v.removeAttribute('src');try{v.load()}catch{}delete v.dataset.src} // a failed or stuck load is never reused
   // Phones (Chrome on Android especially) only allow sound when play() is called during the tap itself, and may not
   // load a video that hasn't been asked to play yet. So: play right away, jump to the start once it's ready, and keep
   // the player's own controls as a way in if the phone still holds it back.
@@ -696,7 +702,7 @@ function playRange(c,r){const box=dlg.querySelector('#brPv'),v=box.querySelector
   const frameIt=()=>{vis=(aw/ah)/((v.videoWidth||16)/(v.videoHeight||9));v.style.aspectRatio=aw+'/'+ah;v.style.objectFit='cover';v.style.maxHeight='46vh';v.style.width='auto';v.style.maxWidth='100%';v.style.margin='0 auto';v.style.display='block';v.style.background='#000';
     v.style.objectPosition=vis<1?Math.max(0,Math.min(100,(fx-vis/2)/(1-vis)*100)).toFixed(1)+'% 50%':'50% 50%'};
   lbl.textContent='Loading the moment…';
-  v.onerror=()=>{lbl.textContent='This browser couldn’t play '+c.asset.name+' here. The moment is still saved; you can lock it and check it on the timeline.'};
+  v.onerror=()=>{if(!retry&&!ready){playRange(c,r,true);return}lbl.textContent=`This phone couldn’t play ${c.asset.name} here (error ${v.error?.code||'?'}). The moment is still saved: lock it and check it on the timeline, or close other apps and try again.`};
   const done=()=>{v.pause();v.dataset.stopped=v.currentTime;lbl.textContent=`Played ${fmtT(r.in)}–${fmtT(r.out)} of ${c.asset.name}. Tap ▶ Play this moment to watch it again.`};
   const tick=()=>{if(ready&&v.currentTime>=r.out-.02)return done();pvRaf=requestAnimationFrame(tick)};
   const start=()=>{if(ready)return;ready=true;v.dataset.in=r.in;v.dataset.out=r.out;
@@ -706,7 +712,9 @@ function playRange(c,r){const box=dlg.querySelector('#brPv'),v=box.querySelector
     setTimeout(()=>{if(!ready&&Math.abs(v.currentTime-r.in)<.5)start()},1500)}; // some phones never send "seeked"
   const p=v.play();if(p&&p.catch)p.catch(()=>{}); // inside the tap, so the phone allows it with sound
   if(v.readyState>=1)go();else v.onloadedmetadata=()=>{v.onloadedmetadata=null;go()};
-  setTimeout(()=>{if(!ready&&v.readyState<1&&!v.error)lbl.textContent='Still loading… if nothing shows, tap the ▶ on the video.'},4000);
+  // Stuck with nothing loaded (a phone with no free player waits instead of failing): start again once, then say so.
+  pvT1=setTimeout(()=>{if(ready||v.readyState>=1||v.error)return;if(!retry){lbl.textContent='Still loading… trying again.';playRange(c,r,true)}},4000);
+  if(retry)pvT2=setTimeout(()=>{if(!ready&&v.readyState<1&&!v.error)lbl.textContent=`This phone couldn’t load ${c.asset.name} for the preview. The moment is still saved: lock it and check it on the timeline.`},6000);
   tick();box.scrollIntoView({block:'nearest'})}
 // What the rough cut uses from a clip: locked (exact, never changed), a found moment ("check it" until locked),
 // or a button to look for moments in a long clip. The line was heard; the picture is only described as movement.
